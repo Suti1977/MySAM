@@ -1,0 +1,1 @@
+Ide kell hogy kerüljön a framework. A Base.qbs erre hivatkozik.
