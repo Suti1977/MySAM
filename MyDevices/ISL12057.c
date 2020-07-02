@@ -23,7 +23,7 @@ status_t ISL12057_write(ISL12057_t* dev,
                         uint8_t address,
                         uint8_t* data, uint8_t length)
 {
-    int status;
+    status_t status;
 
     uint8_t cmd[1];
     cmd[0]= address;
@@ -49,7 +49,7 @@ status_t ISL12057_read(ISL12057_t* dev,
                       uint8_t address,
                       uint8_t* data, uint8_t length)
 {
-    int status;
+    status_t status;
 
     uint8_t cmd[1];
     cmd[0]= address;
