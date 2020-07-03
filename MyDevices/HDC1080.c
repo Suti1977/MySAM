@@ -105,7 +105,7 @@ status_t HDC1080_measure(HDC1080_t* dev,
     status_t status;
 
     //IC Reset, tovabba config beallitasa. 14 bites meres!
-    uint16_t configRegValue=0x1000;
+    uint16_t configRegValue=0x9000;
 
     status=HDC1080_writeReg(dev, HDC1080_CONFIG, configRegValue);
     if (status)  goto error;

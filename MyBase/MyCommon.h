@@ -62,7 +62,8 @@ enum _status_groups
     kStatusGroup_MyDMA=15,			//DMA kezelo driver
     kStatusGroup_MyUart=16,         //Sajat uart driver
     kStatusGroup_XComm=17,          //XComm kommunikacios modul hibakodok
-    kStatusGroup_MySWI=18,     //Single-Wire driver hibakodok
+    kStatusGroup_MySWI=18,          //Single-Wire driver hibakodok
+    kStatusGroup_MySPIM=18,         //SPI master hibakodok
 
 	//Applikacio szamara itt kezdodhetnek a hibakodok
     kStatusGroup_Application=100,

@@ -23,7 +23,7 @@ typedef struct
     uint32_t    baudValue;
 
     //Konfiguracios attributumok (bitmaszk mezo)
-    //Az ertelmezett attributumok definicioit lasd lejebb, a "MY_I2CM_ATTR_"
+    //Az ertelmezett attributumok definicioit lasd lejebb, a "MYI2CM_ATTR_"
     //definicioknal
     uint32_t    attribs;
 
