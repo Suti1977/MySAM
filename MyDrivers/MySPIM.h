@@ -134,9 +134,28 @@ typedef struct
     uint8_t*        txPtr;
     //Beolvasott adatbyteokat cimzi
     uint8_t*        rxPtr;
-
 } MySPIM_t;
 //------------------------------------------------------------------------------
+//Altalanos SPI buszra kotott eszkozok elerese
+//Egy-egy ilyen strukturaban tarolodnak azok az informaciok, melyek egy eszkoz
+//eleresehez szuksegesek.
+typedef struct
+{
+    //A hozza tartozo SPI driver handlerere mutat
+    MySPIM_t*   spi;
+    //Az eszkozhoz tartozo driver valtozoira mutat. Ezt minden driver eseten
+    //sajat tipusanak megfeleloen kell kasztolni.
+    void*       handler;
+} MySPIM_Device_t;
+//------------------------------------------------------------------------------
+//SPI eszkoz letrehozasa
+//spiDevice: A letrehozando eszkoz leiroja
+//spi: Annak a busznak a MySPIM driverenek handlere,melyre az eszkoz csatlakozik
+//handler: Az SPI-s eszkozhoz tartozo driver handlere
+void MySPIM_createDevice(MySPIM_Device_t* spiDevice,
+                         MySPIM_t* spi,
+                         void* handler);
+
 //driver kezdeti inicializalasa
 void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config);
 
@@ -150,7 +169,7 @@ void MySPIM_sendByte(MySPIM_t* spim, uint8_t data);
 
 //SPI-s adat transzfer, leirok alapjan.
 //A leiroknak a muvelet vegeig a memoriaban kell maradnia!
-void MySPIM_transfer(MySPIM_t* spim,
+void MySPIM_transfer(MySPIM_Device_t *spiDevice,
                      const MySPIM_xfer_t* transferBlocks,
                      uint32_t transferBlockCount);
 

@@ -9,6 +9,18 @@
 static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config);
 static void MySPIM_getNextBlock(MySPIM_t* spim);
 //------------------------------------------------------------------------------
+//SPI eszkoz letrehozasa
+//spiDevice: A letrehozando eszkoz leiroja
+//spi: Annak a busznak a MySPIM driverenek handlere,melyre az eszkoz csatlakozik
+//handler: Az SPI-s eszkozhoz tartozo driver handlere
+void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
+                         MySPIM_t *spi,
+                         void *handler)
+{
+    spiDevice->spi=spi;
+    spiDevice->handler=handler;
+}
+//------------------------------------------------------------------------------
 //driver kezdeti inicializalasa
 void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config)
 {
@@ -110,10 +122,13 @@ void MySPIM_sendByte(MySPIM_t* spim, uint8_t data)
 //------------------------------------------------------------------------------
 //SPI-s adat transzfer, leirok alapjan.
 //A leiroknak a muvelet vegeig a memoriaban kell maradnia!
-void MySPIM_transfer(MySPIM_t* spim,
+void MySPIM_transfer(MySPIM_Device_t *spiDevice,
                      const MySPIM_xfer_t* transferBlocks,
                      uint32_t transferBlockCount)
 {
+    //Eszkozhoz tartozo busz driver kijelolese
+    MySPIM_t* spim=spiDevice->spi;
+
     //SPI busz lezarasa a tranzakcio idejere a tobbi taszk elol
     #ifdef USE_FREERTOS
     xSemaphoreTake(spim->busMutex, portMAX_DELAY);
