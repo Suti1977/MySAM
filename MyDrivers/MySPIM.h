@@ -97,6 +97,19 @@ typedef struct
 #define MYSPIM_CALC_BAUDVALUE(gclkfreq, baud) \
                             ((uint8_t)((gclkfreq / (2*baud))-1))
 //------------------------------------------------------------------------------
+//Kuldes/fogadas leiroja. Ha txData es vagy rxData NULL, akkor az adott
+//transzfert nem hajtja vegre. Ha mindegyik be van allitva, akkor egyidoben
+//kuldes es fogadas is tortenik.
+typedef struct
+{
+    //Kikuldendo adatok.
+    uint8_t*   txData;
+    //olvasando adatok celterulete.
+    uint8_t*   rxData;
+    //kuldott es vagy olvasott byteok szama.
+    uint32_t length;
+} MySPIM_xfer_t;
+//------------------------------------------------------------------------------
 //MySPIM driver valtozoi
 typedef struct
 {
@@ -110,16 +123,75 @@ typedef struct
     SemaphoreHandle_t   semaphore;
   #endif //USE_FREERTOS
 
+    //A feldolgozas alatt allo tranzakcios blokk leirojara mutat
+    const MySPIM_xfer_t*  xferBlock;
+    //A meg hatralevo tranzakcios blokkok szama
+    uint32_t        leftXferBlockCount;
+
+    //A blokkbol hatralevo byteok szama
+    uint32_t        leftByteCount;
+    //Kiirando adatbyteokat cimzi...
+    uint8_t*        txPtr;
+    //Beolvasott adatbyteokat cimzi
+    uint8_t*        rxPtr;
 
 } MySPIM_t;
 //------------------------------------------------------------------------------
 //driver kezdeti inicializalasa
-void MySPIM_init(MySPIM_t* spim, MySPIM_Config_t* config);
+void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config);
 
 //SPI mukodes engedelyezese
 void MySPIM_enable(MySPIM_t* spim);
 //SPI mukodes tiltaasa
 void MySPIM_disable(MySPIM_t* spim);
+
+//Egyetlen byte kuldese. A rutin bevarja, mig a byte kimegy.
+void MySPIM_sendByte(MySPIM_t* spim, uint8_t data);
+
+//SPI-s adat transzfer, leirok alapjan.
+//A leiroknak a muvelet vegeig a memoriaban kell maradnia!
+void MySPIM_transfer(MySPIM_t* spim,
+                     const MySPIM_xfer_t* transferBlocks,
+                     uint32_t transferBlockCount);
+
+//Az SPI interfacehez tartozo sercom interrupt service rutinokbol hivando.
+//Parameterkent at kell adni a kezelt interface leirojat.
+void MySPIM_service(MySPIM_t* spim);
 //------------------------------------------------------------------------------
+//A sercomok definicioit undefine-olnom kellet, mert kulonben az alabbi makroban
+//a "SERCOM" osszeveszett a forditoval.
+#undef SERCOM0
+#undef SERCOM1
+#undef SERCOM2
+#undef SERCOM3
+#undef SERCOM4
+#undef SERCOM5
+#undef SERCOM6
+#undef SERCOM7
+#undef SERCOM8
+#define MYSPIM_PASTER( a, b )       a ## b
+#define MYSPIM_EVALUATOR( a, b )    MYSPIM_PASTER(a, b)
+#define MYSPIM_H1(k, ...)           _##k##_Handler(void)\
+                                    {MySPIM_service(  __VA_ARGS__ );}
+#define MYSPIM_H2(n)                MYSPIM_EVALUATOR(SERCOM, n)
+#define MYSPIM_SERCOM_HANDLER(n, k, ...)   \
+            void MYSPIM_EVALUATOR(MYSPIM_H2(n), MYSPIM_H1(k, __VA_ARGS__))
+
+//Seged makro, mellyel egyszeruen definialhato az SPI-hez hasznalando interrupt
+//rutinok.
+//Ez kerul a kodba peldaul:
+//  void SERCOMn_0_Handler(void){ MYSPIM_service( xxxx ); }
+//  void SERCOMn_1_Handler(void){ MYSPIM_service( xxxx ); }
+//  void SERCOMn_2_Handler(void){ MYSPIM_service( xxxx ); }
+//  void SERCOMn_3_Handler(void){ MYSPIM_service( xxxx ); }
+//             ^n                                 ^...
+//n: A sercom sorszama (0..7)
+//xxxx: A MYSPIM_t* tipusu leiro
+#define MYSPIM_HANDLERS( n, ...) \
+        MYSPIM_SERCOM_HANDLER(n, 0, __VA_ARGS__) \
+        MYSPIM_SERCOM_HANDLER(n, 1, __VA_ARGS__) \
+        MYSPIM_SERCOM_HANDLER(n, 2, __VA_ARGS__) \
+        MYSPIM_SERCOM_HANDLER(n, 3, __VA_ARGS__)
+
 //------------------------------------------------------------------------------
 #endif //MYSPI_H_
