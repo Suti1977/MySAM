@@ -166,7 +166,7 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
         xSemaphoreGiveFromISR(spim->semaphore, &higherPriorityTaskWoken);
 
         //megszakitasok tiltasa
-        hw->INTENCLR.reg = SERCOM_SPI_INTENCLR_TXC;
+        hw->INTENCLR.reg = SERCOM_SPI_INTENCLR_RXC;
 
         portYIELD_FROM_ISR(higherPriorityTaskWoken);
 
@@ -194,11 +194,11 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
         hw->DATA.reg=*spim->txPtr++;
     } else
     {   //nincs mit kiirni. Dumy byteot kell irni az adat helyere
-        hw->DATA.reg=0xff;
+        hw->DATA.reg=(uint8_t)0xff;
     }
 
     //megszakitas engedelyezese
-    hw->INTENSET.reg = SERCOM_SPI_INTENSET_TXC;
+    hw->INTENSET.reg = SERCOM_SPI_INTENSET_RXC;
 }
 //------------------------------------------------------------------------------
 //Az SPI interfacehez tartozo sercom interrupt service rutinokbol hivando.
@@ -212,13 +212,17 @@ void MySPIM_service(MySPIM_t* spim)
     //{   //Transmit complete. Egy adatbyte kiment, vagy egy adatbyte beerkezett.
 
         //msz flag torlese
-        hw->INTFLAG.reg= SERCOM_SPI_INTFLAG_TXC;
+        hw->INTFLAG.reg= SERCOM_SPI_INTFLAG_RXC;
 
         //volt eloirva olvasas?
         if (spim->rxPtr)
         {   //Beerkezett adatbyteot menteni kell.
             *spim->rxPtr++= (uint8_t) hw->DATA.reg ;
+        } else
+        {   //Dumy olvasas
+            volatile uint8_t Dumy=(uint8_t) hw->DATA.reg;
         }
+
 
 
         //Van meg hatra byte?
@@ -236,7 +240,7 @@ void MySPIM_service(MySPIM_t* spim)
             hw->DATA.reg=*spim->txPtr++;
         } else
         {   //Nincs mit kiirni. Dumy byteot irunk...
-            hw->DATA.reg=0xff;
+            hw->DATA.reg=(uint8_t)0xff;
         }
 
         //Hatralevo byteok szamanak csokkentese
