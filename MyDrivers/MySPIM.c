@@ -12,13 +12,17 @@ static void MySPIM_getNextBlock(MySPIM_t* spim);
 //SPI eszkoz letrehozasa
 //spiDevice: A letrehozando eszkoz leiroja
 //spi: Annak a busznak a MySPIM driverenek handlere,melyre az eszkoz csatlakozik
+//slaveSelectFunc: A slave select (chip select) vonal vezerleset megvalosito
+//                 callback funkcio
 //handler: Az SPI-s eszkozhoz tartozo driver handlere
 void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
                          MySPIM_t *spi,
+                         MySPIM_slaveSelectFunc_t* slaveSelectFunc,
                          void *handler)
 {
     spiDevice->spi=spi;
     spiDevice->handler=handler;
+    spiDevice->slaveSelectFunc=slaveSelectFunc;
 }
 //------------------------------------------------------------------------------
 //driver kezdeti inicializalasa
@@ -66,7 +70,7 @@ static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
     //igy a beallitasok nagy resze konnyen elvegezheto. A nem a CTRLA regisz-
     //terre vonatkozo bitek egy maszkolassal kerulnek eltuntetesre.
     hw->CTRLA.reg |=
-            (config->attribs & MYSPIMM_CTRLA_CONFIG_MASK) |
+            (config->attribs & MYSPIM_CTRLA_CONFIG_MASK) |
             0;
     __DSB();
 
@@ -117,6 +121,7 @@ void MySPIM_sendByte(MySPIM_t* spim, uint8_t data)
 
     SercomSpi* hw=&spim->sercom.hw->SPI;
     hw->DATA.reg=data;
+    __DSB();
     while(hw->INTFLAG.bit.DRE==0);
 }
 //------------------------------------------------------------------------------
@@ -134,6 +139,11 @@ void MySPIM_transfer(MySPIM_Device_t *spiDevice,
     xSemaphoreTake(spim->busMutex, portMAX_DELAY);
     #endif
 
+    //slave select vonallal eszkoz kijelolese.
+    //A slave select vonalat egy, a letrehozaskor beallitott callback funkcio
+    //vegzi.
+    if (spiDevice->slaveSelectFunc) spiDevice->slaveSelectFunc(true);
+
     //Az elso vegrehajtando transzfer leirot allitjuk be
     spim->xferBlock=transferBlocks;
     spim->leftXferBlockCount=transferBlockCount;
@@ -146,6 +156,8 @@ void MySPIM_transfer(MySPIM_Device_t *spiDevice,
     xSemaphoreTake(spim->semaphore, portMAX_DELAY);
     #endif
 
+    //Slave select vonal deaktivalasa
+    if (spiDevice->slaveSelectFunc) spiDevice->slaveSelectFunc(false);
 
     //Busz foglals felszabaditasa
     #ifdef USE_FREERTOS
@@ -209,7 +221,7 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
         hw->DATA.reg=*spim->txPtr++;
     } else
     {   //nincs mit kiirni. Dumy byteot kell irni az adat helyere
-        hw->DATA.reg=(uint8_t)0xff;
+        hw->DATA.reg=0xff;
     }
 
     //megszakitas engedelyezese
@@ -236,6 +248,7 @@ void MySPIM_service(MySPIM_t* spim)
         } else
         {   //Dumy olvasas
             volatile uint8_t Dumy=(uint8_t) hw->DATA.reg;
+            (void) Dumy;
         }
 
 
@@ -255,7 +268,7 @@ void MySPIM_service(MySPIM_t* spim)
             hw->DATA.reg=*spim->txPtr++;
         } else
         {   //Nincs mit kiirni. Dumy byteot irunk...
-            hw->DATA.reg=(uint8_t)0xff;
+            hw->DATA.reg=0xff;
         }
 
         //Hatralevo byteok szamanak csokkentese

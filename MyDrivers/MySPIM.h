@@ -78,10 +78,10 @@ typedef struct
 #define MYSPIM_ATTR_RUNSTDBY            SERCOM_SPI_CTRLA_RUNSTDBY
 //..............................................................................
 //CTRLA-ba valo beirashoz a konfigracios attributumok maszkja.
-#define MYSPIMM_CTRLA_CONFIG_MASK     (SERCOM_SPI_CTRLA_RUNSTDBY            | \
+#define MYSPIM_CTRLA_CONFIG_MASK      (SERCOM_SPI_CTRLA_RUNSTDBY            | \
                                        SERCOM_SPI_CTRLA_IBON                | \
                                        SERCOM_SPI_CTRLA_DOPO_Msk            | \
-                                       SERCOM_SPI_CTRLA_DIPO_Msk            | \
+                                       SERCOM_SPI_CTRLA_DIPO_Msk            | \                                       
                                        SERCOM_SPI_CTRLA_DORD)
 //------------------------------------------------------------------------------
 //Seged makro, az SPI periferia BAUD regiszter ertekenek kiszamitasahoz.
@@ -136,6 +136,12 @@ typedef struct
     uint8_t*        rxPtr;
 } MySPIM_t;
 //------------------------------------------------------------------------------
+//SS (slave select/chip select) vonal vezerleset vegzo callback fuggvenyek
+//prototipusa.
+//select: true, eseten a slavet ki kell valasztani. (Altalanosan alacsonyba kell
+//helyezni a kivalaszto vonalat.)
+typedef void MySPIM_slaveSelectFunc_t(bool select);
+//------------------------------------------------------------------------------
 //Altalanos SPI buszra kotott eszkozok elerese
 //Egy-egy ilyen strukturaban tarolodnak azok az informaciok, melyek egy eszkoz
 //eleresehez szuksegesek.
@@ -143,6 +149,8 @@ typedef struct
 {
     //A hozza tartozo SPI driver handlerere mutat
     MySPIM_t*   spi;
+    //A slave select vonalat vezerlo callback fuggveny
+    MySPIM_slaveSelectFunc_t* slaveSelectFunc;
     //Az eszkozhoz tartozo driver valtozoira mutat. Ezt minden driver eseten
     //sajat tipusanak megfeleloen kell kasztolni.
     void*       handler;
@@ -151,10 +159,14 @@ typedef struct
 //SPI eszkoz letrehozasa
 //spiDevice: A letrehozando eszkoz leiroja
 //spi: Annak a busznak a MySPIM driverenek handlere,melyre az eszkoz csatlakozik
+//slaveSelectFunc: A slave select (chip select) vonal vezerleset megvalosito
+//                 callback funkcio
 //handler: Az SPI-s eszkozhoz tartozo driver handlere
-void MySPIM_createDevice(MySPIM_Device_t* spiDevice,
-                         MySPIM_t* spi,
-                         void* handler);
+void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
+                         MySPIM_t *spi,
+                         MySPIM_slaveSelectFunc_t* slaveSelectFunc,
+                         void *handler);
+
 
 //driver kezdeti inicializalasa
 void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config);
