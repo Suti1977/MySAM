@@ -113,12 +113,13 @@ static void __attribute__((noreturn)) MyConsole_task(void* task_param)
 
     while(1)
     {
+        MyConsole_poll(console);
+
         //Varakozas ujabb karakterre, mellyel a parancsertelmezo etetheto.
         //A vegtelen varakozasbol a leallasi kerelem eseten egy TaskNotify
         //esemeny ugrathatja ki.
         uint32_t notifyEvents;
         xTaskNotifyWait(0, 0xffffffff, &notifyEvents, portMAX_DELAY);
-        MyConsole_poll(console);
 
     } //while
 }
