@@ -7,8 +7,6 @@
 //  16 bites regiszterparokkal operal. 8 bites a pointere.
 //------------------------------------------------------------------------------
 #include "HDC1080.h"
-
-#include "MyDump.h"
 //------------------------------------------------------------------------------
 //I2C eszkoz letrehozasa a rendszerben
 void HDC1080_create(HDC1080_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
@@ -166,5 +164,17 @@ status_t HDC1080_measure(HDC1080_t* dev,
 
 error:
     return  status;
+}
+//------------------------------------------------------------------------------
+//Eszkoz altal visszaadott meresi eredmenybol celsius fokra konvertalas
+double HDC1080_value2Celsius(uint16_t temperatureValue)
+{
+    return (double) ((uint32_t)temperatureValue*165) / (65536.0)-40.0;
+}
+//------------------------------------------------------------------------------
+//Eszkoz altal visszaadott meresi eredmenybol %-os paratartalomakonvertalas
+double HDC1080_value2Humidity(uint16_t humidityValue)
+{
+    return (double) ((uint32_t)humidityValue*100) / (65536.0);
 }
 //------------------------------------------------------------------------------

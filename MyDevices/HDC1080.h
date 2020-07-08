@@ -42,6 +42,13 @@ status_t HDC1080_writeReg(HDC1080_t* dev, uint8_t address, uint16_t regValue);
 status_t HDC1080_measure(HDC1080_t* dev,
                          uint16_t* temperature,
                          uint16_t*  humidity);
+
+//Eszkoz altal visszaadott meresi eredmenybol celsius fokra konvertalas
+double HDC1080_value2Celsius(uint16_t temperatureValue);
+
+//Eszkoz altal visszaadott meresi eredmenybol %-os paratartalomakonvertalas
+double HDC1080_value2Humidity(uint16_t humidityValue);
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //HDC1080_H_
