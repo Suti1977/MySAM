@@ -17,10 +17,13 @@ void HDC1080_create(HDC1080_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
     MyI2CM_CreateDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
 }
 //------------------------------------------------------------------------------
-//Az IC egy 16 bites regiszterenek olvasasa
-status_t HDC1080_readReg(HDC1080_t* dev, uint8_t address, uint16_t* regValue)
+//Az IC olvasasa
+status_t HDC1080_read(HDC1080_t* dev,
+                      uint8_t address,
+                      uint8_t* buff,
+                      uint8_t length)
 {
-    ASSERT(regValue);
+    ASSERT(buff);
 
     status_t status;
 
@@ -28,21 +31,17 @@ status_t HDC1080_readReg(HDC1080_t* dev, uint8_t address, uint16_t* regValue)
     uint8_t cmd[1];
     cmd[0]= address;
 
-    uint16_t tempValue;
     //Olvasas...
     //Adatatviteli blokk leirok listajnak osszeallitasa.
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, (uint8_t*)&tempValue, 2           },
+        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff, length           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
     status=MYI2CM_transfer(&dev->i2cDevice, xferBlocks, ARRAY_SIZE(xferBlocks));
-
-    //endian csere...
-    *regValue= __builtin_bswap16(tempValue);
 
     return status;
 }
@@ -105,58 +104,66 @@ status_t HDC1080_measure(HDC1080_t* dev,
     status_t status;
 
     //IC Reset, tovabba config beallitasa. 14 bites meres!
-    uint16_t configRegValue=0x9000;
+    uint16_t configRegValue=0x1000;
 
     status=HDC1080_writeReg(dev, HDC1080_CONFIG, configRegValue);
     if (status)  goto error;
 
     //Varakozas, amig az eszkoz elindul.
-    vTaskDelay(10);
+    //vTaskDelay(10);
 
     //meres inditasa
     status=HDC1080_startMeasure(dev);
     if (status)  goto error;
 
-    //Varakozas, amig a meres folyik
-    vTaskDelay(20);
-
-
-
-    //regiszter cime (8 bites pointer)
-    uint8_t cmd[1];
-    cmd[0]= 0;
-    uint8_t buffer[4];
-    //Olvasas...
-    //Adatatviteli blokk leirok listajnak osszeallitasa.
-    //(Ez a stcaken marad, amig le nem megy a transzfer!)
-    MyI2CM_xfer_t xferBlocks[]=
+    union
     {
-        //(MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, (uint8_t*)&buffer,    4           },
-    };
-    //I2C mukodes kezdemenyezese.
-    //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
-    status=MYI2CM_transfer(&dev->i2cDevice, xferBlocks, ARRAY_SIZE(xferBlocks));
+        uint8_t buff[4];
+        #pragma pack(1)
+        struct
+        {
+          uint16_t temp;
+          uint16_t humy;
+        };
+        #pragma pack();
+    } result;
+
+
+    for(int i=0; i<40; i++)
+    {
+        //regiszter cime (8 bites pointer)
+        uint8_t cmd[1];
+        cmd[0]= HDC1080_TEMPERATURE;
+
+        //Olvasas...
+        //Adatatviteli blokk leirok listajnak osszeallitasa.
+        //(Ez a stcaken marad, amig le nem megy a transzfer!)
+        MyI2CM_xfer_t xferBlocks[]=
+        {
+            (MyI2CM_xfer_t){MYI2CM_DIR_RX, result.buff, sizeof(result) },
+        };
+        //I2C mukodes kezdemenyezese.
+        //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
+        status=MYI2CM_transfer(&dev->i2cDevice, xferBlocks, ARRAY_SIZE(xferBlocks));
+
+        if (status==kStatus_Success) break;
+        vTaskDelay(1);
+    }
     if (status)  goto error;
-    MyDump_memory(buffer, 4);
 
-
-
-/*
 
     //Eredmenyek olvasasa...
     if (temperature)
     {
-        status=HDC1080_readReg(dev, HDC1080_TEMPERATURE, temperature);
-        if (status)  goto error;
+        *temperature=__builtin_bswap16(result.temp);
     }
 
     if (humidity)
     {
-        status=HDC1080_readReg(dev, HDC1080_HUMIDITY, humidity);
-        if (status)  goto error;
+        *humidity=__builtin_bswap16(result.humy);
     }
-*/
+
+
 error:
     return  status;
 }

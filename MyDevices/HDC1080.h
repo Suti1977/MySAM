@@ -29,8 +29,11 @@ typedef struct
 void HDC1080_create(HDC1080_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress);
 
 
-//Az IC egy 16 bites regiszterenek olvasasa
-status_t HDC1080_readReg(HDC1080_t* dev, uint8_t address, uint16_t* regValue);
+//Az IC olvasasa
+status_t HDC1080_read(HDC1080_t* dev,
+                      uint8_t address,
+                      uint8_t* buff,
+                      uint8_t length);
 
 //Az IC egy 16 bites regiszterenek irasa
 status_t HDC1080_writeReg(HDC1080_t* dev, uint8_t address, uint16_t regValue);
