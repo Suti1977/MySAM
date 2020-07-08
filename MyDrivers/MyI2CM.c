@@ -50,12 +50,10 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 
     //Periferia resetelese
     hw->CTRLA.reg=SERCOM_I2CM_CTRLA_SWRST;
-    __DSB();
     while(hw->SYNCBUSY.reg);
 
     //Sercom uzemmod beallitas (0x05-->I2C master)
     hw->CTRLA.reg=SERCOM_I2CM_CTRLA_MODE(0x05);
-    __DSB();
 
     //A konfiguraciokor megadott attributum mezok alapjan a periferia mukodese-
     //nek beallitasa.
@@ -64,35 +62,28 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     //terre vonatkozo bitek egy maszkolassal kerulnek eltuntetesre.    
     hw->CTRLA.reg |=
             (config->attribs & MYI2CM_CTRLA_CONFIG_MASK) |
-            //!!! A driver ugy lett megirva, hogy az SCL vonalat az ACK bit
-            //! kiadasa elott tartsa az MCU. Ezert az SCLM bit 0-ban kell
-            //! maradjon!
-            //! Tobbszor megvizsgaltam, de a jelenlegi driver megoldas eseten,
-            //! amikor is a soron kovetkezp transzfer leiro blokkok tipusrol
-            //! nem tudunk, addig nem beallithato elore az ACK/NACK valaszok.
+            //A driver ugy lett megirva, hogy az SCL vonalat az ACK bit
+            //kiadasa utan tartsa az MCU.
+            SERCOM_I2CM_CTRLA_SCLSM |
             0;
-    __DSB();
 
     hw->CTRLB.reg =
             //Smart uzemmod beallitasa. (Kevesebb szoftveres interrupcio kell)
             //Ez a driver a SMART modra epitkezik.
-            //SERCOM_I2CM_CTRLB_SMEN |
+            SERCOM_I2CM_CTRLB_SMEN |
             //Quick command-ok engedelyezese.
             //SERCOM_I2CM_CTRLB_QCEN |
             0;
-    __DSB();
     while(hw->SYNCBUSY.reg);
 
     //Adatatviteli sebesseg beallitasa
     //A beallitando ertek kialakitasaban a MYI2CM_CALC_BAUDVALUE makro segiti
     //a felhasznalot.
     hw->BAUD.reg=config->baudValue;
-    __DSB();
 
     //I2C periferia engedelyezese. (Ez utan mar bizonyos config bitek nem
     //modosithatok!)
     hw->CTRLA.bit.ENABLE=1;
-    __DSB();
     while(hw->SYNCBUSY.reg);
 
     //A periferiat "UNKNOWN" allapotbol ki kell mozditani, mert addig nem tudunk
@@ -100,7 +91,6 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     //a BUSSTATE mezojet.
     //Ekkor IDLE modba kerulunk.
     hw->STATUS.reg=SERCOM_I2CM_STATUS_BUSSTATE(1);
-    __DSB();
     while(hw->SYNCBUSY.reg);
 
     //Minden interrupt engedelyezese a periferian...
@@ -131,14 +121,13 @@ static void MyI2CM_end(MyI2CM_t* i2cm)
 {
     //-TX eseten STOP
     //-RX eseten NACK, STOP
-    //if (i2cm->transferDir==MYI2CM_DIR_RX)
-    //{   //RX van, ezert NACK-zni kell!
-    //    //Ezt beallitjuk a regiszterbe, melyet majd a stop parancsal
-    //    //egyutt fog kikuldeni a sercom. Az I2C slave eszkoz inenn
-    //    //tudja, hogy ez volt az utolso olvasas tole.
-    //    i2cm->sercom.hw->I2CM.CTRLB.reg |= SERCOM_I2CM_CTRLB_ACKACT;
-    //    __DSB();
-    //}
+    if (i2cm->transferDir==MYI2CM_DIR_RX)
+    {   //RX van, ezert NACK-zni kell!
+        //Ezt beallitjuk a regiszterbe, melyet majd a stop parancsal
+        //egyutt fog kikuldeni a sercom. Az I2C slave eszkoz inenn
+        //tudja, hogy ez volt az utolso olvasas tole.
+        i2cm->sercom.hw->I2CM.CTRLB.reg |= SERCOM_I2CM_CTRLB_ACKACT;
+    }
 
     //Stop feltetel generalasa
     MyI2CM_sendStop(i2cm);
@@ -158,7 +147,6 @@ static void MyI2CM_end(MyI2CM_t* i2cm)
         //Restart feltetelt generalunk, irasi irannyal
         SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
         hw->ADDR.reg=i2cm->slaveAddress;
-        __DSB();
         while(hw->SYNCBUSY.reg);
 
         //Folytatas majd az interrupt rutinban...
@@ -174,6 +162,92 @@ static void MyI2CM_end(MyI2CM_t* i2cm)
   #endif //USE_FREERTOS
 }
 //------------------------------------------------------------------------------
+//Kovetkezo vegrehajtando transzfer blokk keresese.
+//A jelenleg futo blokk iranya ha nem valtozik, viszont a soron kovetkezo leiro
+//0 hosszusagot mutat, akkor az a leiro kihagyasra kerul.
+static void MyI2CM_selectNextXferBlock(MyI2CM_t* i2cm,
+                                       const MyI2CM_xfer_t* firstBlock)
+{
+    //Soron kovetkezo blokk leiro kerese, melynek van tartalma, vagy amelyik
+    //masik iranyba megy, mint az utoljara vegrehajtott...
+    //Addig lepked,amig olyan leirora nem talal, melyben van valos tartalom,
+    //vagy az iranya valtozott a legutoljara kuldotthoz kepest.
+
+    //kezdetben a kovetkezo block ismeretlen
+    const MyI2CM_xfer_t* nextBlock;
+
+    if (firstBlock)
+    {   //Ez az elso vegrehajtando block.
+
+
+        //Az elso blokk vegrehajtasaval kezdunk
+        i2cm->actualBlock=firstBlock;
+        nextBlock=firstBlock;
+
+        if (i2cm->leftBlockCnt) i2cm->leftBlockCnt--;
+
+    } else
+    {   //ez nem az elso leiro az atvitel soran
+
+        //Az elozoleg beallitott lesz most vegrehajtva, es a kovetkezo keresese
+        //is attol fog folytatodni.
+        nextBlock=
+        i2cm->actualBlock=i2cm->nextBlock;
+    }
+
+    //A kereses elott ismeretlen lesz a kovetkezo blokk. Ez csak akkor kaphat
+    //ujra erteket, ha talalt vegrehajthatot a listaban.
+    i2cm->nextBlock=NULL;
+    //Aalapertelmezesben azt jelezzuk, hogy egy iranyhoz tratozo transzfernek
+    //vege van. Ha megis folytatni kelelne akkor felul lesz biralva.
+    i2cm->last=true;
+
+
+    while(i2cm->leftBlockCnt)
+    {
+        nextBlock++;
+        i2cm->leftBlockCnt--;
+
+        if (nextBlock->dir == i2cm->actualBlock->dir)
+        {   //A vizsgalt blokknak ugyan az az iranya, mint amit vegrehajtunk
+            if (nextBlock->length == 0)
+            {   //...viszont nincsen hossza. Ebbbn az esetben ezt a leirot
+                //ki kell hagyni. ugrunk a kovetkezore.
+                continue;
+            } else
+            {   //ugyan az az irany, viszont van tartalom.
+                //Folytatni kell a megkezdett muveletet.
+                i2cm->last=false;
+            }
+        }
+
+        //A vizsgalt leirot hasznalni kell.
+        i2cm->nextBlock=nextBlock;
+        break;
+    } //while(i2cm->leftBlockCnt)
+
+    //<--ide ugy jut, hogy az i2cm->nextBlock a kovetkezo leiron all, vagy
+    //   NULL, ha nincs mas leiro.
+
+    if (i2cm->actualBlock==NULL)
+    {   //GEBA.
+        ASSERT(NULL);
+    }
+
+    //Az aktualis block kijelolese
+    const MyI2CM_xfer_t* block=i2cm->actualBlock;
+    i2cm->transferDir=block->dir;
+    i2cm->leftByteCnt=block->length;
+    if (block->length)
+    {   //Van adattartalom
+        i2cm->dataPtr=(uint8_t*) block->buffer;
+    }
+    else
+    {   //nincs adattartalom
+        i2cm->dataPtr=NULL;
+    }
+}
+//------------------------------------------------------------------------------
 //Kovetkezo adatblokk kuldesenek inditasa.
 static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 {
@@ -181,20 +255,22 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 
     if (first)
     {   //Ez az elso adatblokk. Evvel indul az I2C folyamat
+
+        i2cm->nextBlock=NULL;
+
         if (i2cm->leftBlockCnt)
         {   //Van transzfer block leiro.
             //Az elso akar TX, akar RX, vegre kell hajtani, ha van elemszama,
             //ha nincs.
-            //(RX eseten a Sercom a cim kiadasa utan mindenkepen fog egy byteot
-            //beolvasni az eszkozrol, ha akartuk, ha nem.)
-            const MyI2CM_xfer_t* block=i2cm->nextBlock;
-            i2cm->transferDir=block->dir;
-            //Az elso transzfer blokk szerinti adatterulet kijelolese
-            i2cm->dataPtr    =(uint8_t*) block->buffer;
-            i2cm->leftByteCnt=block->length;
-            //hatralevo blockszam csokkentese
-            i2cm->leftBlockCnt--;
-            i2cm->nextBlock++;
+
+            //legelso blokknak megfelelo beallitasok elvegzese, illetve az
+            //azt koveto blokk megkeresese.
+            //A rutin beallitja a "last" flaget annak megfeleloen, hogy egy
+            //iranyhoz tartozolag ez-e az utolso vegrehajtando atvitel.
+            MyI2CM_selectNextXferBlock(i2cm, i2cm->actualBlock);
+
+
+
         } else
         {   //Nincs transzfer blokk leiro. Ez csak egy eszkoz pingeles lesz.
             //Alapertelmezesben Write-ot kuldunk.
@@ -202,20 +278,27 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
             i2cm->leftByteCnt=0;
         }
 
+        if (i2cm->transferDir==MYI2CM_DIR_RX)
+        {
+            //Elore csokkentjuka  beolavsando byteok szamat, mivel a start
+            //kiadasa azonnal egy olvasast is general majd.
+            if (i2cm->leftByteCnt)
+            {
+                i2cm->leftByteCnt--;
+            }
 
-        uint32_t regValue=hw->CTRLB.reg;        
-        //Ha tobb byte-ot is kell olvasni, akkor a smart modot engedelyezzuk.
-        //Ez lehetove teszi, hogy mindn olvasas utan automatikusan elinduljon
-        //egy busz ciklus.
-        if (i2cm->leftByteCnt>1)
-        {
-            regValue |= SERCOM_I2CM_CTRLB_SMEN;
-        } else
-        {
-            regValue &= ~SERCOM_I2CM_CTRLB_SMEN;
+            //olvasas eseten az ACK/NACK-t be kell allitani, ha csak 1 byte lenne,
+            //mivel annak olvasasa a cim utan automatikusan meg fog tortenni.
+            //De mindez csak akkor ervenyes, ha ez az utolso transzfer az adott
+            //iranynak megfeleloen.
+            if ((i2cm->leftByteCnt==0) && (i2cm->last))
+            {   //NACK-t kell adni.
+                hw->CTRLB.bit.ACKACT=1; __DSB();
+            } else
+            {   //ACK-t adunk a tovabbi byteokra.
+                hw->CTRLB.bit.ACKACT=0; __DSB();
+            }
         }
-        hw->CTRLB.reg=regValue;
-        __DSB();
 
 
         //Elso startfeltetel generalasa...
@@ -231,6 +314,121 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 
     //<-- I2C folyamat kozben hivva. Uj transzfer blokk vegrehajtasba kezdes...
 
+    //RX eseten az utoljara fogadott adatbyte a DATA regiszterben van.
+    //Azt a STOP vagy restart utan kell kiolvasni, kulonben ha elotte
+    //tesszuk, akkor elinditana egy ujabb adat vetelt.
+
+    if (i2cm->nextBlock==NULL)
+    {   //nincs tobb block.
+
+        //Stop feltetel generalasa
+        MyI2CM_sendStop(i2cm);
+
+        //RX eseten az utolso byte-ot most lehet kiolvasni.
+        if (i2cm->transferDir==MYI2CM_DIR_RX)
+        {
+            if (i2cm->dataPtr)
+            {   //Van buffer az adatoknak
+                *i2cm->dataPtr=hw->DATA.reg & 0xff;
+            } else
+            {   //nincs buffer. Csak olvassuk a regisztert.
+                uint8_t dummyRead=hw->DATA.reg & 0xff;
+                (void)dummyRead;
+            }
+        }
+
+        //jelzes az applikacionak
+      #ifdef USE_FREERTOS
+        xSemaphoreGiveFromISR(i2cm->semaphore, 0);
+      #endif //USE_FREERTOS
+
+    } else
+    {   //Vam meg hatra block.
+
+        //A jelenlegi iranynak megfelelo foylamatotot kell folytatni?
+        if (i2cm->last==false)
+        {   //muvelet folytatasa, csak az uj blokkal
+
+            //Soron kovetkezo blokknak megfelelo beallitasok elvegzese, illetve
+            //az azt koveto blokk megkeresese.
+            //A rutin beallitja a "last" flaget annak megfeleloen, hogy egy
+            //iranyhoz tartozolag ez-e az utolso vegrehajtando atvitel.
+            MyI2CM_selectNextXferBlock(i2cm, NULL);
+
+        } else
+        {   //Uj irany
+
+            //Megjegyezzuk az olvaso pointert, hogy az utolso byteot ki tudjuk
+            //majd irni a bufferbe...
+            //Ha a stop utan nem kell olvasni, akkor erteke NULL lesz.
+            uint8_t* savedReadPtr;
+            if (i2cm->transferDir==MYI2CM_DIR_RX)
+            {
+                savedReadPtr=i2cm->dataPtr;
+            } else
+            {
+                savedReadPtr=NULL;
+            }
+
+            //Soron kovetkezo blokknak megfelelo beallitasok elvegzese, illetve
+            //az azt koveto blokk megkeresese.
+            //A rutin beallitja a "last" flaget annak megfeleloen, hogy egy
+            //iranyhoz tartozolag ez-e az utolso vegrehajtando atvitel.
+            MyI2CM_selectNextXferBlock(i2cm, NULL);
+
+            //Folytatjuk a mukodest az uj  blokk, uj iranya szerint...
+
+            if (i2cm->transferDir==MYI2CM_DIR_RX)
+            {   //Az uj blokk iranya olvasas. (Elotte iras volt.)
+
+                //Elore csokkentjuka  beolavsando byteok szamat, mivel a start
+                //kiadasa azonnal egy olvasast is general majd.
+                if (i2cm->leftByteCnt)
+                {
+                    i2cm->leftByteCnt--;
+                }
+
+                //olvasas eseten az ACK/NACK-t be kell allitani, ha csak 1 byte
+                //lenne, mivel annak olvasasa a cim utan automatikusan meg fog
+                //tortenni.
+                //De mindez csak akkor ervenyes, ha ez az utolso transzfer az
+                //adott iranynak megfeleloen.
+                if ((i2cm->leftByteCnt==0) && (i2cm->last))
+                {   //NACK-t kell adni.
+                    hw->CTRLB.bit.ACKACT=1; __DSB();
+                } else
+                {   //ACK-t adunk a tovabbi byteokra.
+                    hw->CTRLB.bit.ACKACT=0; __DSB();
+                }
+            } else
+            {   //az uj blokk iranya iras.
+
+                //Stop feltetel generalasa
+                MyI2CM_sendStop(i2cm);
+
+                if (savedReadPtr)
+                {   //A korabbi blokkban olvasas volt, melynek az utolso
+                    //eleme meg a DATA regiszterben varakozik.
+                    //Ezt csak a stop feltetel utan olvashatjuk ki.
+
+                    //utolso byte mentese a bufferbe
+                    *savedReadPtr=hw->DATA.reg & 0xff;
+                }
+            }
+
+
+            //Start/restart feltetel generalasa...
+            //A start feltetel az iranytol fugg.
+            hw->ADDR.reg=i2cm->slaveAddress | i2cm->transferDir;
+            __DSB();
+            while(hw->SYNCBUSY.reg);
+
+        }
+    } //if (i2cm->nextBlock==NULL) else
+
+
+
+/*
     if (i2cm->leftBlockCnt==0)
     {
         //Nincs tobb blokk, amit vegre kellene hajtani. Az elozo volt az
@@ -261,28 +459,25 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
             if (block->dir != i2cm->transferDir)
             {   //A soron levo blokknak mas az iranya, mint ami most van.
 
-                //- Ha az aktualis irany RX, akkor most TX lesz. NACK, majd restart.
+                //- Ha az aktualis irany RX, akkor NACK, majd restart.
                 //- TX eseten restar
 
-                uint32_t regValue=hw->CTRLB.reg;
                 if (i2cm->transferDir==MYI2CM_DIR_RX)
                 {   //Jelenleg RX van, ezert NACK-zni kell!
                     //Ezt beallitjuk a regiszterbe, melyet majd a cim ujboli
                     //kiirasa hatasara fog kikuldeni.
-                    regValue |= SERCOM_I2CM_CTRLB_ACKACT;
+                    hw->CTRLB.reg |= SERCOM_I2CM_CTRLB_ACKACT;
                 } else
                 {   //Olvasni fogunk a tovabbiakban
                     //ACKACT bitet 0-ba allitjuk, mely az utolso olvasasig ugy
                     //is marad.
-                    regValue &= ~SERCOM_I2CM_CTRLB_ACKACT;
+                    hw->CTRLB.reg &= ~SERCOM_I2CM_CTRLB_ACKACT;
+
                 }
-                hw->CTRLB.reg = regValue;
-                __DSB();
 
                 //restart feltetel generalasa az uj blokknak megfelelo irany
                 //szerint
                 hw->ADDR.reg=i2cm->slaveAddress | block->dir;
-                __DSB();
 
                 //Uj adatteruletre allunk, a transzfer block leiro alapjan.
                 i2cm->dataPtr    =(uint8_t*) block->buffer;
@@ -307,7 +502,6 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
                 {   //Az aktuali irany az kuldes. A soron kovetkezo blokk
                     //elso elemet most kell elkuldeni.
                     hw->DATA.reg = *i2cm->dataPtr++;
-                    __DSB();
                     //Hatralevo elemek szama ezert csokken.
                     i2cm->leftByteCnt--;
                 }
@@ -321,9 +515,10 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
         // --> STOP, majd jelzes az applikacionak, de csak ha nem kell az
         //     eszkoz foglaltsagara varni.
     }
+*/
 
     //Ciklus lezarasa
-    MyI2CM_end(i2cm);
+    //MyI2CM_end(i2cm);
     return;
 }
 //------------------------------------------------------------------------------
@@ -346,7 +541,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 
         //Toroljuk a hiba IT jelzest
         hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_ERROR;
-        __DSB();
     }
     //..........................................................................
 
@@ -362,7 +556,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 
             //IT flag torlese.
             hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_MB;
-            __DSB();
 
             if (status.bit.BUSERR)
             {   //Busz hiba volt                
@@ -399,7 +592,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         {   //van meg mit kuldeni a bufferbol. A soron kovetkezo adatbyte
             //kuldesenek inditasa, es egyben az uj elem kijelolese...
             hw->DATA.reg = *i2cm->dataPtr++;
-            __DSB();
             //Hatralevo byteok szama csokken
             i2cm->leftByteCnt--;
         } else
@@ -431,7 +623,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
     if (hw->INTFLAG.bit.SB)
     {   //A slavehez tartozo IT-t kaptunk. Ez akkor jon fel, ha a slavetol
         //beerkezett egy adatbyte.
-
         //A sercom tarja alacsonyban az SCL vonalat, es varja az ACK/NACK
         //kibocsatast, melyet aszerint kell kiadni, hogy az utolso byteot
         //olvassuk-e vagy sem...
@@ -440,75 +631,42 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         //a cimre adott ACK-t kell, hogy megkapjuk.
         //Ez a teljes RX folyamat alatt orzi az utolso slave ACK allapotot.
         //Igaz, hogy minden korben le vizsgaljuk
-        //TODO: az adatlap szerint erre nem lenne szukseg, mivel RX eseten, a   !!!!!!!!!!!!!!
-        //      cimre adott NACK-ra MB interruptot ad a sercom.
+        //TODO: az adatlap szerint ez a master IRQ-ra jon csk fel!!!!!!!!!!!!!!!!!!!!!!!
+        //      lehet, hogy ez innen kiveheto. Megvizsgalni!
         if (status.bit.RXNACK==1)
         {   //A slave nem ACK-zta a cimet.
 
             //Toroljuk az IT flaget.
             hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_SB;
-            __DSB();
 
-            //Mivel a sercom beleptette az elso adatbyteot, a teljes ciklust    ???????????
+            //Mivel a sercom beleptette az elso adatbyteot, a teljes ciklust
             //NACK-zva kell befejeznie.
             hw->CTRLB.reg |= SERCOM_I2CM_CTRLB_ACKACT;
-            __DSB();
 
             i2cm->asyncStatus=kMyI2CMStatus_NACK;
             goto error;
         }
 
-
         //<--Az eszkozrol beolvasott adatbyte beerkezett.
         //(RX eseten mindenkepen olvas az MCU egy byteot a START es CIM utan.)
 
-        //if (i2cm->leftByteCnt==1)
-        //{   //Az utolso byte olvasasa fog megtortenni. Az van a DATA
-        //    //regiszterben.
-        //    //Smart modot ki kell kapcsolni, mert kulonben az olvasas utan
-        //    //egy felesleges tovabbi adatbyte olvasasa is megtortenne.
-        //    //uint32_t regValue=hw->CTRLB.reg;
-        //    //regValue &= ~SERCOM_I2CM_CTRLB_SMEN;
-        //    hw->CTRLB.bit.SMEN=0;
-        //    __DSB();
-        //}
-
-        //beerkezett adatbyte olvasasa a periferiarol.
-        //(A SMART mode miatt azonnal elindul a kovetkezo adatbyte olvasasa is,
-        //de csak ha ez nem az utolso volt a blockban.)
-        *i2cm->dataPtr++ = (uint8_t) hw->DATA.reg;
-
-        //Hatralevo byteok szamanak csokkenetese...
-        i2cm->leftByteCnt--;
-
-        if (i2cm->leftByteCnt==0)
-        {   //a transzfer blokk minden eleme be van olvasva.
-            //Uj blokkra allas.
-            MyI2CM_startNextXferBlock(i2cm, false);
+        if ((i2cm->last) && (i2cm->leftByteCnt<=1))
+        {   //Az utolso adatbyte olvasasa fog indulni, ha a DATA regisztert
+            //kiolvassuk. Ezert meg elotte be kell allitani, hogy NACK-t adjon
+            //majd arra a periferia.
+            hw->CTRLB.bit.ACKACT=1; __DSB();
         }
 
-        /*
         if (i2cm->leftByteCnt==0)
-        {   //a transzfer blokk minden eleme be van olvasva.
+        {   //a transzfer blokk minden eleme beerkezett. Az utolso viszont a
+            //DATA regiszterben varakozik. Ha azt kiolvasnank, akkor a SMART
+            //mod miatt egy ujabb atvitel indulna.
+
             //Uj blokkra allas.
             MyI2CM_startNextXferBlock(i2cm, false);
 
         } else
         {   //A beolvasott adatbyteot a helyere kell tenni
-
-            if (i2cm->leftByteCnt==1)
-            {   //Az utolso byte olvasasa fog majd kovetkezni.
-                //Erre NACK-t kell, majd, hogy adjunk.
-                uint32_t regValue=hw->CTRLB.reg;
-                regValue |= SERCOM_I2CM_CTRLB_ACKACT;
-                //Smart modot ki kell kapcsolni, mert kulonben az olvasas utan
-                //egy felesleges tovabbi adatbyte olvasasa is megtortenne.
-                //Megj: az ujabb tranzakcio inditasanal ezt majd vissza kell
-                //engedelyezni.
-                regValue &= ~SERCOM_I2CM_CTRLB_SMEN;
-                hw->CTRLB.reg=regValue;
-                __DSB();
-            }
 
             //beerkezett adatbyte olvasasa a periferiarol. A SMART mode miatt
             //azonanl elindul a kovetkezo adatbyte olvasasa is.
@@ -517,7 +675,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
             //Hatralevo byteok szamanak csokkenetese...
             i2cm->leftByteCnt--;
         }
-        */
 
     } //if (Hw->INTFLAG.bit.SB)
     return;
@@ -562,11 +719,11 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         i2cm->asyncStatus=kStatus_Success;
 
         //Az elso kiirando adatblokkra allunk
-        i2cm->nextBlock=xferBlocks;
+        i2cm->actualBlock=xferBlocks;
         i2cm->leftBlockCnt=blockCount;
+
         //Megjegyezzuk a slave eszkoz cimet, mivel IT alol is kell majd
         //restartnal a cimet ismerni.
-
         //A 7 bits slave cimet shifteljuk 1-el balra, mert a 0. bit az R/W bit
         //helye
         i2cm->slaveAddress= (uint8_t)(i2cDevice->slaveAddress << 1);

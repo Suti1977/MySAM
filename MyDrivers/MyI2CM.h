@@ -159,6 +159,10 @@ typedef struct
     SemaphoreHandle_t   semaphore;
     #endif //USE_FREERTOS
 
+
+    //Az aktualisan vegrehajtott blokkra mutat
+    const MyI2CM_xfer_t* actualBlock;
+
     //A kovetkezo vegrehajtando adatatatviteli leirora mutat
     const MyI2CM_xfer_t* nextBlock;
     //Ennyi blokk van meg hatra amit vegre kell hajtani
@@ -176,6 +180,11 @@ typedef struct
     //es ezert restartot kell inditani.
     MyI2CM_dir_t    transferDir;
 
+    //true, ha egy iranyhoz tartozo utolso transzfer block vegrehajtasa van.
+    //Ez RX eseten az utolso olvasott byte eseten NACK kuldeset majd stop-ot
+    //jelent.
+    bool    last;
+
     //true, ha egy eszkozon be kell varni, amig vegez, es csak utana szabad
     //lezarni a buszt a STOP kondicioval.
     //Ez ott eredekes, ahol peldaul egy eszkoz NACK-val jelzi, ha egy muvelet
@@ -187,6 +196,8 @@ typedef struct
     //Az I2C folyamatok alatt beallitott statusz, melyet az applikacio fele
     //visszaad.
     int     asyncStatus;
+
+
 } MyI2CM_t;
 //------------------------------------------------------------------------------
 //Statusz kodok
