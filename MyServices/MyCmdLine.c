@@ -59,7 +59,7 @@ void MyCmdLine_feeding(MyCmdLine_t* cmd, char newChar)
 {
     uint32_t toBuffer=1;
     uint32_t toEcho=1;
-
+printf("________________________________%c  %02X\n", newChar, newChar);
     //vett karakter ellenorzese, hogy nem-e sor vege jel
     switch(newChar)
     {
@@ -71,9 +71,18 @@ void MyCmdLine_feeding(MyCmdLine_t* cmd, char newChar)
                     toBuffer=0;
                     break;
 
-    case CHAR_CR:  //sorvege. jelet egy az egyben eldobjuk!
+        case CHAR_CR:  //sorvege. jelet egy az egyben eldobjuk!
                     return;
-    case CHAR_LF:  //Kocsi vissza
+
+         //case 0x00:  //Ez hibas karakter. eldobjuk
+         //           //RS485 eseten ha valamit kuld az MCU, akkor utana
+         //           //az a tapasztalat, hogy fake 0x00-kat vesz be.
+         //           //ezt itt lehet eliminalni.
+         //           //Nem szep, de mukodik.
+         //           return;
+
+
+        case CHAR_LF:  //Kocsi vissza
                     toBuffer=0;
                     break;
     }
@@ -110,7 +119,6 @@ void MyCmdLine_feeding(MyCmdLine_t* cmd, char newChar)
         MyCmdLine_tokenise(cmd);
         //Parancs keresese, es ha megvan, akkor annak vegrehajtasa
         MyCmdLine_execute(cmd);
-
         //A parancssorban ugras az elejere
         cmd->lineLength=0;
         //Sor uritese.

@@ -74,7 +74,9 @@ static status_t MyUart_initSercom(MyUart_t* uart, const MyUart_Config_t* cfg)
                 //hasznalhato!
                 SERCOM_USART_CTRLA_SAMPR(0) |
                 //Kimenetek pinoutjanak beallitasa. PAD[0] --> TXD
-                SERCOM_USART_CTRLA_TXPO(0) |
+                //RS485 eseten TXPO-t 3-ra kell beallitani
+                (cfg->rs485Mode ? SERCOM_USART_CTRLA_TXPO(3) :
+                                 SERCOM_USART_CTRLA_TXPO(0)) |
                 //Adat bemenet (RXD) kijelolese  PAD[1] <-- RXD
                 SERCOM_USART_CTRLA_RXPO(1) |
                 //Mintavetelezesi pontok beallitasa.

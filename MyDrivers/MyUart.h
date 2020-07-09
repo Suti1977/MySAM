@@ -27,6 +27,8 @@ typedef struct
     //Adatatviteli sebesseghez tartozo baudrate regiszter erteke
     //A MYUART_CALC_BAUDVALUE() makroval szamithato
     uint16_t            baudRegValue;
+    //RS485 mod kijelolese
+    bool rs485Mode;
 } MyUart_Config_t;
 //------------------------------------------------------------------------------
 //UART baudrate regiszterenek kiszamitasa a kivant adatatviteli sebesseg, es az
