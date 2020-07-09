@@ -183,6 +183,14 @@ void MyOWI_service(MyOWI_Driver_t* driver)
 //Reset feltetel generalasa a buszon, majd presence bit olvasasa
 static void MyOWI_wState_reset_driveWire(MyOWI_Driver_t* driver)
 {
+    //Ellenorzes, hogy a busz magasban van-e...
+    if (driver->wireConfig.readWireFunc()==0)
+    {   //A busz alacsonyban van. ez hiba
+        driver->asyncStatus=kMyOWI_Status_busError;
+        MyOWI_mState_end(driver);
+        return;
+    }
+
     driver->wireConfig.driveWireFunc();
     MyOWI_startTimer(driver, driver->times.reset_lowTime);
     driver->stateFunc=

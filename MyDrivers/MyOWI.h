@@ -19,8 +19,8 @@ struct MyOWI_Driver_t;
 enum
 {
     kMyOWI_Status_= MAKE_STATUS(kStatusGroup_MyOWI, 0),
-    //A slave nem ACK-zott
-    //kMyOWI_Status_NACK,
+    //A busz hibas. Reset kiadasa elott azt erzekelte, hogy a busz le van huzva
+    kMyOWI_Status_busError,
     //A resetkor nem erzekelte a presence bitet
     kMyOWI_Status_noPresence,
 };
