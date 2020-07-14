@@ -52,7 +52,7 @@ typedef struct
     //Ha true, akkor az EVENT kimenet engedelyezett lesz a csatornahoz
     bool eventOutEnable;
 
-    //Async bemeneti mod engedelyezese. (Peldaul sleep-bol vaklo ebresztes
+    //Async bemeneti mod engedelyezese. (Peldaul sleep-bol valo ebresztes
     //lehetseges ilyenkor a csatornarol.)
     bool asyncEnable;
 

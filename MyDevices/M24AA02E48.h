@@ -22,6 +22,19 @@ void M24AA02E48_create(MyI2CMem_t* dev,
 status_t M24AA02E48_readUID( MyI2CMem_t* dev,
                              uint8_t* buffer,
                              uint32_t bufferSize);
+
+//eeprom terulet olvasasa
+status_t M24AA02E48_read( MyI2CMem_t* dev,
+                          uint8_t address,
+                          uint8_t* src,
+                          uint32_t length);
+
+//eeprom terulet irasa
+status_t M24AA02E48_write(MyI2CMem_t* dev,
+                          uint8_t address,
+                          uint8_t* dest,
+                          uint32_t length);
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //M24AA02E48_H_

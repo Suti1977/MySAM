@@ -38,5 +38,22 @@ status_t M24AA02E48_readUID( MyI2CMem_t* dev,
     return MyI2CMem_read(dev, EUI48_START_ADDRESS, buffer, bufferSize);
 }
 //------------------------------------------------------------------------------
+//eeprom terulet olvasasa
+status_t M24AA02E48_read( MyI2CMem_t* dev,
+                          uint8_t address,
+                          uint8_t* src,
+                          uint32_t length)
+{
+    return MyI2CMem_read(dev, address, src, length);
+}
+//------------------------------------------------------------------------------
+//eeprom terulet irasa
+status_t M24AA02E48_write(MyI2CMem_t* dev,
+                          uint8_t address,
+                          uint8_t* dest,
+                          uint32_t length)
+{
+    return MyI2CMem_write(dev, address, dest, length);
+}
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
