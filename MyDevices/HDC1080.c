@@ -108,7 +108,7 @@ status_t HDC1080_measure(HDC1080_t* dev,
     if (status)  goto error;
 
     //Varakozas, amig az eszkoz elindul.
-    //vTaskDelay(10);
+    vTaskDelay(10);
 
     //meres inditasa
     status=HDC1080_startMeasure(dev);
