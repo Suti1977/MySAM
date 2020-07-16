@@ -9,7 +9,7 @@
 #include <string.h>
 #include "compiler.h"
 #include "MyHelpers.h"
-
+#include "board.h"      //TODO: torolni!!!!!!!!!!
 #include <stdio.h>
 //Ha ennyi ido alatt sem sikerul egy I2C folyamatot vegrehajtani, akkor hibaval
 //kilep.    [TICK]
@@ -105,13 +105,45 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 }
 //------------------------------------------------------------------------------
 //Stop feltetel generalasa a buszon
-static inline void MyI2CM_sendStop(MyI2CM_t* i2cm)
+static void MyI2CM_sendStop(MyI2CM_t* i2cm)
 {
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
-    i2cm->sercom.hw->I2CM.CTRLB.reg |= SERCOM_I2CM_CTRLB_CMD( 0x03 );
-    __DSB();
+    uint32_t tmp;
+MyGPIO_set(PIN_RED_LED);
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+__NOP();
+    tmp = i2cm->sercom.hw->I2CM.CTRLB.reg;
+    tmp &= ~(SERCOM_I2CM_CTRLB_CMD_Msk | SERCOM_I2CM_CTRLB_ACKACT);
+    tmp |= SERCOM_I2CM_CTRLB_CMD(0x03);
+    i2cm->sercom.hw->I2CM.CTRLB.reg =tmp;
+    __DMB();
     //Varakozas a szinkronra.
-    while(i2cm->sercom.hw->I2CM.SYNCBUSY.bit.SYSOP);
+    while(i2cm->sercom.hw->I2CM.SYNCBUSY.reg);
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+MyGPIO_clr(PIN_RED_LED);
+
 }
 //------------------------------------------------------------------------------
 //I2C folyamatok vegen hivodo rutin.
@@ -162,7 +194,9 @@ static void MyI2CM_end(MyI2CM_t* i2cm)
 
     //Jelzes az applikacionak
   #ifdef USE_FREERTOS
-    xSemaphoreGiveFromISR(i2cm->semaphore, 0);
+    portBASE_TYPE higherPriorityTaskWoken=pdFALSE;
+    xSemaphoreGiveFromISR(i2cm->semaphore, &higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(higherPriorityTaskWoken);
   #endif //USE_FREERTOS
 }
 //------------------------------------------------------------------------------
@@ -297,18 +331,19 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
             //iranynak megfeleloen.
             if ((i2cm->leftByteCnt==0) && (i2cm->last))
             {   //NACK-t kell adni.
-                hw->CTRLB.bit.ACKACT=1; __DSB();
+                hw->CTRLB.bit.ACKACT=1; __DMB();
             } else
             {   //ACK-t adunk a tovabbi byteokra.
-                hw->CTRLB.bit.ACKACT=0; __DSB();
+                hw->CTRLB.bit.ACKACT=0; __DMB();
             }
+            while(hw->SYNCBUSY.reg);
         }
 
 
         //Elso startfeltetel generalasa...
         //A start feltetel az iranytol fugg.
         hw->ADDR.reg=i2cm->slaveAddress | i2cm->transferDir;
-        __DSB();
+        __DMB();
         while(hw->SYNCBUSY.reg);
 
         //VIGYAZAT! Ez utan feljohet IT azonnal, pl arbitacio vesztes miatt!
@@ -397,11 +432,12 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
                 //adott iranynak megfeleloen.
                 if ((i2cm->leftByteCnt==0) && (i2cm->last))
                 {   //NACK-t kell adni.
-                    hw->CTRLB.bit.ACKACT=1; __DSB();
+                    hw->CTRLB.bit.ACKACT=1; __DMB();
                 } else
                 {   //ACK-t adunk a tovabbi byteokra.
-                    hw->CTRLB.bit.ACKACT=0; __DSB();
+                    hw->CTRLB.bit.ACKACT=0; __DMB();
                 }
+                while(hw->SYNCBUSY.reg);
             } else
             {   //az uj blokk iranya iras.
 
@@ -422,7 +458,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
             //Start/restart feltetel generalasa...
             //A start feltetel az iranytol fugg.
             hw->ADDR.reg=i2cm->slaveAddress | i2cm->transferDir;
-            __DSB();
+            __DMB();
             while(hw->SYNCBUSY.reg);
 
         }
@@ -436,10 +472,14 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 {
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
     volatile SERCOM_I2CM_STATUS_Type    status;
-
+//MyGPIO_set(PIN_RED_LED);
     //Statusz regiszter kiolvasasa. A tovabbiakban ezt hasznaljuk az elemzeshez
     status.reg=hw->STATUS.reg;
-
+//__NOP();
+//__NOP();
+//__NOP();
+//__NOP();
+//MyGPIO_clr(PIN_RED_LED);
     //..........................................................................
     if (hw->INTFLAG.bit.ERROR)
     {   //Valam hiba volt a buszon
@@ -447,6 +487,10 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         //A hibakat a status register irja le.
 
         //Toroljuk a hiba IT jelzest
+        __NOP();
+        __NOP();
+        __NOP();
+        __NOP();
         hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_ERROR;
     }
     //..........................................................................
@@ -498,9 +542,11 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         if (i2cm->leftByteCnt)
         {   //van meg mit kuldeni a bufferbol. A soron kovetkezo adatbyte
             //kuldesenek inditasa, es egyben az uj elem kijelolese...
-            hw->DATA.reg = *i2cm->dataPtr++;
+            hw->DATA.reg = *i2cm->dataPtr++; __DMB();
             //Hatralevo byteok szama csokken
             i2cm->leftByteCnt--;
+            while(hw->SYNCBUSY.reg);
+
         } else
         {   //Nincs mar mit kuldeni. Ez volt az utolso adatbyte a blokkban.
             //Uj blokk nyitasa, ha van meg, vagy a transzfer lezarasa.
@@ -536,7 +582,8 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         {   //Az utolso adatbyte olvasasa fog indulni, ha a DATA regisztert
             //kiolvassuk. Ezert meg elotte be kell allitani, hogy NACK-t adjon
             //majd arra a periferia.
-            hw->CTRLB.bit.ACKACT=1; __DSB();
+            hw->CTRLB.bit.ACKACT=1; __DMB();
+            while(hw->SYNCBUSY.reg);
         }
 
         if (i2cm->leftByteCnt==0)
@@ -625,6 +672,7 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         {   //Hiba a buszon.
             printf("I2C bus error.\n");
             status=kMyI2CMStatus_BusError;
+MyGPIO_set(PIN_GREEN_LED);
         } else
         {
             status=i2cm->asyncStatus;

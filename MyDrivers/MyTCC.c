@@ -112,7 +112,7 @@ uint32_t MyTCC_getCounter(MyTCC_t* tcc)
 {
     Tcc* hw=tcc->hw;
     hw->CTRLBSET.reg=TCC_CTRLBSET_CMD_READSYNC;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
     return hw->COUNT.reg;
 }

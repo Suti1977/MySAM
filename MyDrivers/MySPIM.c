@@ -62,7 +62,7 @@ static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
     while(hw->SYNCBUSY.reg);
 
     //Sercom uzemmod beallitas (0x03-->SPI master)
-    hw->CTRLA.reg=SERCOM_SPI_CTRLA_MODE(0x03); __DSB();
+    hw->CTRLA.reg=SERCOM_SPI_CTRLA_MODE(0x03); __DMB();
 
     //A konfiguraciokor megadott attributum mezok alapjan a periferia mukodese-
     //nek beallitasa.
@@ -72,7 +72,7 @@ static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
     hw->CTRLA.reg |=
             (config->attribs & MYSPIM_CTRLA_CONFIG_MASK) |
             0;
-    __DSB();
+    __DMB();
 
     hw->CTRLB.reg =
             //Vetel engedelyezett
@@ -80,14 +80,14 @@ static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
             //Hardver kezelje-e az SS vonalat? Config alapjan.
             (config->hardwareSSControl ? SERCOM_SPI_CTRLB_MSSEN : 0) |
             0;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
 
     //Adatatviteli sebesseg beallitasa
     //A beallitando ertek kialakitasaban a MYSPIM_CALC_BAUDVALUE makro segiti
     //a felhasznalot.
     hw->BAUD.reg=config->baudValue;
-    __DSB();
+    __DMB();
 
     //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
     //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
@@ -101,7 +101,7 @@ void MySPIM_enable(MySPIM_t* spim)
     SercomSpi* hw=&spim->sercom.hw->SPI;
 
     hw->CTRLA.bit.ENABLE=1;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
 }
 //------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ void MySPIM_disable(MySPIM_t* spim)
     SercomSpi* hw=&spim->sercom.hw->SPI;
 
     hw->CTRLA.bit.ENABLE=0;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
 }
 //------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ void MySPIM_sendByte(MySPIM_t* spim, uint8_t data)
 
     SercomSpi* hw=&spim->sercom.hw->SPI;
     hw->DATA.reg=data;
-    __DSB();
+    __DMB();
     while(hw->INTFLAG.bit.DRE==0);
 }
 //------------------------------------------------------------------------------

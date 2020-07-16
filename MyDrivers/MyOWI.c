@@ -10,13 +10,13 @@
 #include "MyOWI.h"
 #include <string.h>
 
-
 //Ha ez benne van, akkor az egyik GPIO vonalat huzgod a megsazkitas be es
 //kilepesenel. A driver teszteleshez hasznalhatjuk.
 #if 0
 #define MyOWI_IRQ_TRACE
 #include "MyGPIO.h"
-#defien MyOWI_IRQ_TRACE_PIN PIN_DEBUG_TP2
+#include "board.h"
+#define MyOWI_IRQ_TRACE_PIN     PIN_RED_LED
 #endif
 
 //Ha ez 1, akkor a bit kiirasnal timerhez koti az '1'-es bitek kuldesenel az
@@ -118,31 +118,31 @@ static void MyOWI_initTC(MyOWI_Driver_t* driver,
         0;
 
     //debug modban is futhat a timer.
-    hw->DBGCTRL.bit.DBGRUN=1;
+    //hw->DBGCTRL.bit.DBGRUN=1;
 
     //Wave regiszter bellitasa
-    hw->WAVE.reg = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MFRQ_Val);
+    hw->WAVE.reg = TC_WAVE_WAVEGEN(TC_WAVE_WAVEGEN_MFRQ_Val); __DMB();
     //Szamlalo nullazsasa
-    hw->COUNT.reg=0;
+    hw->COUNT.reg=0; __DMB();
     //Kezdetben a TOP ertek a maximum, amig tud szamolni.
-    hw->CC[0].reg=0;
-    hw->CC[1].reg=0;
+    hw->CC[0].reg=0; __DMB();
+    hw->CC[1].reg=0; __DMB();
 
     //One-shot mode fixen beallitva a timerhez.
     //Az one-shot akkor valtodik ki, amikor a timer eleri a CC0-ban beallitott
     //erteket, majd visszaall 0-ra. Indulaskor ezert mindenkepen keletkezik egy
     //megszakitas, de utana a timer leall, es varja a retrigger jelet.
-    hw->CTRLBSET.reg=TC_CTRLBCLR_ONESHOT;
+    hw->CTRLBSET.reg=TC_CTRLBCLR_ONESHOT; __DMB();
     while(hw->SYNCBUSY.reg);
 
     //TC engedelyezese. Utana mar bizonyos regiszterek nem irhatok!
-    hw->CTRLA.bit.ENABLE=1;
+    hw->CTRLA.bit.ENABLE=1; __DMB();
     while(hw->SYNCBUSY.reg);
 
     //Overflow interrupt engedelyezese. Ez akkor kovetkezik be, amikor a
     //COUNTER regiszter elerte a CC0-ban beallitott erteket.
-    hw->INTFLAG.reg=0xff;    
-    hw->INTENSET.reg=TC_INTENSET_OVF;
+    hw->INTFLAG.reg=0xff;    __DMB();
+    hw->INTENSET.reg=TC_INTENSET_OVF; __DMB();
     //NVIC-ben IRQ engedelyezese
     MyTC_enableIrq(&driver->tc);
 
@@ -151,10 +151,15 @@ static void MyOWI_initTC(MyOWI_Driver_t* driver,
 static inline void MyOWI_startTimer(MyOWI_Driver_t* driver,
                                          uint16_t ccValue)
 {
+    TcCount16* hw=&driver->tc.hw->COUNT16;
     //TC CC0 regiszterenek segitsegevel idozites beallitasa.
-    driver->tc.hw->COUNT16.CC[0].reg=ccValue;
+    hw->CC[0].reg=ccValue;
+    __DMB();
+    while(hw->SYNCBUSY.reg);
     //Timer inditasa
-    driver->tc.hw->COUNT16.CTRLBSET.reg=TC_CTRLBCLR_CMD_RETRIGGER;
+    hw->CTRLBSET.reg=TC_CTRLBCLR_CMD_RETRIGGER;
+    __DMB();
+    while(hw->SYNCBUSY.reg);
 }
 //------------------------------------------------------------------------------
 //A driverhez  rendelt TC-hez tartozo interrupt service rutin
@@ -164,7 +169,6 @@ void MyOWI_service(MyOWI_Driver_t* driver)
   #ifdef MyOWI_IRQ_TRACE
     MyGPIO_set(MyOWI_IRQ_TRACE_PIN);
   #endif
-
     //megszkitasi flag torlese
     driver->tc.hw->COUNT16.INTFLAG.reg = TC_INTFLAG_OVF;
 
@@ -174,6 +178,7 @@ void MyOWI_service(MyOWI_Driver_t* driver)
   #ifdef MyOWI_IRQ_TRACE
     MyGPIO_clr(MyOWI_IRQ_TRACE_PIN);
   #endif
+
 }
 //------------------------------------------------------------------------------
 
@@ -467,7 +472,6 @@ status_t MyOWI_transaction(MyOWI_Wire_t* wire,
 {
     status_t status;
     MyOWI_Driver_t* driver=(MyOWI_Driver_t*) wire->driver;
-
     //Mivel az egyes wire-ok azonos eroforrasokat hasznalnak, ezert szukseges
     //azok egyidoben torteno eleresenek a kizarasa. --> kell a mutex.
     #ifdef USE_FREERTOS

@@ -36,7 +36,7 @@ status_t DS18B201_startMeasure(MyOWI_Wire_t* wire)
 
     //Homerseklet meres (konverzio) inditasa parancs...
     functionCmd[0]=DS18B201_CONVERT_T;
-    //Az eszkoz tapot kap. Nem parazita power mode-ban mukodeik.
+    //Az eszkoz tapot kap. Nem parazita power mode-ban mukodik.
     functionCmd[1]=0;
 
     trans.tx1Buff=&romCmd;
@@ -44,7 +44,7 @@ status_t DS18B201_startMeasure(MyOWI_Wire_t* wire)
     trans.tx2Buff=functionCmd;
     trans.tx2Length=2;
     trans.rxBuff=NULL;
-    trans.rxLength=0;
+    trans.rxLength=0;    
     return MyOWI_transaction(wire, &trans);
 }
 //------------------------------------------------------------------------------
