@@ -9,7 +9,7 @@
 #include <string.h>
 #include "compiler.h"
 #include "MyHelpers.h"
-#include "board.h"      //TODO: torolni!!!!!!!!!!
+
 #include <stdio.h>
 //Ha ennyi ido alatt sem sikerul egy I2C folyamatot vegrehajtani, akkor hibaval
 //kilep.    [TICK]
@@ -105,29 +105,76 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 }
 //------------------------------------------------------------------------------
 //Stop feltetel generalasa a buszon
-static void MyI2CM_sendStop(MyI2CM_t* i2cm)
+static void MyI2CM_sendStop(SercomI2cm* hw)
 {
+    /*
+    __DMB();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+*/
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
     uint32_t tmp;
-MyGPIO_set(PIN_RED_LED);
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-__NOP();
-    tmp = i2cm->sercom.hw->I2CM.CTRLB.reg;
-    tmp &= ~(SERCOM_I2CM_CTRLB_CMD_Msk | SERCOM_I2CM_CTRLB_ACKACT);
+    while(hw->SYNCBUSY.reg !=0 );
+    tmp = hw->CTRLB.reg;
+    tmp &= ~(SERCOM_I2CM_CTRLB_CMD_Msk /*| SERCOM_I2CM_CTRLB_ACKACT*/);
     tmp |= SERCOM_I2CM_CTRLB_CMD(0x03);
-    i2cm->sercom.hw->I2CM.CTRLB.reg =tmp;
+    hw->CTRLB.reg =tmp;
     __DMB();
     //Varakozas a szinkronra.
-    while(i2cm->sercom.hw->I2CM.SYNCBUSY.reg);
+    while(hw->SYNCBUSY.reg);
+/*
     __NOP();
     __NOP();
     __NOP();
@@ -142,7 +189,51 @@ __NOP();
     __NOP();
     __NOP();
     __NOP();
-MyGPIO_clr(PIN_RED_LED);
+
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    __DMB();
+    */
 
 }
 //------------------------------------------------------------------------------
@@ -361,20 +452,23 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
     {   //nincs tobb block.
 
         //Stop feltetel generalasa
-        MyI2CM_sendStop(i2cm);
+        MyI2CM_sendStop(hw);
 
         //RX eseten az utolso byte-ot most lehet kiolvasni.
         if (i2cm->transferDir==MYI2CM_DIR_RX)
-        {
+        {            
+            while(hw->SYNCBUSY.reg !=0 );
+            while(hw->SYNCBUSY.reg !=0 );
             if (i2cm->dataPtr)
             {   //Van buffer az adatoknak
                 *i2cm->dataPtr=hw->DATA.reg & 0xff;
             } else
             {   //nincs buffer. Csak olvassuk a regisztert.
-                uint8_t dummyRead=hw->DATA.reg & 0xff;
+                volatile uint8_t dummyRead=hw->DATA.reg & 0xff;
                 (void)dummyRead;
             }
         }
+
 
         //jelzes az applikacionak, hogy kesz a leiroval
         MyI2CM_end(i2cm);
@@ -442,7 +536,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
             {   //az uj blokk iranya iras.
 
                 //Stop feltetel generalasa
-                MyI2CM_sendStop(i2cm);
+                MyI2CM_sendStop(hw);
 
                 if (savedReadPtr)
                 {   //A korabbi blokkban olvasas volt, melynek az utolso
@@ -472,14 +566,10 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 {
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
     volatile SERCOM_I2CM_STATUS_Type    status;
-//MyGPIO_set(PIN_RED_LED);
+
     //Statusz regiszter kiolvasasa. A tovabbiakban ezt hasznaljuk az elemzeshez
     status.reg=hw->STATUS.reg;
-//__NOP();
-//__NOP();
-//__NOP();
-//__NOP();
-//MyGPIO_clr(PIN_RED_LED);
+
     //..........................................................................
     if (hw->INTFLAG.bit.ERROR)
     {   //Valam hiba volt a buszon
@@ -487,9 +577,6 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         //A hibakat a status register irja le.
 
         //Toroljuk a hiba IT jelzest
-        __NOP();
-        __NOP();
-        __NOP();
         __NOP();
         hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_ERROR;
     }
@@ -599,6 +686,7 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 
             //beerkezett adatbyte olvasasa a periferiarol. A SMART mode miatt
             //azonanl elindul a kovetkezo adatbyte olvasasa is.
+            while(hw->SYNCBUSY.reg);
             *i2cm->dataPtr++ = (uint8_t) hw->DATA.reg;
 
             //Hatralevo byteok szamanak csokkenetese...
@@ -613,7 +701,7 @@ error:
     //A hibat a korabban beallitott ->AsyncStatus valtozo orzi
 
     //Stop feltetel generalasa
-    MyI2CM_sendStop(i2cm);
+    MyI2CM_sendStop(hw);
 
     //jelzes az applikacionak, hogy kesz a leiroval
     MyI2CM_end(i2cm);
@@ -672,7 +760,6 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         {   //Hiba a buszon.
             printf("I2C bus error.\n");
             status=kMyI2CMStatus_BusError;
-MyGPIO_set(PIN_GREEN_LED);
         } else
         {
             status=i2cm->asyncStatus;
