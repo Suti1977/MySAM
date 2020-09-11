@@ -56,6 +56,18 @@ void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState);
 #define MYSM_NEW_STATE(newState)                   \
         MySM_ChangeState((MySM_t*)sm, newState); \
         return kStatus_Success
+
+//Egy makro, mely visszaadja az initkor beallitott userData parametrert.
+//A makrot az alalpotfuggvenyeken belul lehet hasznalni. Parametereben
+//megadhato, hogy milyen tipusra kasztolja a parametert.
+#define MYSM_USER_DATA(type) ((type) (((MySM_t*)sm)->userData))
+
+//Makro, mely true-t ad vissza, ha egy allapotnak ez az elso hivasa.
+#define MYSM_INIT()     (((MySM_t*)sm)->init)
+
+//Makro, mely segit letrehozni az allapotfuggvenyeket
+#define MYSM_STATE(functionName) \
+    status_t functionName (struct MySM_t* sm)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MY_SM_H_
