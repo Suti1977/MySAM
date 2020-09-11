@@ -11,6 +11,8 @@
 //delyezese.
 void MyGclk_setPeripherialClock(uint32_t peripherialId, uint32_t generator);
 
+//A megadott priferiara vonatkozo orajel tiltasa
+void MyGclk_disablePeripherialClock(uint32_t peripherialId);
 //------------------------------------------------------------------------------
 #endif //MY_GCLK_H
 

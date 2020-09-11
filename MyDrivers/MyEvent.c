@@ -6,6 +6,7 @@
 
 //------------------------------------------------------------------------------
 //Esemenykezeles kezdeti initje
+//ELOTTE EROSEN AJANLOTT LEALLITANI A FUTO ESEMENY GENERATOROKAT!
 void MyEvent_init(void)
 {
     //esemenyrendszer orajelenek engedelyezese
