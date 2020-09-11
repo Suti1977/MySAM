@@ -24,15 +24,15 @@ void MyTimer_initManager(MyTimerManager_t* timerManager,
 
     Tc* hw=timerManager->tc.hw;
     //A hasznalt TC modul szoftveres resteje
-    hw->COUNT16.CTRLA.bit.ENABLE=0; __DMB();
+    hw->COUNT16.CTRLA.bit.ENABLE=0; __DSB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
-    hw->COUNT16.CTRLA.bit.SWRST=1; __DMB();
+    hw->COUNT16.CTRLA.bit.SWRST=1; __DSB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
     //TC konfiguralas...
     //Uzemmod kijelolese a TC periferian (16 bites uzemmodot hasznaluk)
-    hw->COUNT16.CTRLA.reg = TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val); __DMB();
+    hw->COUNT16.CTRLA.reg = TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val); __DSB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
     hw->COUNT16.CTRLA.reg |=
@@ -63,13 +63,13 @@ void MyTimer_initManager(MyTimerManager_t* timerManager,
 static void MyTimer_interruptEnable(Tc* hw)
 {
     hw->COUNT16.INTENSET.reg=TC_INTENCLR_OVF;
-    __DMB();
+    __DSB();
 }
 //------------------------------------------------------------------------------
 static void MyTimer_interruptDisable(Tc* hw)
 {
     hw->COUNT16.INTENCLR.reg=TC_INTENCLR_OVF;
-    __DMB();
+    __DSB();
 }
 //------------------------------------------------------------------------------
 //A fociklusbol hivogatott timer task. Azok a callback rutinok, melyekhez
@@ -80,7 +80,7 @@ void MyTimer_loop(MyTimerManager_t* timerManager)
     volatile uint8_t modeFlags;
 
     //Vegig haladunk a timerek lancolt listajan, es amelyik be van kapcsolva, es
-    //meg nem jart le, anank csokkentjuk a szamlalojat.
+    //meg nem jart le, annak csokkentjuk a szamlalojat.
     //Ha a szamlalo elerte a 0-at, akkor jelezzuk, hogy az idozites letelt.
     //Ha a szamlalo ciklikus, akkor a szamlalot ujrainditjuk.
     //Ha letelt egy timer, es az van uzemmodban megadva, hogy interruptbol kell
@@ -165,7 +165,7 @@ void MyTimer_service(MyTimerManager_t* timerManager)
     timerManager->tickCnt++;
 
     //Vegig haladunk a timerek lancolt listajan, es amelyik be van kapcsolva, es
-    //meg nem jart le, anank csokkentjuk a szamlalojat.
+    //meg nem jart le, annak csokkentjuk a szamlalojat.
     //Ha a szamlalo elerte a 0-at, akkor jelezzuk, hogy az idozites letelt.
     //Ha a szamlalo ciklikus, akkor a szamlalot ujrainditjuk.
     //Ha letelt egy timer, es az van uzemmodban megadva, hogy interruptbol kell
