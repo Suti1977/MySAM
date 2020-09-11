@@ -63,8 +63,13 @@ ArmMcuProduct
         }
 
         if (project.useSeggerSysView)
-        {   //SEGGER RTT hozzaadasa
+        {   //SEGGER SYSTEM VIEW hozzaadasa
             arr.push(mywayPath+"/Thirdparty/SEGGER_SYSVIEW");
+        }
+
+        if (project.uselibfixmath)
+        {   //libfixmath fixpontos lib hozzaadasa
+            arr.push(mywayPath+"/Thirdparty/libfixmath/libfixmath");
         }
 
         return arr;

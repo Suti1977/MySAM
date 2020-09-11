@@ -35,6 +35,9 @@ Project
     //heap_1.c, heap_2.c ... fordul bele
     property string memManagerVerison: "1"
 
+    //libfixmath hasznalata (fix pontos MIT licences lib)
+    property bool uselibfixmath: false
+
 	//Ha ez true, akkor az indulo (startup) fileokat az applikacionak kell 
 	//biztositani, es nem az kerul beforditasra, amit a CMSIS-ek biztositanak.
 	//Ez foleg bootloaderes applikaciok eseten szukseges.
