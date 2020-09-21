@@ -45,8 +45,14 @@ ArmMcuProduct
 
         //FREE RTOS hasznalat jelzese egy globalis definiciok szerint
         if (project.useFreeRTOS)
-        {   //SEGGER RTT hozzaadasa
+        {
             arr.push("USE_FREERTOS");
+        }
+
+        //SYSTEM VIEW hasznalat jelezese
+        if (project.useSeggerSysView)
+        {   //SEGGER SYSTEM VIEW hozzaadasa
+            arr.push("USE_SYSTEMVIEW");
         }
 
         return arr;
