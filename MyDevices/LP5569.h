@@ -131,15 +131,9 @@ status_t LP5569_writeMultipleRegs(LP5569_t* dev,
 status_t LP5569_readReg(LP5569_t* dev, uint8_t address, uint8_t* regValue);
 
 //IC engedelyezese
-static inline status_t LP5569_enable(LP5569_t* dev)
-{
-    return LP5569_writeReg(dev, LP5569_REG_CONFIG, LP5569_CONFIG_CHIP_EN);
-}
+status_t LP5569_enable(LP5569_t* dev);
 //IC tiltasa
-static inline status_t LP5569_disbale(LP5569_t* dev)
-{
-    return LP5569_writeReg(dev, LP5569_REG_CONFIG, 0);
-}
+status_t LP5569_disable(LP5569_t* dev);
 
 //LED vezerlesek bealliatsanal, a master fader beallitashoz hasznalhato enumok.
 //(Olyan bitmaszkok, melyeket azonnal a regiszterbe irhatunk.)
@@ -210,6 +204,13 @@ typedef struct
     //false: Address auto-increment is disabled
     //true: Address auto-increment is enabled (default)
     bool autoIncrement;
+
+    //Charge pump discharge disable
+    //false: discharging is enabled in shutdown and standby states, absent of
+    //TSD. (default)    -->more standby current!
+    //true: discharging is disabled
+    bool cpDisableDischarge;
+
 } LP5569_Config_t;
 
 //LP5569 konfiguralasa
@@ -224,6 +225,8 @@ status_t LP5569_setMasterFader( LP5569_t* dev,
 status_t LP5569_setAllPwm( LP5569_t* dev,
                            uint8_t* pwmValues);
 
+//IC szoftveres reset
+status_t LP5569_reset(LP5569_t* dev);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //LP5569_H_
