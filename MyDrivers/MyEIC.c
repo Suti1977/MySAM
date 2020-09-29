@@ -80,9 +80,9 @@ void MyEIC_configChannel(uint8_t channel, const MyEIC_ChannelConfig_t* cfg)
     uint32_t temp;
     temp=cfg->inputSense;
     if (cfg->filterEnable) temp |= 0x80;
-    temp <<= (4 * channel);
+    temp <<= (4 * (channel & 7));
 
-    mask= 0xfUL << (4 * channel);
+    mask= 0xfUL << (4 * (channel & 7));
     uint32_t group=channel / 8;
     eic->CONFIG[ group ].reg &= ~mask;
     eic->CONFIG[ group ].reg |= temp;
