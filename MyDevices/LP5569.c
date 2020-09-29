@@ -97,6 +97,10 @@ status_t LP5569_config( LP5569_t* dev, const LP5569_Config_t* config)
     status=LP5569_writeReg(dev, LP5569_REG_MISC, regValue);
     if (status) return status;
 
+    if (config->cpDisableDischarge)
+    {   //Shutdown alatti charge pump kisutes tiltasa.
+        status=LP5569_writeReg(dev, LP5569_REG_MISC2, 1);
+    }
 
     return status;
 }
@@ -151,3 +155,36 @@ status_t LP5569_setAllPwm( LP5569_t* dev,
     return LP5569_writeMultipleRegs(dev, LP5569_REG_LED0_PWM, pwmValues, 9);
 }
 //------------------------------------------------------------------------------
+//IC engedelyezese
+status_t LP5569_enable(LP5569_t* dev)
+{
+    uint8_t regVal;
+
+    status_t status=LP5569_readReg(dev, LP5569_REG_CONFIG, &regVal);
+    if (status) return status;
+
+    regVal |=LP5569_CONFIG_CHIP_EN;
+
+    return LP5569_writeReg(dev, LP5569_REG_CONFIG, regVal);
+}
+//------------------------------------------------------------------------------
+//IC tiltasa
+status_t LP5569_disable(LP5569_t* dev)
+{
+    uint8_t regVal;
+
+    status_t status=LP5569_readReg(dev, LP5569_REG_CONFIG, &regVal);
+    if (status) return status;
+
+    regVal &=~LP5569_CONFIG_CHIP_EN;
+
+    return LP5569_writeReg(dev, LP5569_REG_CONFIG, regVal);
+}
+//------------------------------------------------------------------------------
+//IC szoftveres reset
+status_t LP5569_reset(LP5569_t* dev)
+{
+    //0xff-et irva a RESET registrebe
+    return LP5569_writeReg(dev, LP5569_REG_RESET, 0xff);
+}
+
