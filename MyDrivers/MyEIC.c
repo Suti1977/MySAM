@@ -43,6 +43,7 @@ void MyEIC_init(const MyEIC_Config_t* cfg)
 }
 //------------------------------------------------------------------------------
 //Egy kulso interrupt vonal konfiguralasa
+//Csak akkor lehetseges, ha az NVIC tiltott allapotu!
 void MyEIC_configChannel(uint8_t channel, const MyEIC_ChannelConfig_t* cfg)
 {
     Eic* eic=EIC;
