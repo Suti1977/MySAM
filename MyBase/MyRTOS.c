@@ -378,9 +378,12 @@ void vPortSetupTimerInterrupt( void )
 }
 //------------------------------------------------------------------------------
 //Akkor hivodik, ha az RTOS idle taszkja fut, nincsenek folyamatok.
-void vApplicationIdleHook( void )
+#ifdef configUSE_IDLE_HOOK
+void __attribute__((weak)) vApplicationIdleHook( void )
 {
-
+    //!!! IMPLEMENTALD A FORRASODBAN A vApplicationIdleHook() CALLBACKET !!!
+    while(1);
 }
+#endif
 //------------------------------------------------------------------------------
 #endif //USE_FREERTOS
