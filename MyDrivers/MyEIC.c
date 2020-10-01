@@ -17,7 +17,7 @@ void MyEIC_init(const MyEIC_Config_t* cfg)
 
     Eic* eic=EIC;
     //EIC resetelese...
-    eic->CTRLA.bit.SWRST=1;
+    eic->CTRLA.bit.SWRST=1; __DMB();
     while(eic->SYNCBUSY.reg);
 
     //EIC-hez orajelforras beallitasa. Lehet GCLK, vagy CLK_ULP32K. GCLK- csak
