@@ -87,7 +87,7 @@ void MyWDT_enable(void);
 void MyWDT_disable(void);
 //------------------------------------------------------------------------------
 //Watchdog torlese
-static inline MyWDT_clear(void)
+static inline void MyWDT_clear(void)
 {
     WDT->CLEAR.reg=0xA5;
     __DMB();

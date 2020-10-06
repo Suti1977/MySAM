@@ -38,11 +38,14 @@
 #define PIN2GROUP(pin)      (((pin >> 5)) & 0x03)
 //PIN neve alapjan a hozza tartozo port baziscimenek visszanyerese
 #define PIN2IN_ADDR(pin)   ((uint32_t)&PORT->Group[ PIN2GROUP(pin) ].IN)
+//Port es ID megadasval PIN azonosito letrehozasa
+#define MyGPIO_ID(port, pin)  (((uint32_t)port << 5) | pin)
 //------------------------------------------------------------------------------
 //PORT csoportok definialasa (hatha jo lesz valahova)
 #define PORT_A  0
 #define PORT_B  1
 #define PORT_C  2
+#define PORT_D  3
 
 //------------------------------------------------------------------------------
 // PIN KONFIGURACIOS REKORD FELEPITESE (bitkiosztas)
@@ -61,7 +64,7 @@
 #define _PINOP_PORT_MASK       (3<<_PINOP_PORT_POS)
 //20..16
 #define _PINOP_PIN_POS         16
-#define _PINOP_PIN_MASK        (0x31<<_PINOP_PIN_POS)
+#define _PINOP_PIN_MASK        (31<<_PINOP_PIN_POS)
 
 //11
 #define _PINOP_STRENGTH_POS    11
@@ -125,7 +128,12 @@
 //A MyGPIO_pinGroupConfig() rutin eddig a bejegyzesig dolgozza fel a tablazatot.
 #define PINCONFIG_END           0xFFFFFFFF
 //------------------------------------------------------------------------------
-
+//PIN config bitmaszkbol port sorszam kinyerese
+#define PINCFG2PORT(a)   ((a >> _PINOP_PORT_POS) & 3)
+//PIN config bitmaszkbol porton beluli pin sorszamanak kinyerese
+#define PINCFG2BIT(a)    ((a >> _PINOP_PIN_POS) & 31)
+//PIN configuraciobol PIN azonosito konvertalasa
+#define MyGPIO_CFG2ID(cfg)    MyGPIO_ID(PINCFG2PORT(cfg), PINCFG2BIT(cfg))
 //------------------------------------------------------------------------------
 //PINEK kezelese gyors makrokon keresztul
 
@@ -269,6 +277,38 @@
 #define PINMUX_PC30_GPIO        ((PIN_PC30 << 16)  |   PINOP_GPIO)
 #define PINMUX_PC31_GPIO        ((PIN_PC31 << 16)  |   PINOP_GPIO)
 
+#define PINMUX_PD00_GPIO        ((PIN_PD00 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD01_GPIO        ((PIN_PD01 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD02_GPIO        ((PIN_PD02 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD03_GPIO        ((PIN_PD03 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD04_GPIO        ((PIN_PD04 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD05_GPIO        ((PIN_PD05 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD06_GPIO        ((PIN_PD06 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD07_GPIO        ((PIN_PD07 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD08_GPIO        ((PIN_PD08 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD09_GPIO        ((PIN_PD09 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD10_GPIO        ((PIN_PD10 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD11_GPIO        ((PIN_PD11 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD12_GPIO        ((PIN_PD12 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD13_GPIO        ((PIN_PD13 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD14_GPIO        ((PIN_PD14 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD15_GPIO        ((PIN_PD15 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD16_GPIO        ((PIN_PD16 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD17_GPIO        ((PIN_PD17 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD18_GPIO        ((PIN_PD18 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD19_GPIO        ((PIN_PD19 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD20_GPIO        ((PIN_PD20 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD21_GPIO        ((PIN_PD21 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD22_GPIO        ((PIN_PD22 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD23_GPIO        ((PIN_PD23 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD24_GPIO        ((PIN_PD24 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD25_GPIO        ((PIN_PD25 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD26_GPIO        ((PIN_PD26 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD27_GPIO        ((PIN_PD27 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD28_GPIO        ((PIN_PD28 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD29_GPIO        ((PIN_PD29 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD30_GPIO        ((PIN_PD30 << 16)  |   PINOP_GPIO)
+#define PINMUX_PD31_GPIO        ((PIN_PD31 << 16)  |   PINOP_GPIO)
 //------------------------------------------------------------------------------
 //GPIO kezeles kezdeti initje
 void MyGPIO_initPorts(void);
