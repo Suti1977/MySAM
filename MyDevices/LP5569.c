@@ -11,7 +11,7 @@
 void LP5569_create(LP5569_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
 {
     //I2C eleres letrehozasa
-    MyI2CM_CreateDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
+    MyI2CM_createDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
 }
 //------------------------------------------------------------------------------
 //Az IC egy 8 bites regiszterenek irasa

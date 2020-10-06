@@ -13,7 +13,7 @@ void EMC1815_create(EMC1815_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
     //modul valtozoinak kezdeti nulalzsasa
     memset(dev, 0, sizeof(EMC1815_t));
 
-    MyI2CM_CreateDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
+    MyI2CM_createDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
 
 }
 //------------------------------------------------------------------------------

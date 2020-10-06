@@ -47,7 +47,7 @@ void MyRDM_init(void)
 //------------------------------------------------------------------------------
 //Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
-void MyRDM_initResource(  resource_t* resource,
+void MyRDM_createResource(  resource_t* resource,
                           const resourceFuncs_t* funcs,
                           void* funcsParam,
                           const char* resourceName)
@@ -65,7 +65,7 @@ void MyRDM_initResource(  resource_t* resource,
     resource->state=RESOURCE_STATE_UNKNOWN;
     resource->funcs=funcs;
     resource->funcsParam=funcsParam;
-    resource->resourceName=resourceName;
+    resource->resourceName=(resourceName==NULL) ? "?" :resourceName;
 
     //Az eroforrast hozzaadjuk a rendszerben levo eroforrasok listajahoz...
     MyRDM_addResource(resource);

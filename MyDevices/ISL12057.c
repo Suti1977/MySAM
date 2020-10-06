@@ -14,7 +14,7 @@ void ISL12057_create(ISL12057_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
     //modul valtozoinak kezdeti nulalzsasa
     memset(dev, 0, sizeof(ISL12057_t));
 
-    MyI2CM_CreateDevice(&dev->device, i2c, slaveAddress, NULL);
+    MyI2CM_createDevice(&dev->device, i2c, slaveAddress, NULL);
 }
 //------------------------------------------------------------------------------
 //ISL12057 irasa. A megadott cimtol kezd kiirni egy megadott adattartalmat,

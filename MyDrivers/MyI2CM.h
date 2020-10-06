@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-//  I2C kezelest segito wrapper. FreeRTOS-hez illeszkedik.
+//  I2C Master driver
 //
 //    File: MyI2CM.h
 //------------------------------------------------------------------------------
@@ -239,7 +239,7 @@ void MyI2CM_service(MyI2CM_t* i2cm);
 //i2c: Annak a busznak az I2CM driverenek handlere, melyre az eszkoz csatlakozik
 //slave_address: Eszkoz I2C slave cime a buszon
 //handler: Az I2C-s eszkozhoz tartozo driver handlere
-void MyI2CM_CreateDevice(MyI2CM_Device_t* i2cDevice,
+void MyI2CM_createDevice(MyI2CM_Device_t* i2cDevice,
                          MyI2CM_t* i2c,
                          uint8_t slaveAddress,
                          void* handler);

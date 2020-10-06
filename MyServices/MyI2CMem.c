@@ -16,7 +16,7 @@ void MyI2CMem_create(MyI2CMem_t* mem, const MyI2CMem_Config_t* cfg)
     ASSERT(cfg->addressFieldSize);
     ASSERT(cfg->addressFieldSize<5);
 
-    MyI2CM_CreateDevice(&mem->i2cDevice, cfg->i2c, cfg->slaveAddress, NULL);
+    MyI2CM_createDevice(&mem->i2cDevice, cfg->i2c, cfg->slaveAddress, NULL);
     mem->addressFieldSize=cfg->addressFieldSize;
     mem->writeBlockSize=cfg->writeBlockSize;
 }

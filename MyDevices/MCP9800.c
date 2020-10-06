@@ -12,7 +12,7 @@
 void MCP9800_create(MCP9800_t* dev, MyI2CM_t* i2c, uint8_t slaveAddress)
 {
     //I2C eleres letrehozasa
-    MyI2CM_CreateDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
+    MyI2CM_createDevice(&dev->i2cDevice, i2c, slaveAddress, NULL);
 
     //I2C eszkoz felkonfiguralasa. Folyamatos mukodes, 12 bites meresi
     //eredmenyek alkalmazasa.

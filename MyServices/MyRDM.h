@@ -186,7 +186,7 @@ typedef struct
     uint32_t    runningResourceCount;
 
     //A nyilvantartott eroforrasok lancolt listajanak az elso es utolso eleme.
-    //Az MyRDM_initResourceManagement rutinnal kerulnek hozzadasra.
+    //Az MyRDM_createResource() management rutinnal kerulnek hozzadasra.
     //Ez alapjan az eroforrasokon vegig lehet haladni, es azokon csoportos
     //muveleteket vegrehajtani.
     resource_t*    firstResource;
@@ -298,7 +298,7 @@ void MyRDM_init(void);
 
 //Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra!
-void MyRDM_initResource(  resource_t* resource,
+void MyRDM_createResource(  resource_t* resource,
                           const resourceFuncs_t* funcs,
                           void* funcsParam,
                           const char* resourceName);
