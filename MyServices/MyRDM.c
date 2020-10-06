@@ -6,9 +6,9 @@
 #include "MyRDM.h"
 #include <string.h>
 
-//Manager sajat valtozoi.
-//TODO: megoldani, hogy ennek instanciaja csak opcionalis forditas eseten jojjon letre!
-//MyRDM_t myrdm;
+//Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
+//Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
+//MyRDM_INSTANCE
 
 static inline status_t MyRDM_dependencyStarted(resource_t* resource);
 static inline void MyRDM_dependencyStop(resource_t* resource);
@@ -48,8 +48,9 @@ void MyRDM_init(void)
 //Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
 void MyRDM_initResource(  resource_t* resource,
-                            const resourceFuncs_t* Funcs,
-                            void* FuncsParam)
+                          const resourceFuncs_t* funcs,
+                          void* funcsParam,
+                          const char* resourceName)
 {
     memset(resource, 0, sizeof(resource_t));
 
@@ -62,8 +63,9 @@ void MyRDM_initResource(  resource_t* resource,
   #endif
 
     resource->state=RESOURCE_STATE_UNKNOWN;
-    resource->funcs=Funcs;
-    resource->funcsParam=FuncsParam;
+    resource->funcs=funcs;
+    resource->funcsParam=funcsParam;
+    resource->resourceName=resourceName;
 
     //Az eroforrast hozzaadjuk a rendszerben levo eroforrasok listajahoz...
     MyRDM_addResource(resource);
@@ -325,7 +327,7 @@ static inline status_t MyRDM_dependencyStarted(resource_t* resource)
                 //Az eroforras el van inditva. Vartuk ezt a jelzest, hogy a
                 //fuggosegek mind elinduljanak.
                 //Az eroforras maga is elindithato.
-                if (resource->funcs->Start)
+                if (resource->funcs->start)
                 {
                     //A startResource cimkere ugrunk.
                     //(Kevesebb stack felhasznalas)
@@ -392,7 +394,7 @@ startResource:
     //status callbacket, ha az inditas azonnak elvegezheto.
 
     //Az indito callbacket meghivjuk.
-    status=resource->funcs->Start(resource->funcsParam);
+    status=resource->funcs->start(resource->funcsParam);
 
     //Ezek utan majd az eroforrashoz tartozo callbackben kapunk
     //ertesitest a leallitasi parancs kimenetelerol.
@@ -695,7 +697,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
                 }
                 //xxx
 
-                if (resource->funcs->Start)
+                if (resource->funcs->start)
                 {
                     //A startResource cimkere ugrunk. (Jobb stack felhasznalas)
                     //A cimke unlockolja a mutexet, majd meghivja az eroforras
@@ -769,7 +771,7 @@ startResource:
     //status callbacket, ha az inditas azonnak elvegezheto.
 
     //Az indito callbacket meghivjuk.
-    status=resource->funcs->Start(resource->funcsParam);
+    status=resource->funcs->start(resource->funcsParam);
 
     //Ezek utan majd az eroforrashoz tartozo callbackben kapunk
     //ertesitest a leallitasi parancs kimenetelerol.
@@ -1087,7 +1089,7 @@ void MyRDM_resourceStatus(resourceStatus_t resourceStatus,
                 if (resource->depCnt==0)
                 {   //A eroforrasnak nincs fuggosege, amire varni kellene.
                     //Azonnal indulhatunk...
-                    if (resource->funcs->Start)
+                    if (resource->funcs->start)
                     {
                         //A startResource cimkere ugrunk.(Jobb stack felhasznalas)
                         //A cimke unlockolja a mutexet, majd meghivja az
@@ -1234,7 +1236,7 @@ startResource:
     //status callbacket, ha az inditas azonnak elvegezheto.
 
     //Az indito callbacket meghivjuk.
-    errorCode=resource->funcs->Start(resource->funcsParam);
+    errorCode=resource->funcs->start(resource->funcsParam);
 
     //Ezek utan majd az eroforrashoz tartozo callbackben kapunk
     //ertesitest a leallitasi parancs kimenetelerol.
@@ -1633,7 +1635,7 @@ void MyRDM_addGeneralUser(resource_t* resource, generalResourceUser_t* genUser)
     //Esemenyflag mezo letrehozasa hozza. (statikus)
     genUser->events=xEventGroupCreateStatic(&genUser->eventsBuff);
 
-    //Az altalanos usrekehez tartozo kozos alalpot callback lesz beallitva
+    //Az altalanos usrekehez tartozo kozos allapot callback lesz beallitva
     genUser->user.statusFunc=MyRDM_generalUserStatusCallback;
     genUser->user.callbackData=genUser;
 

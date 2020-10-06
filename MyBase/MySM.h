@@ -58,7 +58,7 @@ void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState);
         return kStatus_Success
 
 //Egy makro, mely visszaadja az initkor beallitott userData parametrert.
-//A makrot az alalpotfuggvenyeken belul lehet hasznalni. Parametereben
+//A makrot az allapotfuggvenyeken belul lehet hasznalni. Parametereben
 //megadhato, hogy milyen tipusra kasztolja a parametert.
 #define MYSM_USER_DATA(type) ((type) (((MySM_t*)sm)->userData))
 

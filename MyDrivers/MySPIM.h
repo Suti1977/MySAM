@@ -50,7 +50,7 @@ typedef struct
 #define MYSPIM_ATTR_LSB_FIRST           SERCOM_SPI_CTRLA_DORD
 
 //SP transfer modok
-//Ezek fuggenek a CPOL alalpotatatol
+//Ezek fuggenek a CPOL allapotatatol
 // Mode  Leadin Edge      Trailing Edge    Clk idle state
 // 0:   Rising, sample    Falling, change         low
 // 1:   Rising, change    Falling, sample         low

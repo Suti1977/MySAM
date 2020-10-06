@@ -8,6 +8,9 @@
 
 #include "MyCommon.h"
 
+//Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
+//Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
+#define MyRDM_INSTANCE  MyRDM_t myrdm;
 //------------------------------------------------------------------------------
 //Eroforrasok statusz definicioi.
 //Az egyes eroforrasok kezelesenek implementalasakor ezekeken keresztul jelzik
@@ -43,7 +46,7 @@ typedef struct
     //eroforrast inicializalo callback
     resourceInitFunc_t*        init;
     //Eroforrast elindito callback
-    resourceStartFunc_t*       Start;
+    resourceStartFunc_t*       start;
     //Eroforrast leallito callback
     resourceStopFunc_t*        stop;
 } resourceFuncs_t;
@@ -295,9 +298,10 @@ void MyRDM_init(void);
 
 //Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra!
-void MyRDM_initResource(resource_t* resource,
-                        const resourceFuncs_t* funcs,
-                        void* funcsParam);
+void MyRDM_initResource(  resource_t* resource,
+                          const resourceFuncs_t* funcs,
+                          void* funcsParam,
+                          const char* resourceName);
 //------------------------------------------------------------------------------
 //Az resourceUser_t struktura beallitasat segito rutin.
 //user: a hasznalati leirora mutat
