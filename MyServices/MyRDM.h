@@ -168,6 +168,9 @@ typedef struct
     //fuggvenye.
     bool    started;
 
+    //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
+    //eroforrashoz letrehoztak taszkot.
+    void* ext;
 } resource_t;
 //------------------------------------------------------------------------------
 //Minden eroforras sikeres leallitasa utan hihato callback fuggveny definialasa
@@ -296,12 +299,21 @@ typedef struct
 //Eroforras management reset utani kezdeti inicializalasa
 void MyRDM_init(void);
 
-//Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
+//Eroforras letrehozasa.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra!
 void MyRDM_createResource(  resource_t* resource,
                           const resourceFuncs_t* funcs,
                           void* funcsParam,
                           const char* resourceName);
+
+//Egyedi eroforras letrehozasa, bovitmeny megadasaval
+//Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
+void MyRDM_createResourceExt(resource_t* resource,
+                          const resourceFuncs_t* funcs,
+                          void* funcsParam,
+                          const char* resourceName,
+                          void* ext);
+
 //------------------------------------------------------------------------------
 //Az resourceUser_t struktura beallitasat segito rutin.
 //user: a hasznalati leirora mutat
@@ -407,7 +419,7 @@ resource_t* MyRDM_getResourceByName(const char* name);
 uint32_t MyRDM_getRunningResourcesCount(void);
 
 //Minden eroforras sikeres leallitasakor hivodo callback funkcio beregisztralasa
-void MyRDM_Register_allResourceStoppedFunc(MyRDM_allResourceStoppedFunc_t* func,
+void MyRDM_register_allResourceStoppedFunc(MyRDM_allResourceStoppedFunc_t* func,
                                            void* callbackData);
 //------------------------------------------------------------------------------
 #endif //MyRDM_H_

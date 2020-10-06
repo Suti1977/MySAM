@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 #include "MyRDM.h"
 #include <string.h>
+#include "MyTaskedResource.h"
 
 //Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
 //Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
@@ -45,12 +46,13 @@ void MyRDM_init(void)
   #endif
 }
 //------------------------------------------------------------------------------
-//Egyedi eroforras managellesehez szukseges kezdeti inicializalasok.
+//Egyedi eroforras letrehozasa, bovitmeny megadasaval
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
-void MyRDM_createResource(  resource_t* resource,
+void MyRDM_createResourceExt(resource_t* resource,
                           const resourceFuncs_t* funcs,
                           void* funcsParam,
-                          const char* resourceName)
+                          const char* resourceName,
+                          void* ext)
 {
     memset(resource, 0, sizeof(resource_t));
 
@@ -66,9 +68,20 @@ void MyRDM_createResource(  resource_t* resource,
     resource->funcs=funcs;
     resource->funcsParam=funcsParam;
     resource->resourceName=(resourceName==NULL) ? "?" :resourceName;
+    resource->ext=ext;
 
     //Az eroforrast hozzaadjuk a rendszerben levo eroforrasok listajahoz...
     MyRDM_addResource(resource);
+}
+//------------------------------------------------------------------------------
+//Eroforras letrehozasa.
+//Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
+void MyRDM_createResource(resource_t* resource,
+                          const resourceFuncs_t* funcs,
+                          void* funcsParam,
+                          const char* resourceName)
+{
+    MyRDM_createResourceExt(resource, funcs, funcsParam, resourceName, NULL);
 }
 //------------------------------------------------------------------------------
 //A rendszerben levo eroforrasok listajahoz adja a hivatkozott eroforras kezelot.
@@ -345,6 +358,11 @@ static inline status_t MyRDM_dependencyStarted(resource_t* resource)
                     //Az eroforras elindult jelzes kiadasa a ra varakozokra,
                     //akik tole fuggenek. (mutexelve kell hivni)
                     status=MyRDM_resourceStarted(resource);
+
+                    //TODO: megnezni, hogy mi tortenik, ha itt nem sucess-al jon vissza!!!!
+                    //      Ez azt jelentene, hogy az initben hiba volt, es
+                    //      az eroforras nem indult el. Hibara kene menni, nem
+                    //      RUN-ra!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                     //Jelzes az applikacio fele, hogy az eroforras elindult
                     MyRDM_signallingUsers(resource, RESOURCE_RUN, 0);
@@ -1788,7 +1806,7 @@ uint32_t MyRDM_getRunningResourcesCount(void)
 }
 //------------------------------------------------------------------------------
 //Minden eroforras sikeres leallitasakor hivodo callback funkcio beregisztralasa
-void MyRDM_Register_allResourceStoppedFunc(MyRDM_allResourceStoppedFunc_t* func,
+void MyRDM_register_allResourceStoppedFunc(MyRDM_allResourceStoppedFunc_t* func,
                                            void* callbackData)
 {
     MyRDM_t* man=&myrdm;
@@ -1797,3 +1815,5 @@ void MyRDM_Register_allResourceStoppedFunc(MyRDM_allResourceStoppedFunc_t* func,
     man->callbackData=callbackData;
     xSemaphoreGive(man->mutex);
 }
+//------------------------------------------------------------------------------
+
