@@ -23,6 +23,9 @@ typedef enum
     //kalibraljak, akkor az ilyen tipusu bejegyzes utan lesz hangolva, mivel
     //valtozik a relativ masodperc szamlalo.
     ALARM_MODE_RELATIVE,
+
+    //Periodikusan bekovetkezo idozito uzemmod
+    ALARM_MODE_PERIODIC,
 } MyCalendar_alarmMode_t;
 //------------------------------------------------------------------------------
 //Valos ideju orahoz kotott riasztasok definiciora leiro.
@@ -33,8 +36,13 @@ typedef struct
     //A riasztasi bejegyzes tipusa
     MyCalendar_alarmMode_t   mode;
 
-    //Masodpercben megadva a riasztasi idopont
+    //Masodpercben megadva a riasztasi idopont.
+    //Periodikus mukodes eseten az elso, majd kesobb a periodikus ismetlesek
+    //idopontjai.
     uint32_t    time;
+
+    //Periodikus mukodes eseten az idokoz
+    uint32_t period;
 
     //A riasztas bekovetkezesekor meghivando callback funkcio, es az ahhoz
     //atadott tetszoleges parameter.

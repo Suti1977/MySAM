@@ -345,7 +345,7 @@ void MyCalendar_service(void)
     uint32_t sec=MyRTC_mode0_getCounter();
 
     sec=MyRTC_mode0_getCounter();
-    printf("_ALARM_  -->T: %d\n", (int)sec);
+    //printf("_ALARM_  -->T: %d\n", (int)sec);
 
     //vegig elemezzuk a beregisztralt riasztasokat...
     MyCalendar_alarm_t* alarm=myCalendar.firstAlarm;
@@ -361,14 +361,30 @@ void MyCalendar_service(void)
             if (alarm->time<=sec)
             {   //Ez az idopont van, vagy mar at is lepte az RTC.
 
-                //A leirot tiltjuk
-                alarm->enabled=false;
+
+                if (alarm->mode==ALARM_MODE_PERIODIC)
+                {   //Periodikus mukodesu timer.
+                    //uj idopont kiszamitasa
+                    alarm->time += alarm->period;
+
+                    //Keressuk a legkorabbi idopontot a leirokban...
+                    if (alarm->time < nextAlarmTime)
+                    {   //Talaltunk egy korabbi idopontot a leirokban.
+                        //Aktualizalunk.
+                        nextAlarmTime=alarm->time;
+                    }
+                } else
+                {   //Csak egyszer fut le az idozites.
+                    //A leirot tiltjuk
+                    alarm->enabled=false;
+                }
 
                 //A hozza beregisztralt callbacket meg kell hivni
                 if (alarm->alarmFunc)
                 {
                     alarm->alarmFunc(alarm->callbackParam);
                 }
+
 
             } else
             {   //Ez az idopont meg nem kovetkezett be.
@@ -398,6 +414,7 @@ static void MyCalendar_printAlarmInfo(MyCalendar_alarm_t* alarm)
     printf("[%s] ", alarm->enabled ? "*" : " ");
     printf("%16s   ", alarm->alarmName ? alarm->alarmName : "????");
     printf("Mode: %d  ", alarm->mode);
+    printf("Period: %4d  ", (int)alarm->period);
     printf("Time: %d  ", (int)alarm->time);
     printf("\n");
 }
