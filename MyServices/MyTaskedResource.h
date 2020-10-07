@@ -9,27 +9,47 @@
 #include "MyRDM.h"
 #include "MyCommon.h"
 
+//------------------------------------------------------------------------------
 //Eroforras inditasat eloiro esemeny flag
 #define MyTASKEDRESOURCE_EVENT__START_REQUEST   BIT(22)
 //Eroforras leallitasat kero esemeny flag
 #define MyTASKEDRESOURCE_EVENT__STOP_REQUEST    BIT(23)
+//------------------------------------------------------------------------------
+//Az eroforrast vezerlo valtozok halmaza
+typedef struct
+{
+    //A taszknak kuldott eventek
+    EventBits_t events;
+    //A ciklusnak erre az esemenyre kell varnia. Ezt a loop-ban, vagy a Starting
+    //funkciokban is modosithatja az applikacio
+    EventBits_t waitedEvents;
+    //A varakozasi ido tick-ben
+    uint32_t waitTime;
+    //Feladat kesz jelzes. Azoknal az eroforrasoknal, melyek elinditasa utan
+    //azok mukodese egy ido utan befejezodik, ott ezen a flagen keresztul tudja
+    //jelezni azt a start vagy loop callbackban futtatott kod.
+    //Hatasara a manager fele RESOURCE_DONE alalpot kerul jelzesre, es az
+    //eroforras ujra a start feltetelre fog varni.
+    bool done;
 
+} taskedRsource_control_t;
 //------------------------------------------------------------------------------
 //Az eroforras inicializalasakor meghivodo callback definicioja
 typedef status_t taskedResourceInitFunc_t(void* callbackData);
 //Az eroforras inditasi kerelmekor hivott callback rutin definicioja
-typedef status_t taskedResourceStartFunc_t(void* callbackData);
+typedef void taskedResourceStartReqFunc_t(void* callbackData);
 //Az eroforras leallitasi kerelmenel hivott callback rutin definicioja
-typedef status_t taskedResourceStopFunc_t(void* callbackData);
+typedef void taskedResourceStopReqFunc_t(void* callbackData);
 //Az eroforras elinditasara, a taszkban meghivodo rutin
-typedef status_t taskedResourceStartingFunc_t(void* callbackData);
+typedef status_t taskedResourceStartFunc_t(void* callbackData,
+                                              taskedRsource_control_t* control);
 //Az eroforras leallitasi kerelme utan a taszkban meghivodo rutin
-typedef status_t taskedResourceStoppingFunc_t(void* callbackData);
+typedef status_t taskedResourceStopFunc_t(void* callbackData);
 //Hiba eseten, a taszkbol hivott callback definicioja
-typedef status_t taskedResourceErrorFunc_t(void* callbackData);
+typedef void taskedResourceErrorFunc_t(void* callbackData);
 //Eroforrast futtato callback definicioja
 typedef status_t taskedResourceLoopFunc_t(void* callbackData,
-                                          EventBits_t* waitedEvents);
+                                          taskedRsource_control_t* control);
 //------------------------------------------------------------------------------
 //Taszkal rendelkezo eroforras inicializalasanal hasznalt struktura.
 typedef struct
@@ -47,13 +67,13 @@ typedef struct
     //Az eroforras inicializalasakor meghivodo callback definicioja
     taskedResourceInitFunc_t* initFunc;
     //Az eroforras inditasi kerelmekor hivott callback rutin definicioja
-    taskedResourceStartFunc_t* startFunc;
+    taskedResourceStartReqFunc_t* startRequestFunc;
     //Az eroforras leallitasi kerelmenel hivott callback rutin definicioja
-    taskedResourceStopFunc_t* stopFunc;
+    taskedResourceStopReqFunc_t* stopRequestFunc;
     //Az eroforras elinditasara, a taszkban meghivodo rutin
-    taskedResourceStartingFunc_t* startingFunc;
+    taskedResourceStartFunc_t* startFunc;
     //Az eroforras leallitasi kerelme utan a taszkban meghivodo rutin
-    taskedResourceStoppingFunc_t* stoppingFunc;
+    taskedResourceStopFunc_t* stopFunc;
     //Hiba eseten, a taszkbol hivott callback definicioja
     taskedResourceErrorFunc_t* errorFunc;
     //Eroforrast futtato callback definicioja
@@ -77,7 +97,7 @@ typedef struct
 } taskedResourceExtension_t;
 //------------------------------------------------------------------------------
 //Taszkal tamogatott eroforras letrehozasa
-void MyTaskedResource_createResource(resource_t* resource,
+void MyTaskedResource_create(resource_t* resource,
                                      taskedResourceExtension_t* ext,
                                      const taskedResource_config_t* cfg);
 

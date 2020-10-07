@@ -274,7 +274,9 @@ typedef struct
     //rutinok. (Statikus)
     //GENUSEREVENT_xxx bitekkel operalunk rajta
     EventGroupHandle_t  events;
+  #if configSUPPORT_STATIC_ALLOCATION
     StaticEventGroup_t  eventsBuff;
+  #endif
 
     //Hiba eseten meghivhato callback funkcio cime. Ezen keresztul lehet jelezni
     //az applikacio fele az eroforras mukodese kozbeni hibakat.

@@ -1619,7 +1619,7 @@ static void MyRDM_generalUserStatusCallback(resourceStatus_t resourceStatus,
     }
 
     //Elagaz a statusz alapjan
-    switch(resourceStatus)
+    switch((int)resourceStatus)
     {
         case RESOURCE_RUN:
             //A eroforras elindult. Jelezzuk a varakozo taszknak.
@@ -1650,8 +1650,12 @@ static void MyRDM_generalUserStatusCallback(resourceStatus_t resourceStatus,
 //regisztraciot.
 void MyRDM_addGeneralUser(resource_t* resource, generalResourceUser_t* genUser)
 {
-    //Esemenyflag mezo letrehozasa hozza. (statikus)
+    //Esemenyflag mezo letrehozasa
+  #if configSUPPORT_STATIC_ALLOCATION
     genUser->events=xEventGroupCreateStatic(&genUser->eventsBuff);
+  #else
+    genUser->events=xEventGroupCreate();
+  #endif
 
     //Az altalanos usrekehez tartozo kozos allapot callback lesz beallitva
     genUser->user.statusFunc=MyRDM_generalUserStatusCallback;
@@ -1766,8 +1770,7 @@ static void MyRDM_incrementRunningResourcesCnt(void)
 //------------------------------------------------------------------------------
 //A futo/elinditott eroforrasok szamat csokkenti, ha egy eroforras leallt.
 static void MyRDM_decrementRunningResourcesCnt(void)
-{
-    bool signalling=false;
+{    
     MyRDM_t* man=&myrdm;
     xSemaphoreTake(man->mutex, portMAX_DELAY);
 

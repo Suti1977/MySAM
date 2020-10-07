@@ -5,17 +5,15 @@
 //------------------------------------------------------------------------------
 #include "MyTaskedResource.h"
 
-static
-
 static status_t MyTaskedResource_resource_init(void* param, void* statusHandler);
 static status_t MyTaskedResource_resource_start(void* param);
 static status_t MyTaskedResource_resource_stop(void* param);
 static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam);
 //------------------------------------------------------------------------------
 //Taszkal tamogatott eroforras letrehozasa
-void MyTaskedResource_createResource(resource_t* resource,
-                                     taskedResourceExtension_t* this,
-                                     const taskedResource_config_t* cfg)
+void MyTaskedResource_create(resource_t* resource,
+                             taskedResourceExtension_t* this,
+                             const taskedResource_config_t* cfg)
 {
     //Konfiguracio masolasa
     memcpy(&this->cfg, cfg, sizeof(taskedResource_config_t));
@@ -80,25 +78,15 @@ static status_t MyTaskedResource_resource_start(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
 
-    status_t status=kStatus_Success;
-
     if (this->cfg.startFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
-        status=this->cfg.startFunc(this->cfg.callbackData);
+        this->cfg.startRequestFunc(this->cfg.callbackData);
     }
 
-    if (status==kStatus_Success)
-    {   //A start callback nem adott hibat (ha egyaltalan volt beregisztralva)
-        //Jelzes az eroforrast futtato szalnak, hogy kezdje meg a mukodest.
-        xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__START_REQUEST);
-    } else
-    {   //Hiba volt a start callback alatt.
-        //TODO: mi legyen a strategia???????????????????????????????????????????????????????????
-        // kuldunk error statuszt, vagy bovitjuk a MyRDM modult, hogy ilyenkor
-        // automatikusan menjen hibara?
-    }
+    //Indito esemeny beallitasa, melyre a taszkban varakozo folyamat elindul
+    xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__START_REQUEST);
 
-    return status;
+    return kStatus_Success;
 }
 //------------------------------------------------------------------------------
 //Eroforras leallitasakor hivott callback
@@ -106,27 +94,16 @@ static status_t MyTaskedResource_resource_stop(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
 
-    status_t status=kStatus_Success;
-
     if (this->cfg.stopFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
-        status=this->cfg.stopFunc(this->cfg.callbackData);
+        this->cfg.stopRequestFunc(this->cfg.callbackData);
     }
 
-    if (status==kStatus_Success)
-    {   //A stop callback nem adott hibat (ha egyaltalan volt beregisztralva)
-        //Jelzes az eroforrast futtato szalnak, hogy kezdje meg a mukodest.
-        xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
-    } else
-    {   //Hiba volt a stop callback alatt.
-        //TODO: mi legyen a strategia???????????????????????????????????????????????????????????
-        // kuldunk error statuszt, vagy bovitjuk a MyRDM modult, hogy ilyenkor
-        // automatikusan menjen hibara?
-        //A szalat mindenkepen le kell allitani szerintem.
-        xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
-    }
+    //Leallitasi kerelem esemeny beallitasa, melyre a taszkban a loop ciklus
+    //elott minden korben ravizsglava kezdemenyezheto az eroforars leallasa.
+    xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
 
-    return status;
+    return kStatus_Success;
 }
 //------------------------------------------------------------------------------
 static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
@@ -140,15 +117,27 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
     {
         status_t status=kStatus_Success;
 
+        //Vezerlo valtozok, melyeken keresztul adjuk at a fuggevyneknek a
+        //kapott esemeny flageket, de ezen keresztul modosithatjak a callbackek
+        //a varakozasi idot, vagy irhatjak elo a varakozasra az eventeket.
+        taskedRsource_control_t control;
+
+        //Start kerelemre varakozik a taszk
+        control.waitedEvents=MyTASKEDRESOURCE_EVENT__START_REQUEST;
+        //Vegtelen ideig
+        control.waitTime=portMAX_DELAY;
+        control.done=0;
+
         //varakozas arra, hogy az eroforrast elinditjak...
-        xEventGroupWaitBits(this->events,
-                            MyTASKEDRESOURCE_EVENT__START_REQUEST, pdTRUE,
-                            pdFALSE,
-                            portMAX_DELAY);
+        control.events=xEventGroupWaitBits(this->events,
+                                          control.waitedEvents,
+                                          pdTRUE,
+                                          pdFALSE,
+                                          control.waitTime);
         //Eroforras indul...
-        if (this->cfg.startingFunc)
+        if (this->cfg.startFunc)
         {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
-            status=this->cfg.startingFunc(this->cfg.callbackData);
+            status=this->cfg.startFunc(this->cfg.callbackData, &control);
             if (status)
             {
                 goto error;
@@ -156,30 +145,111 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         }
 
         //Az eroforras elindult. Reportoljuk az eroforras manager fele...
-        MyRDM_resourceStatus(RESOURCE_RUN, 0, this->statusHandler);
+        MyRDM_resourceStatus(RESOURCE_RUN, status, this->statusHandler);
+
+        //Az elso futasnal nem akad meg az eventekre varasnal.
+        control.waitTime=0;
 
         //Eroforrast futtato ciklus...
         while(1)
         {
-            //Annak ellenorzese, hogy nem volt-e leallitasi kerelem...
-            EventBits_t events;
-            events=xEventGroupGetBits(this->events);
-            if (events & MyTASKEDRESOURCE_EVENT__STOP_REQUEST)
-            {   //leallitasi kerelem erkezett.
-                //Nem toroljuk az esemeny flaget, hogy a kilepes utan is
-                //tovabb tudja billenteni a mukodest.
-                //xEventGroupClearBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
+            if (control.done)
+            {   //Az eroforras befejezte a mukodeset. Jelzes a manager fele.
+                MyRDM_resourceStatus(RESOURCE_DONE, status, this->statusHandler);
+
+                //A loop funkcio mar nem kerul futtatasra. Kilep a belso
+                //ciklusbol, majd a kulos ciklusban ujra a start jelre fog varni.
                 break;
             }
 
+            //Varakozas esemenyre...
+            //A kilepesei flagre mindig varakozhat
+            control.waitedEvents |= MyTASKEDRESOURCE_EVENT__STOP_REQUEST;
 
+            //varakozas esemenyre, vagy csak idozites...
+            control.events=xEventGroupWaitBits(this->events,
+                                              control.waitedEvents,
+                                              pdTRUE,
+                                              pdFALSE,
+                                              control.waitTime);
+
+            //Annak ellenorzese, hogy le kell-e allitani az eroforrast...
+            if (control.events & MyTASKEDRESOURCE_EVENT__STOP_REQUEST)
+            {   //leallitasi kerelem van.
+
+                if (this->cfg.stopFunc)
+                {   //Van megadva leallitasi funkcio. Meghivjuk...
+                    status=this->cfg.stopFunc(this->cfg.callbackData);
+                    if (status)
+                    {   //hiba volt a leallitas alatt. Hibakezeles...
+                        goto error;
+                    }
+                }
+
+                //Az eroforras leallt. Reportoljuk az eroforras manager fele...
+                MyRDM_resourceStatus(RESOURCE_STOP, status, this->statusHandler);
+                //kilepes a belso ciklusbol. A kulso ciklusban ujra a start
+                //esemenyre fog varakozni.
+                break;
+            }
+
+            //A loop ciklusban ha kell valmire varakozni, akkor majd beallitja.
+            //Ha nem modositja a loop callbackben futo folyamat ezt a mezot,
+            //akkor a loopbol visszaterve, csak a __STOP_REQUEST eventre fog
+            //figyelni, azt is a control.waitTime-ban beallitott ideig.
+            control.waitedEvents=0;
+
+            //Eroforras loop funkcio futtatasa.
+            //Az atadott control strukturan keresztul a loop-ban futo kod
+            //kepes modositani a varakozasi idot, az esemenybiteket, melyekre
+            //varni kell. Tovabba megkapja azokat az esemyneket, amiket kuldtek
+            //az eroforrasnak.
+            if (this->cfg.loopFunc)
+            {
+                status=this->cfg.loopFunc(this->cfg.callbackData,
+                                          &control);
+
+                if (status)
+                {   //A vegrehajtas kozben valami hiba tortent. Az eroforrast
+                    //hiba allapotba mozgatjuk
+                    goto error;
+                }
+            }
+
+            //A loop elhagyasa utan a "control"-ban be vannak allitva az
+            //eroforras altal eloirt esemeny flagek, melyekre a ciklus elejen
+            //talalhato xEventGroupWaitBits() fuggeveny varakozhat.
 
         } //while(1)
 
+        continue;
+
+error:  //<--ide ugrunk hibak eseten
+
+        //hiba eseten meghivodo callback, ah van beregisztralva
+        if (this->cfg.errorFunc)
+        {
+            this->cfg.errorFunc(this->cfg.callbackData);
+        }
+
+        //Jelzes a manager fele, hogy hiba van.
+        MyRDM_resourceStatus(RESOURCE_ERROR, status, this->statusHandler);
 
 
-error:  ;
-        __NOP();
+        //Hiba eseten a modult le kell allitani, tehat meg kell, hogy hivodjon
+        //a STOP kerelme, hogy torlodni tudjon a hiba.
+
+        //Varakozas a
+        control.events=xEventGroupWaitBits(this->events,
+                                          MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+                                          pdTRUE,
+                                          pdFALSE,
+                                          portMAX_DELAY);
+
+        //Jelzes a manager fele, hogy a modul le lett allitva.
+        MyRDM_resourceStatus(RESOURCE_STOP,
+                             kStatus_Success,
+                             this->statusHandler);
     } //while(1)
 
 }
