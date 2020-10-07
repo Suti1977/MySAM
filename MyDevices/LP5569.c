@@ -40,7 +40,7 @@ status_t LP5569_writeReg(LP5569_t* dev, uint8_t address, uint8_t regValue)
 //Az IC tobb 8 bites regiszterenek irasa
 status_t LP5569_writeMultipleRegs(LP5569_t* dev,
                                   uint8_t address,
-                                  uint8_t* values,
+                                  const uint8_t* values,
                                   uint8_t length)
 {
     uint8_t cmd[1];
@@ -52,7 +52,7 @@ status_t LP5569_writeMultipleRegs(LP5569_t* dev,
     MyI2CM_xfer_t xferBlocks[]=
     {
         (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, values, length   },
+        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)values, length   },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -136,6 +136,16 @@ status_t LP5569_setCurrent( LP5569_t* dev,
                             uint8_t currentValue)
 {
     return LP5569_writeReg(dev, LP5569_REG_LED0_CURRENT+ledIndex, currentValue);
+}
+//------------------------------------------------------------------------------
+//Az osszes LED csatorna (9) aramanak csoportos beallitasa.
+//(0x00-0mA 0x01-0.1mA 0xaf-17.5mA 0xFF-25.5mA)
+status_t LP5569_setAllCurrent( LP5569_t* dev, const uint8_t* currentValues)
+{
+    return LP5569_writeMultipleRegs(dev,
+                                    LP5569_REG_LED0_CURRENT,
+                                    currentValues,
+                                    9);
 }
 //------------------------------------------------------------------------------
 //A 3 master fader valamelyikenek beallitasa

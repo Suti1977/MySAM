@@ -124,7 +124,7 @@ status_t LP5569_writeReg(LP5569_t* dev, uint8_t address, uint8_t regValue);
 //Az IC tobb 8 bites regiszterenek irasa
 status_t LP5569_writeMultipleRegs(LP5569_t* dev,
                                   uint8_t address,
-                                  uint8_t* values,
+                                  const uint8_t* values,
                                   uint8_t length);
 
 //Az IC egy 8 bites regiszterenek olvasasa
@@ -167,6 +167,9 @@ status_t LP5569_setCurrent( LP5569_t* dev,
                             uint8_t ledIndex,
                             uint8_t currentValue);
 
+//Az osszes LED csatorna (9) aramanak csoportos beallitasa.
+//(0x00-0mA 0x01-0.1mA 0xaf-17.5mA 0xFF-25.5mA)
+status_t LP5569_setAllCurrent( LP5569_t* dev, const uint8_t* currentValues);
 
 //Charge-pump mode selection
 typedef enum

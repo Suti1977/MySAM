@@ -28,7 +28,7 @@ typedef struct
     //Feladat kesz jelzes. Azoknal az eroforrasoknal, melyek elinditasa utan
     //azok mukodese egy ido utan befejezodik, ott ezen a flagen keresztul tudja
     //jelezni azt a start vagy loop callbackban futtatott kod.
-    //Hatasara a manager fele RESOURCE_DONE alalpot kerul jelzesre, es az
+    //Hatasara a manager fele RESOURCE_DONE allapot kerul jelzesre, es az
     //eroforras ujra a start feltetelre fog varni.
     bool done;
 
