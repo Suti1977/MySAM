@@ -665,7 +665,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
         //hivni...
         if (resource->funcs->init)
         {
-            status=resource->funcs->init(resource->funcsParam, resource);
+            status=resource->funcs->init(resource->funcsParam);
             //Hiba eseten nem folytatjuk az inicializaciot
             if (status) goto initError;
         }
@@ -991,12 +991,10 @@ stopResource:
 //ikat.
 //Megj: Ezt a callbacket az eroforrasok a Start vagy Stop funkciojukbol is
 //hivhatjak!
-void MyRDM_resourceStatus(resourceStatus_t resourceStatus,
-                            status_t errorCode,
-                            void* callbackData)
-{
-    resource_t* resource=(resource_t*) callbackData;
-
+void MyRDM_resourceStatus(resource_t* resource,
+                          resourceStatus_t resourceStatus,
+                          status_t errorCode)
+{    
     //A eroforras valtozoit csak mutexelten lehet modositgatni
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
 
@@ -1593,9 +1591,9 @@ static inline void MyRDM_sendErrorSignalToReqesters(resource_t* resource,
     while(requester)
     {
         //Jelzes a kerelmezonek...
-        MyRDM_resourceStatus(resourceStatus,
-                             errorCode,
-                             requester->requesterResource);
+        MyRDM_resourceStatus((resource_t*)requester->requesterResource,
+                             resourceStatus,
+                             errorCode);
 
         requester=(resourceDep_t*) requester->nextRequester;
     }

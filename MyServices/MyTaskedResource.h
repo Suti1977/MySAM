@@ -89,9 +89,6 @@ typedef struct
     //Az eroforras mukodeset befolyasolo esemeny flagek csoprtja
     EventGroupHandle_t events;
 
-    //Az eroforras allapotanak visszajelzesehez szuksehges handler.
-    void* statusHandler;
-
     //letrehozaskor kapott konfiguracio
     taskedResource_config_t cfg;
 } taskedResourceExtension_t;

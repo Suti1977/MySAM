@@ -29,10 +29,7 @@ typedef enum
 } resourceStatus_t;
 
 //Eroforrast inicializalo callback felepitese
-//resourceHandler: ezt az eroforras valtozoihoz le kell tarolni, es ezt kell
-//visszaadni a status callbackben az RDM-nek.
-typedef status_t resourceInitFunc_t(void* param,
-                             void* resourceHandler);
+typedef status_t resourceInitFunc_t(void* param);
 
 //eroforrast elindito callback
 typedef status_t resourceStartFunc_t(void* param);
@@ -380,9 +377,9 @@ typedef void resourceStatusFunc_t(  resourceStatus_t status,
 //ikat.
 //Megj: Ezt a callbacket az eroforrasok a Start vagy Stop funkciojukbol is
 //hivhatjak!
-void MyRDM_resourceStatus(resourceStatus_t resourceStatus,
-                          status_t errorCode,
-                          void* callbackData);
+void MyRDM_resourceStatus(resource_t* resource,
+                          resourceStatus_t resourceStatus,
+                          status_t errorCode);
 
 
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
