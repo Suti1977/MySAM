@@ -223,7 +223,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
 
 error:  //<--ide ugrunk hibak eseten
 
-        //hiba eseten meghivodo callback, ah van beregisztralva
+        //hiba eseten meghivodo callback, ha van beregisztralva
         if (this->cfg.errorFunc)
         {
             this->cfg.errorFunc(this->cfg.callbackData, status);
@@ -236,7 +236,7 @@ error:  //<--ide ugrunk hibak eseten
         //Hiba eseten a modult le kell allitani, tehat meg kell, hogy hivodjon
         //a STOP kerelme, hogy torlodni tudjon a hiba.
 
-        //Varakozas a
+        //Varakozas a stop jelzesre...
         control.events=xEventGroupWaitBits(this->events,
                                           MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
                                           pdTRUE,

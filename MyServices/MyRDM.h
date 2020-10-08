@@ -317,7 +317,7 @@ void MyRDM_createResourceExt(resource_t* resource,
 //Az resourceUser_t struktura beallitasat segito rutin.
 //user: a hasznalati leirora mutat
 //statusFunc: A hasznalt eroforras allapotat visszajelzo callback rutin
-//callbackData: A callbackban visszaadott tetszlseges valtozo
+//callbackData: A callbackban visszaadott tetszolseges valtozo
 static inline void MyRDM_setUser(resourceUser_t* user,
                                  resourceStatusFunc_t* statusFunc,
                                  void* callbackData)
@@ -351,13 +351,13 @@ void MyRDM_printUsages(bool printDeps);
 #define CREATE_RESOURCE_DEPENDENCY(hi, lo)    {static resourceDep_t RDMDEPCOMBINE(DEP_,__LINE__);  MyRDM_addDependency(& RDMDEPCOMBINE(DEP_,__LINE__), hi, lo);}
 //------------------------------------------------------------------------------
 //Eroforras igenylese.
-//Hatasara a kert eroforras ha meg nins elinditva, elindul, majd a
-//megadott callbacken keresztul jelzi, annak sikeresseget, vagy hibajat.
+//Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
+//beregisztraltkeresztul jelzi, annak sikeresseget, vagy hibajat.
 //Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
 status_t MyRDM_useResource(resourceUser_t* user);
 //Eroforrasrol lemondas.
 //Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
-//A kerelmnel megadott callbacken keresztul majd vissza fog jelezni, ha az
+//Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
 status_t MyRDM_unuseResource(resourceUser_t* user);
 
@@ -384,7 +384,9 @@ void MyRDM_resourceStatus(resource_t* resource,
 
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
 //A hasznalok lancolt listajahoz adja az User-t.
-void MyRDM_addUser(resource_t* resource, resourceUser_t* user);
+void MyRDM_addUser(resource_t* resource,
+                   resourceUser_t* user,
+                   const char* userName);
 //Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
 //A hasznalok lancolt listajabol kivesszuk az elemet
 void MyRDM_removeFromUsers(resource_t* resource, resourceUser_t* user);
@@ -393,7 +395,9 @@ void MyRDM_removeFromUsers(resource_t* resource, resourceUser_t* user);
 //Az eroforrashoz altalanos user kezelo hozzaadasa. A rutin letrehozza a
 //szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
 //regisztraciot.
-void MyRDM_addGeneralUser(resource_t* resource, generalResourceUser_t* genUser);
+void MyRDM_addGeneralUser(resource_t* resource,
+                          generalResourceUser_t* genUser,
+                          const char* userName);
 //Torli az usert a eroforras hasznaloi kozul.
 //Fontos! Elotte a eroforras hasznalatot le kell mondani!
 void MyRDM_removeGeneralUser(generalResourceUser_t* generalUser);

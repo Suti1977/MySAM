@@ -593,7 +593,7 @@ stopResource:
 //megvana  mukodeshez.
 static inline void MyRDM_dependencyStop(resource_t* resource)
 {
-    //A eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
+    //Az eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
     //tobb masik taszkban futo folyamtbol is meghivodhat
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
 
@@ -621,7 +621,7 @@ Ha az eroforras inditasa mar folyamatban van (STARTING), akkor nem csinal semmit
 Majd a callbackben kerul jelzesre az ot hasznaloknak, ha elindult az eroforras.
 Mindenkinek el lesz kuldve, aki
 
-Ha az eroforras leallitasa folyamatban van, akkor nem csinal semmit. A eroforras ujra-
+Ha az eroforras leallitasa folyamatban van, akkor nem csinal semmit. Az eroforras ujra-
 iniditasat a callbackben kell megoldani. Az ott kiadott ujrainditas vegen
 fog majd jelzest kapni a hasznalo, hogy elindult az eroforras.
 
@@ -630,7 +630,7 @@ allapotra (STARTING).
 --  Ha az eroforrashoz tartoznak fuggosegek, melyeknek el kell indulnia elobb, akkor
     azokat elinditja. Rekurzio!
     + Vegighalad a hozza beregisztralt fuggsegi lancolt listan.
-    + A eroforrashoz tartozik egy fuggoseg szamlalo, mely majd ugy csokken, ahogy
+    + Az eroforrashoz tartozik egy fuggoseg szamlalo, mely majd ugy csokken, ahogy
       a statusz callbackben jonnek a jelzesek,hogy valamelyik fuggoseg elindult.
     + Ahogy ez a fuggosegi szamlalo 0-ra csokkent, ugy az eroforras elindithato,
       meghivasra kerul a Start funkcioja. (Az allapota meg mindig STARTING).
@@ -654,7 +654,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
 {
     status_t status=kStatus_Success;
 
-    //A eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
+    //Az eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
     //tobb masik taszkban futo folyamtbol is meghivodhat
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
 
@@ -669,7 +669,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
             //Hiba eseten nem folytatjuk az inicializaciot
             if (status) goto initError;
         }
-        //A eroforras inicializalas utan leallitott allapotot vesz fel.
+        //Az eroforras inicializalas utan leallitott allapotot vesz fel.
         resource->state=RESOURCE_STATE_STOP;
         resource->started=false;
     }
@@ -684,20 +684,20 @@ status_t MyRDM_useResourceCore(resource_t* resource)
     switch(resource->state)
     {
         case RESOURCE_STATE_STOP:
-            //A eroforras le van allitva. El kell inditani.
+            //Az eroforras le van allitva. El kell inditani.
             //Ha vannak fuggosegei, akkor elobb azokat kell elinditani. Ha
             //nincsenek, akkor azonnal indulhat.
 
             //Noveljuk a futo eroforrasok szamat
             MyRDM_incrementRunningResourcesCnt();
 
-            //A eroforras ettol kezdve inditasi folyamatot jelzo allapotot
+            //Az eroforras ettol kezdve inditasi folyamatot jelzo allapotot
             //fog mutatni, mindaddig, amig minden fuggosege, es o maga is el nem
             //indul.
             resource->state=RESOURCE_STATE_STARTING;
 
             if (resource->depCnt==0)
-            {   //A eroforrasnak nincs fuggosege, amit inditani kellene.
+            {   //Az eroforrasnak nincs fuggosege, amit inditani kellene.
                 //Azonnal indulhatunk...
 
                 //xxx
@@ -724,22 +724,22 @@ status_t MyRDM_useResourceCore(resource_t* resource)
                     goto startResource;
                 }
             } else
-            {   //A eroforrasnak van vagy vannak fuggosegei. Azokat indijuk.
-                //A eroforrashoz tartozo fuggosegi szamlalo majd a fuggosegek
+            {   //Az eroforrasnak van vagy vannak fuggosegei. Azokat indijuk.
+                //Az eroforrashoz tartozo fuggosegi szamlalo majd a fuggosegek
                 //elindulasara csokkanni fognak 0-ra, melynek bekovetkezesekor
-                //A eroforras maga is indithato lesz. Ez viszont majd a callbackben
+                //Az eroforras maga is indithato lesz. Ez viszont majd a callbackben
                 //tortenik meg.                
                 status=MyRDM_startResourceDeps(resource);
             }
             break;
 
         case RESOURCE_STATE_STARTING:
-            //A eroforras el van mar inditva. Majd varjuk a callback
+            //Az eroforras el van mar inditva. Majd varjuk a callback
             //bekovetkezeset. Addig is kilepes...
             break;
 
         case RESOURCE_STATE_RUN:
-            //A eroforras mar el van inditva. A callbcaken keresztul mar jelzest
+            //Az eroforras mar el van inditva. A callbcaken keresztul mar jelzest
             //kellet, hogy kapjon a kerelmezo eroforras, ezert itt nem csinalunk
             //semmit. Nem szabad jelzest adni a kerelmezo fele, mivel az
             //egy esetleges masik kerelmezo miatt ujra csokkentene az osszes
@@ -753,7 +753,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
             break;
 
         case RESOURCE_STATE_STOPPING:
-            //A eroforras egy korabban kiadott leallitasi folyamatban van.
+            //Az eroforras egy korabban kiadott leallitasi folyamatban van.
             //Annak veget meg kell varni. Ha vegzett, akkor majd a
             //eroforrashoz tartozo status callbackben tortenhet meg annak
             //ujboli elinditasa.
@@ -763,7 +763,7 @@ status_t MyRDM_useResourceCore(resource_t* resource)
 
         case RESOURCE_STATE_ERROR:
         default:
-            //A eroforras hibas allapotban van. Tehat egy korabban kiadott inditasi
+            //Az eroforras hibas allapotban van. Tehat egy korabban kiadott inditasi
             //vag ymegallitasi folyamat hibara futott.
             //Ebben az esetben nem inditjuk ujra az eroforrast. Egyetlen muvelet
             //engedelyezett, ha leallitjak az eroforrast.
@@ -807,7 +807,7 @@ Minden lemondas csokkenti a hasznalok szamlalojat (UsageCnt).
    errol minden hasznalonak kellet jelzest kapnia, ezert az azokban levo
    fuggosegi szamlalo mar novekedett.
 
-Ha az eroforras leallitasa folyamatban van, akkor nem csinal semmit. A eroforras ujra-
+Ha az eroforras leallitasa folyamatban van, akkor nem csinal semmit. Az eroforras ujra-
 iniditasat a callbackben kell megoldani. Az ott kiadott ujrainditas vegen
 fog majd jelzest kapni a hasznalo, hogy elindult az eroforras.
 
@@ -822,7 +822,7 @@ allapotra (STARTING).
 --  Ha az eroforrashoz tartoznak fuggosegek, melyeknek el kell indulnia elobb, akkor
     azokat elinditja. Rekurzio!
     + Vegighalad a hozza beregisztralt fuggsegi lancolt listan.
-    + A eroforrashoz tartozik egy fuggoseg szamlalo, mely majd ugy csokken, ahogy
+    + Az eroforrashoz tartozik egy fuggoseg szamlalo, mely majd ugy csokken, ahogy
       a statusz callbackben jonnek a jelzesek,hogy valamelyik fuggoseg elindult.
     + Ahogy ez a fuggosegi szamlalo 0-ra csokkent, ugy az eroforras elindithato,
       meghivasra kerul a Start funkcioja. (Az allapota meg mindig STARTING).
@@ -842,26 +842,26 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
 {
     status_t status=kStatus_Success;
 
-    //A eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
+    //Az eroforras valtozoit csak mutexelten lehet valtoztatni, mivel ez a rutin
     //tobb masik taszkban futo folyamtbol is meghivodhat
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
 
     switch(resource->state)
     {
         case RESOURCE_STATE_ERROR:
-            //A eroforras hibas allapotban van. Ebben az esetben ez az egyetlen
+            //Az eroforras hibas allapotban van. Ebben az esetben ez az egyetlen
             //mod hogy visszaterjunk a normal mukodeshez, ha elobb leallitjuk
-            //az eroforrast. A eroforrasokat ugy kell megimplementalni, hogy
-            //inditasi vagy megallitasi hiba esten is lehessen hivni a stop
-            //funkciojukat, melyekben az eroforrasok mukodese alaphelyzetbe kerulhet.
-            //A eroforrast minden hasznalojanak le kell allitania, hogy ervenyre
-            //jusson a leallitasi kerelem.
+            //az eroforrast. Az eroforrasokat ugy kell megimplementalni, hogy
+            //inditasi vagy megallitasi hiba esten is lehessen hivni a STOP
+            //funkciojukat, melyekben az eroforrasok mukodese alaphelyzetbe
+            //kerulhet.Az eroforrast minden hasznalojanak le kell allitania,
+            //hogy ervenyre jusson a leallitasi kerelem.
 
         case RESOURCE_STATE_RUN:
         case RESOURCE_STATE_STARTING:
-            //A eroforras mukodik, vagy mar el van inditva...
+            //Az eroforras mukodik, vagy mar el van inditva...
 
-            //A eroforras hasznalati szamlalojanak csokkentese
+            //Az eroforras hasznalati szamlalojanak csokkentese
             if (resource->usageCnt==0)
             {   //Hiba! Nem mehetne negativba!
                 printf("MyRDM error. UsageCnt!\n");
@@ -872,7 +872,7 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
 
             if (resource->state==RESOURCE_STATE_STARTING)
             {
-                //A eroforras el van inditva, de az meg folyamatban van.Itt most nem
+                //Az eroforras el van inditva, de az meg folyamatban van.Itt most nem
                 //teszunk semmit, majd csak a callbackban. Amikor a callbackban
                 //visszajon a jelzes, hogy az eroforras elindult, majd meg lesz vizs-
                 //galva az UsageCnt, ami ha 0, akkor azt jelenti,hogy az indulas
@@ -883,13 +883,13 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
 
 
             if (resource->usageCnt==0)
-            {   //A eroforrasrol mindenki lemondott. A eroforrast le kell allitani.
+            {   //Az eroforrasrol mindenki lemondott. Az eroforrast le kell allitani.
 
-                //A eroforras ettol kezdve leallitasi folyamatot jelzo allapotot
+                //Az eroforras ettol kezdve leallitasi folyamatot jelzo allapotot
                 //fog mutatni, mindaddig, amig o maga le nem allt.
                 resource->state=RESOURCE_STATE_STOPPING;
 
-                //A eroforras igenyloi fele  jelezni kell, hogy az eroforras nem
+                //Az eroforras igenyloi fele  jelezni kell, hogy az eroforras nem
                 //hasznalhato.
                 //Igy azoknal a fuggosegi szamlalot novelni kell!
                 resourceDep_t* requester=resource->firstRequester;
@@ -916,13 +916,13 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
                 } else
                 {   //Ha nincs callback, akkor ugy vesszuk, hogy le van allitva
 
-                    //A eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
+                    //Az eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
                     //nem szukseges eroforrasok (melyekben az UsageCnt 0-ra
                     //csokkent, szinten leallithato...
                     //(mutexelve kell hivni)
                     status=MyRDM_resourceStopped(resource);
 
-                    //A eroforras ettol kezdve azt mutatja, hogy le van allitva.
+                    //Az eroforras ettol kezdve azt mutatja, hogy le van allitva.
                     resource->state=RESOURCE_STATE_STOP;
                     resource->started=false;
 
@@ -934,7 +934,7 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
                 }
             } else
             {
-                //A eroforrasnak meg vannak hasznaloi.A eroforrasall nem teszunk semmit.
+                //Az eroforrasnak meg vannak hasznaloi.Az eroforrasall nem teszunk semmit.
                 //Meg mukodnie kell.
                 //Viszont az user fele jelezni kell valahogy, hogy sikeresen
                 //lemondott az eroforrasrol, igy annak leallasara nem kell varnia.
@@ -945,7 +945,7 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
             break;
 
         case RESOURCE_STATE_STOP:
-            //A eroforras le van allva. A callbcaken keresztul mar jelzest
+            //Az eroforras le van allva. A callbcaken keresztul mar jelzest
             //kellet, hogy kapjon a kerelmezo, ezert itt nem csinalunk
             //semmit. Nem szabad jelzest adni a kerelmezo fele, mivel az
             //egy esetleges masik kerelmezo miatt ujra novelne az osszes
@@ -957,7 +957,7 @@ status_t MyRDM_unuseResourceCore(resource_t* resource, bool* continueWork)
             MyRDM_signallingUsers(resource, RESOURCE_STOP, 0);
             break;
         case RESOURCE_STATE_STOPPING:
-            //A eroforras egy korabban kiadott leallitasi folyamatban van.
+            //Az eroforras egy korabban kiadott leallitasi folyamatban van.
             //Annak veget meg kell varni.
             break;
 
@@ -995,7 +995,7 @@ void MyRDM_resourceStatus(resource_t* resource,
                           resourceStatus_t resourceStatus,
                           status_t errorCode)
 {    
-    //A eroforras valtozoit csak mutexelten lehet modositgatni
+    //Az eroforras valtozoit csak mutexelten lehet modositgatni
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
 
     //if (errorCode)
@@ -1009,19 +1009,19 @@ void MyRDM_resourceStatus(resource_t* resource,
     {
         //......................................................................
         case RESOURCE_RUN:
-            //A eroforras elindult.
+            //Az eroforras elindult.
 
             if (resource->usageCnt==0)
             {   //De nincs mar hasznalo hozza. Ilyen lehet, ha kozben az indu-
                 //lasi folyamat alatt lemondta megis az osszes igenylo.
                 //Le kell allitani az eroforrast...
 
-                //A eroforras ettol kezdve leallitasi folyamatot jelzo allapotot
+                //Az eroforras ettol kezdve leallitasi folyamatot jelzo allapotot
                 //fog mutatni, mindaddig, amig o maga le nem all, ezt mutatja.
                 resource->state=RESOURCE_STATE_STOPPING;
 
 
-                //A eroforras igenyloi fele  jelezni kell, hogy az eroforras nem
+                //Az eroforras igenyloi fele  jelezni kell, hogy az eroforras nem
                 //hasznalhato.
                 //Igy azoknal a fuggosegi szamlalot novelni kell!
                 resourceDep_t* requester=resource->firstRequester;
@@ -1048,13 +1048,13 @@ void MyRDM_resourceStatus(resource_t* resource,
                 } else
                 {   //Ha nincs callback, akkor ugy vesszuk, hogy le van allitva
 
-                    //A eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
+                    //Az eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
                     //nem szukseges eroforrasok (melyekben az UsageCnt 0-ra
                     //csokkent, szinten leallithato...
                     //(mutexelve kell hivni)
                     errorCode=MyRDM_resourceStopped(resource);
 
-                    //A eroforras ettol kezdve leallitott allapotot mutat.
+                    //Az eroforras ettol kezdve leallitott allapotot mutat.
                     resource->state=RESOURCE_STATE_STOP;
                     resource->started=false;
 
@@ -1066,10 +1066,10 @@ void MyRDM_resourceStatus(resource_t* resource,
                 }
             } else
             {
-                //A eroforras elindult. Hasznalhato. Jelezzuk az uj allapotot.
+                //Az eroforras elindult. Hasznalhato. Jelezzuk az uj allapotot.
                 resource->state=RESOURCE_STATE_RUN;
 
-                //A eroforras elindult jelzes kiadasa a ra varakozokra, akik
+                //Az eroforras elindult jelzes kiadasa a ra varakozokra, akik
                 //tole fuggenek. (Mutexelve kell hivni!
                 errorCode=MyRDM_resourceStarted(resource);
 
@@ -1082,14 +1082,14 @@ void MyRDM_resourceStatus(resource_t* resource,
             break;
         //......................................................................
         case RESOURCE_DONE:
-            //A eroforras vegzett a feladataval.
+            //Az eroforras vegzett a feladataval.
             if (resource->usageCnt)
-            {   //A eroforras meg hasznalatban van. Csokkentjuk a hasznalati szamla-
+            {   //Az eroforras meg hasznalatban van. Csokkentjuk a hasznalati szamla-
                 //lot. Ha az 0-ra csokken, akkor vegez a mukodessel.
                 resource->usageCnt--;
             }
         case RESOURCE_STOP:
-            //A eroforras leallt.
+            //Az eroforras leallt.
 
             if (resource->usageCnt)
             {   //Most viszont azt latni, hogy a leallitasi folyamat kozben
@@ -1097,13 +1097,13 @@ void MyRDM_resourceStatus(resource_t* resource,
                 //nem 0.)
                 //Ujrainditjuk az eroforrast...
 
-                //A eroforras ettol kezdve inditasi folyamatot jelzo allapotot
+                //Az eroforras ettol kezdve inditasi folyamatot jelzo allapotot
                 //fog mutatni, mindaddig, amig minden fuggosege, es o maga is el
                 //nem indul.
                 resource->state=RESOURCE_STATE_STARTING;
 
                 if (resource->depCnt==0)
-                {   //A eroforrasnak nincs fuggosege, amire varni kellene.
+                {   //Az eroforrasnak nincs fuggosege, amire varni kellene.
                     //Azonnal indulhatunk...
                     if (resource->funcs->start)
                     {
@@ -1120,7 +1120,7 @@ void MyRDM_resourceStatus(resource_t* resource,
                         //Jelzes, hogy az eroforras el lett inditva
                         resource->started=true;
 
-                        //A eroforras elindult jelzes kiadasa a ra varakozokra,
+                        //Az eroforras elindult jelzes kiadasa a ra varakozokra,
                         //akik tole fuggenek. (mutexelve kell hivni)
                         errorCode=MyRDM_resourceStarted(resource);
 
@@ -1132,7 +1132,7 @@ void MyRDM_resourceStatus(resource_t* resource,
                     }
 
                 } else
-                {   //A eroforrasnak van vagy vannak fuggosegei. Azokat indijuk.
+                {   //Az eroforrasnak van vagy vannak fuggosegei. Azokat indijuk.
                     //Az eroforrashoz tartozo fuggosegi szamlalo majd a
                     //fuggosegek elindulasara csokkanni fognak 0-ra, melynek
                     //bekovetkezesekor az eroforras maga is indithato lesz.
@@ -1144,16 +1144,16 @@ void MyRDM_resourceStatus(resource_t* resource,
                     //hasznalokhoz!
                 }
             } else
-            {   //A eroforrasban jelezhetjuk, hogy leallt, mivel senki sem
+            {   //Az eroforrasban jelezhetjuk, hogy leallt, mivel senki sem
                 //hasznalja.
 
-                //A eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
+                //Az eroforras fuggosegeiben lemondjuk a hasznalatot. Igy a mar
                 //nem szukseges eroforrasok (melyekben az UsageCnt 0-ra
                 //csokkent, szinten leallithato...
                 //(mutexelve kell hivni)
                 errorCode=MyRDM_resourceStopped(resource);
 
-                //A eroforras ettol kezdve azt mondja, hogy teljesen le van
+                //Az eroforras ettol kezdve azt mondja, hogy teljesen le van
                 //allitva
                 resource->state=RESOURCE_STATE_STOP;
                 resource->started=false;
@@ -1167,14 +1167,14 @@ void MyRDM_resourceStatus(resource_t* resource,
             break;
         //......................................................................
         //case RESOURCE_DONE:
-        //    //A eroforras befejezte a feladatat, ezert leallt.
+        //    //Az eroforras befejezte a feladatat, ezert leallt.
         //    //(ujra kepes inditas fogadasara.)
         //    //TODO: KIDOLGOZNI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         //    break;
         //......................................................................
         case RESOURCE_ERROR:
         default:
-            //A eroforras inditasa/leallitasa/mukodese hibara futott.
+            //Az eroforras inditasa/leallitasa/mukodese hibara futott.
             //de ide jut, ha valami invalid statuszt kapott.
 
             //Ha nem lenne megadva hibakod, akkor egyszeru fail lesz az.
@@ -1188,7 +1188,7 @@ exit:   //<--kilepeskor ugrik ide
     if (errorCode)
     {   //Volt valami hiba a folyamatokban. Ezt jelezzuk a hasznalok iranyaba...
 
-        //A eroforras utolos kapott hibakodjat megjegyzezzuk
+        //Az eroforras utolos kapott hibakodjat megjegyzezzuk
         resource->lastErrorCode=errorCode;
 
         //Ha az eroforras inditasi vagy megallitasi folyamatban volt, akkor az
@@ -1201,7 +1201,7 @@ exit:   //<--kilepeskor ugrik ide
         {
             case RESOURCE_STATE_STARTING:
             case RESOURCE_STATE_STOPPING:
-                //A eroforrast hibas allapotba visszuk. Ebbol kimozditani csak
+                //Az eroforrast hibas allapotba visszuk. Ebbol kimozditani csak
                 //ugy lehet, ha elobb leallitasi kerelmet kap, majd ha az
                 //hiba nelkul lement, akkor all vissza STOP-ba.
                 resource->state=RESOURCE_STATE_ERROR;
@@ -1214,7 +1214,7 @@ exit:   //<--kilepeskor ugrik ide
         }
 
         //Jelzes a hasznalo eroforrasok fele...
-        //(Azokat mindn vegigfertozi a hibaval)
+        //(Azokat mind vegigfertozi a hibaval)
         MyRDM_sendErrorSignalToReqesters(resource,
                                              RESOURCE_ERROR,
                                              errorCode);
@@ -1263,7 +1263,7 @@ startResource:
 static inline void MyRDM_addRequesterToResource(resource_t* resource,
                                               resourceDep_t* dep)
 {
-    //A eroforrast igenylok lancolt listajahoz adjuk a fuggosegi leirot...
+    //Az eroforrast igenylok lancolt listajahoz adjuk a fuggosegi leirot...
     if (resource->firstRequester==NULL)
     {   //Meg nincs beregisztralva kerelmezo. Ez lesz az elso.
         resource->firstRequester=dep;
@@ -1286,7 +1286,7 @@ static inline void MyRDM_addDependencyToResource(resource_t* resource,
     //leirjuk.
     dep->requesterResource=(struct resource_t*) resource;
 
-    //A eroforras lancolt listajahoz adjuk a fuggosegi leirot...
+    //Az eroforras lancolt listajahoz adjuk a fuggosegi leirot...
     if (resource->firstDependency==NULL)
     {   //Meg nincs beregisztralva fuggoseg. Ez lesz az elso.
         resource->firstDependency=dep;
@@ -1299,7 +1299,7 @@ static inline void MyRDM_addDependencyToResource(resource_t* resource,
     dep->nextDependency=NULL;
     resource->lastDependency=dep;
 
-    //A eroforrashoz tartozo fuggosegek szamanak novelese. Ez nem valtozik kesobb.
+    //Az eroforrashoz tartozo fuggosegek szamanak novelese. Ez nem valtozik kesobb.
     resource->depCount++;
     //Az inditasra varo fuggosegek szamanak novelese. Evvel szamoljuk a fuggoben
     //levo inditasok/allitasok szamat.
@@ -1321,9 +1321,29 @@ void MyRDM_addDependency(resourceDep_t* dep,
     MyRDM_addRequesterToResource (lowLevel,  dep);
 }
 //------------------------------------------------------------------------------
+//Eroforras hibas allapotbol torteno kimozditasa.
+//Az eroforrasokon a hiba ugy torolheto, ha azokat leallitjuk
+status_t MyRDM_clearResourceError(resource_t* resource)
+{
+    status_t status=kStatus_Success;
+
+    xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
+    if (resource->state!=RESOURCE_STATE_ERROR)
+    {   //Az eroforras nics is hiba allapotban
+        //nem csinalunk semmit
+    } else
+    {   //Hiba allapotra meg kell hivni a leallitasi kerelmet...
+khfgkjhglkahlg todo: ez lehet, hogy taszkban kell bevrni...
+    }
+    xSemaphoreGiveRecursive(resource->mutex);
+    return status;
+}
+//------------------------------------------------------------------------------
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
 //A hasznalok lancolt listajahoz adja az User-t.
-void MyRDM_addUser(resource_t* resource, resourceUser_t* user)
+void MyRDM_addUser(resource_t* resource,
+                   resourceUser_t* user,
+                   const char* userName)
 {
     //A lista csak mutexelt allapotban bovitheto!
     xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
@@ -1344,11 +1364,13 @@ void MyRDM_addUser(resource_t* resource, resourceUser_t* user)
     resource->lastUser=(struct resourceUser_t*)user;
 
 
-    //A eroforras a hozzaadas utan keszenleti allapotot mutat. Amig nincs konkret
+    //Az eroforras a hozzaadas utan keszenleti allapotot mutat. Amig nincs konkret
     //inditasi kerelem az eroforrasram addig ezt mutatja.
     //(Ebbe ter vissza, ha az eroforrast mar nem hasznaljuk, es az eroforras le is allt.)
     user->state=RESOURCEUSERSTATE_IDLE;
 
+    //Eroforras nevenek megjegyzese
+    user->userName=(userName!=NULL) ? userName : "?";
     xSemaphoreGiveRecursive(resource->mutex);
 }
 //------------------------------------------------------------------------------
@@ -1390,8 +1412,8 @@ void MyRDM_removeFromUsers(resource_t* resource, resourceUser_t* user)
 }
 //------------------------------------------------------------------------------
 //Eroforras igenylese.
-//Hatasara a kert eroforras ha meg nins elinditva, elindul, majd a
-//megadott callbacken keresztul jelzi, annak sikeresseget, vagy hibajat.
+//Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
+//beregisztraltkeresztul jelzi, annak sikeresseget, vagy hibajat.
 //Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
 status_t MyRDM_useResource(resourceUser_t* user)
 {
@@ -1403,8 +1425,8 @@ status_t MyRDM_useResource(resourceUser_t* user)
     {
         case RESOURCEUSERSTATE_IDLE:
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
-            //A eroforras inidtasat meg nem kezdemenyezte a felhasznalo.
-            //Vagy A eroforrasnak a leallitasara vagy a folyamat vegere varunk,
+            //Az eroforras inidtasat meg nem kezdemenyezte a felhasznalo.
+            //Vagy Az eroforrasnak a leallitasara vagy a folyamat vegere varunk,
             //de kozben jott egy ujboli hasznalati kerelem.
 
             //Beallitjuk, hogy varunk annak inditasara.
@@ -1425,39 +1447,39 @@ status_t MyRDM_useResource(resourceUser_t* user)
             break;
     }
 
-    xSemaphoreGiveRecursive(resource->mutex);         //*-*
+    xSemaphoreGiveRecursive(resource->mutex);
 
     return status;
 }
 //------------------------------------------------------------------------------
 //Eroforrasrol lemondas.
 //Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
-//A kerelmnel megadott callbacken keresztul majd vissza fog jelezni, ha az
+//Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
 status_t MyRDM_unuseResource(resourceUser_t* user)
 {
-    status_t status;
-    resource_t* eroforrase=user->resource;
+    status_t status=kStatus_Success;
+    resource_t* resource=user->resource;
 
-    xSemaphoreTakeRecursive(eroforrase->mutex, portMAX_DELAY);
+    xSemaphoreTakeRecursive(resource->mutex, portMAX_DELAY);
     switch(user->state)
     {
         case RESOURCEUSERSTATE_RUN:
         case RESOURCEUSERSTATE_WAITING_FOR_START:
-            //A eroforras el van inidtva
-            //vagy varunk annak leallasara. Ez utobbi akkor lehet, ha inditasi
-            //folyamat kozben megis lemond az user az eroforrasrol.
+            //Az eroforras el van inidtva vagy varunk annak leallasara.
+            //Ez utobbi akkor lehet, ha inditasi folyamat kozben megis lemond
+            //az user az eroforrasrol.
 
             //Beallitjuk, hogy varunk annak leallasara
             user->state=RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE;
             user->resourceContinuesWork=false;
 
             //Eroforrast leallitjuk
-            status=MyRDM_unuseResourceCore(eroforrase,
+            status=MyRDM_unuseResourceCore(resource,
                                            &user->resourceContinuesWork);
 
             if (user->resourceContinuesWork)
-            {   //A eroforras tovabb folytatja a mukodeset, mivel mas
+            {   //Az eroforras tovabb folytatja a mukodeset, mivel mas
                 //eroforrasok vagy userek meg hasznaljak.
 
                 //Jeleznunk kell az user fele, hogy reszerol vege az eroforras
@@ -1475,10 +1497,31 @@ status_t MyRDM_unuseResource(resourceUser_t* user)
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
+            //Meg egy korabbi inditasra varunk.
+            if (resource->state==RESOURCE_STATE_ERROR)
+            {   //Az eroforras leallitasa hibara futott.
+                printf("_________LE KELLENE ALLITANI_______%s\n", resource->resourceName);
+                //Eroforrast leallitjuk
+                status=MyRDM_unuseResourceCore(resource,
+                                               &user->resourceContinuesWork);
+                printf("statusza a leallitasnak: %d\n", status);
+            }
+            //kilepes, es varakozas tovabba  befejezesre...
+            break;
+
         case RESOURCEUSERSTATE_IDLE:
-            //Mar egy korabbi inditasra varunk, vagy az eroforras le van allitva,
-            //vagy vegzett. Nem tesz semmit.
-            status=kStatus_Success;
+            //Callback-en keresztul jelezzuk az user fele, hogy az eroforras
+            //vegzett. Ez peldaul general user eseten is lenyeges, amikor ugy
+            //hivnak meg egy generalUnuse() funkciot, hogy az eroforras el sem
+            //volt inditva. Ilyenkor a callbackben visszaadott statusz
+            //segitsegevel olyan esemeny generalodik, mely az user-ben a
+            //leallasra varakozast triggereli.
+            if (user->statusFunc)
+            {
+                user->statusFunc(RESOURCE_STOP,
+                                 status,
+                                 user->callbackData);
+            }
             break;
 
         default:
@@ -1487,10 +1530,9 @@ status_t MyRDM_unuseResource(resourceUser_t* user)
             break;
     }
 
-    xSemaphoreGiveRecursive(eroforrase->mutex);
+    xSemaphoreGiveRecursive(resource->mutex);
 
     return status;
-
 }
 //------------------------------------------------------------------------------
 //Userek fele jelzes kuldese a hozzajuk rendelt eroforrasok allapotarol
@@ -1509,7 +1551,7 @@ static void MyRDM_signallingUsers(resource_t* resource,
         } else
         {
             if (resourceStatus==RESOURCE_ERROR)
-            {   //Hiba van az eroforraslal.
+            {   //Hiba van az eroforrasal.
                 //A hibajelzest at kell kuldeni mindenkepen.
                 if (user->statusFunc)
                 {
@@ -1620,23 +1662,23 @@ static void MyRDM_generalUserStatusCallback(resourceStatus_t resourceStatus,
     switch((int)resourceStatus)
     {
         case RESOURCE_RUN:
-            //A eroforras elindult. Jelezzuk a varakozo taszknak.
+            //Az eroforras elindult. Jelezzuk a varakozo taszknak.
             xEventGroupSetBits(genUser->events, GENUSEREVENT_RUN);
             break;
         case RESOURCE_STOP:
-            //A eroforras rendben leallt. Jelezzuk a varakozo taszknak.
+            //Az eroforras rendben leallt. Jelezzuk a varakozo taszknak.
             xEventGroupSetBits(genUser->events, GENUSEREVENT_STOP);
             break;
         case RESOURCE_DONE:
-            //A eroforras vegzett, es leallt
+            //Az eroforras vegzett, es leallt
             //vagy az eroforrasrol az user sikeresen lemondott.
             xEventGroupSetBits(genUser->events, GENUSEREVENT_DONE);
             break;
         case RESOURCE_ERROR:
         default:
-            //A eroforras mukodeseben hiba kovetkezett be.
+            //Az eroforras mukodeseben hiba kovetkezett be.
             //Jelezzuk a varakozo tszaknak. A hibakodot majd az eroforrashoz
-            //tartozo LastErrorCode valtozobol olvassuk ki.
+            //tartozo lastErrorCode valtozobol olvassuk ki.
             xEventGroupSetBits(genUser->events, GENUSEREVENT_ERROR);
             break;
     }
@@ -1646,7 +1688,9 @@ static void MyRDM_generalUserStatusCallback(resourceStatus_t resourceStatus,
 //Az eroforrashoz altalanos user kezelo hozzaadasa. A rutin letrehozza a
 //szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
 //regisztraciot.
-void MyRDM_addGeneralUser(resource_t* resource, generalResourceUser_t* genUser)
+void MyRDM_addGeneralUser(resource_t* resource,
+                          generalResourceUser_t* genUser,
+                          const char* userName)
 {
     //Esemenyflag mezo letrehozasa
   #if configSUPPORT_STATIC_ALLOCATION
@@ -1660,7 +1704,7 @@ void MyRDM_addGeneralUser(resource_t* resource, generalResourceUser_t* genUser)
     genUser->user.callbackData=genUser;
 
     //A kiejlolt eroforrashoz user hozzaadasa
-    MyRDM_addUser(resource, &genUser->user);
+    MyRDM_addUser(resource, &genUser->user, userName);
 }
 //------------------------------------------------------------------------------
 //Torli az usert az eroforras hasznaloi kozul.
@@ -1697,6 +1741,11 @@ status_t MyRDM_generalUseResource(generalResourceUser_t* generalUser)
     {   //Hiba volt az eroforras inditasakor
         //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
         status=generalUser->user.resource->lastErrorCode;
+
+        //eroforras leallitasa, igy biztositva abban a hiba torleset
+        /*status=*/ MyRDM_unuseResource(&generalUser->user);
+        //if (status) return status;
+
     }
 
     return status;
@@ -1721,15 +1770,19 @@ status_t MyRDM_generalUnuseResource(generalResourceUser_t* generalUser)
                                             pdTRUE,
                                             pdFALSE,
                                             portMAX_DELAY);
-    if (events & GENUSEREVENT_STOP)
-    {   //az eroforras rendben leallt
-
-    }
+    //if (events & GENUSEREVENT_STOP)
+    //{   //az eroforras rendben leallt
+    //
+    //}
 
     if (events & GENUSEREVENT_ERROR)
     {   //Hiba volt az eroforras leallitasakor
         //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
         status=generalUser->user.resource->lastErrorCode;
+
+        //eroforras leallitasa, igy biztositva abban a hiba torleset
+        /*status=*/ MyRDM_unuseResource(&generalUser->user);
+        //if (status) return status;
     }
 
     return status;
@@ -1753,7 +1806,7 @@ resource_t* MyRDM_getResourceByName(const char* name)
         resource=(resource_t*) resource->next;
     }
 
-    //A eroforras nem talalhato
+    //Az eroforras nem talalhato
     return NULL;
 }
 //------------------------------------------------------------------------------
