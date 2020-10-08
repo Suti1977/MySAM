@@ -46,7 +46,7 @@ typedef status_t taskedResourceStartFunc_t(void* callbackData,
 //Az eroforras leallitasi kerelme utan a taszkban meghivodo rutin
 typedef status_t taskedResourceStopFunc_t(void* callbackData);
 //Hiba eseten, a taszkbol hivott callback definicioja
-typedef void taskedResourceErrorFunc_t(void* callbackData);
+typedef void taskedResourceErrorFunc_t(void* callbackData, status_t errorCode);
 //Eroforrast futtato callback definicioja
 typedef status_t taskedResourceLoopFunc_t(void* callbackData,
                                           taskedRsource_control_t* control);

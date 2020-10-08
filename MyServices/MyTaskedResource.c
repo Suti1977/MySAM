@@ -78,7 +78,7 @@ static status_t MyTaskedResource_resource_start(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
 
-    if (this->cfg.startFunc)
+    if (this->cfg.startRequestFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
         this->cfg.startRequestFunc(this->cfg.callbackData);
     }
@@ -94,7 +94,7 @@ static status_t MyTaskedResource_resource_stop(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
 
-    if (this->cfg.stopFunc)
+    if (this->cfg.stopRequestFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
         this->cfg.stopRequestFunc(this->cfg.callbackData);
     }
@@ -229,7 +229,7 @@ error:  //<--ide ugrunk hibak eseten
         //hiba eseten meghivodo callback, ah van beregisztralva
         if (this->cfg.errorFunc)
         {
-            this->cfg.errorFunc(this->cfg.callbackData);
+            this->cfg.errorFunc(this->cfg.callbackData, status);
         }
 
         //Jelzes a manager fele, hogy hiba van.
