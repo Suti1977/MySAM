@@ -162,7 +162,8 @@ typedef struct
     status_t lastErrorCode;
 
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
-    //fuggvenye.
+    //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
+    //beallitasra.
     bool    started;
 
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
