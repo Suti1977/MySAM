@@ -97,7 +97,7 @@ static status_t MyTaskedResource_resource_stop(void* param)
     }
 
     //Leallitasi kerelem esemeny beallitasa, melyre a taszkban a loop ciklus
-    //elott minden korben ravizsglava kezdemenyezheto az eroforars leallasa.
+    //elott minden korben ravizsglava kezdemenyezheto az eroforras leallasa.
     xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
 
     return kStatus_Success;

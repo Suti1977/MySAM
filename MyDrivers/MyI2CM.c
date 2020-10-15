@@ -476,7 +476,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
     } else
     {   //Vam meg hatra block.
 
-        //A jelenlegi iranynak megfelelo foylamatotot kell folytatni?
+        //A jelenlegi iranynak megfelelo folyamatotot kell folytatni?
         if (i2cm->last==false)
         {   //muvelet folytatasa, csak az uj blokkal
 
