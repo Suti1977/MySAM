@@ -113,7 +113,7 @@ static void MyRDM_printResourceInfo(resource_t* resource, bool printDeps)
 
     static const char* resourceStateStrings[]=RESOURCE_STATE_STRINGS;
 
-    //Eroforars nevenek kiirasa. Ha nem ismert, akkor ??? kerul kiirasra
+    //Eroforras nevenek kiirasa. Ha nem ismert, akkor ??? kerul kiirasra
     printf("%12s", resource->resourceName ? resource->resourceName : "???");
 
     //Eroforras allapotanak kiirasa
@@ -291,7 +291,7 @@ static inline status_t MyRDM_resourceStarted(resource_t* resource)
 //Minden elindulo fuggoseg hatasara csokkeni fog a sajat fuggosegi szamlaloja,
 //tehat fogynak a meg varando elofeltetelek. Ha 0-ra csokken, akkor azt jelenti,
 //hogy az eroforras maga is indithato, annak hivhato a start() fuggvenye.
-//De csak akkor hivjuk a start fuggvenyet, ha az eroforars allapota azt mutatja,
+//De csak akkor hivjuk a start fuggvenyet, ha az eroforras allapota azt mutatja,
 //hogy elinditasi allapotban (STARTING) van.
 //Ha az eroforras nincs elinditva (STOP) akkor egyszeruen csak a fuggosegi
 //szamlaloja fog csokkenni. Egy kesobbi inditasi kerelem eseten mar ez jelzi,
@@ -370,7 +370,7 @@ static inline status_t MyRDM_dependencyStarted(resource_t* resource)
                 break;
 
             case RESOURCE_STATE_RUN:
-                //Az eroforras mar fut. Ez hiba. Az eroforars nem futhatna,
+                //Az eroforras mar fut. Ez hiba. Az eroforras nem futhatna,
                 //hiszen most keszult meg csak el az osszes fuggosege.
                 printf("MyRDM error. RESOURCE_STATE_RUN.\n");
                 ASSERT(0);
@@ -1333,7 +1333,7 @@ status_t MyRDM_clearResourceError(resource_t* resource)
         //nem csinalunk semmit
     } else
     {   //Hiba allapotra meg kell hivni a leallitasi kerelmet...
-khfgkjhglkahlg todo: ez lehet, hogy taszkban kell bevrni...
+
     }
     xSemaphoreGiveRecursive(resource->mutex);
     return status;

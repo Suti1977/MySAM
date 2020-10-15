@@ -20,7 +20,7 @@ typedef struct
 {
     //Eroforras management taszkhoz allokalando stack merete
     uint32_t stackSize;
-    //Eroforars management taszk prioritasa
+    //Eroforras management taszk prioritasa
     uint32_t taskPriority;
 
 } MyRM_config_t;
@@ -123,9 +123,8 @@ typedef struct
 typedef struct
 {
     //Az eroforras managerben az eroforrasok lancolt listajahoz szukseges
-    //mutato. Segitsegevel lehet kilistazni a letrehozott eroforarsokat.
+    //mutato. Segitsegevel lehet kilistazni a letrehozott eroforrasokat.
     struct resource_t* nextResource;
-
 
     //Eroforras aktualis allapota.
     resourceState_t    state;
@@ -145,6 +144,10 @@ typedef struct
     //minden lemondas csokkenti.
     //Ha a szamlalo 0-ra csokken, akkor az eroforras hasznalata leallithato.
     uint32_t        usageCnt;
+    //true-ba allitjuk, ha az usageCnt 0-ba allt, tehat eloirjuk a szalnak, hogy
+    //ellenorizze a usageCnt allapotat, es ha az 0, akkor allitsa le az
+    //eroforrast
+    bool checkUsageCntRequest;
 
     //Az eroforrast igenylo eroforrasok lancolt listaja.
     resourceDep_t*    firstRequester;
@@ -156,6 +159,9 @@ typedef struct
     //Ha erteke 0-ra csokken, akkor az eroforras mukodesehez tratozo egyeb
     //fuggosegek elindultak, es az eroforras is indithato.
     uint32_t        depCnt;
+    //true-ba allitjuk, ha a depCnt 0-ba allt, tehat eloirjuk a szalnak, hogy
+    //ellenorizze a depCnt allapotat, es ha az 0, akkor inditsa el az eroforrast
+    bool checkDepCntRequest;
 
     //Az eroforrashoz tartozo sajat fuggosegek lancolt listajanak eleje es vege.
     //Ebben sorakoznak az eroforras mukodesehez szukseges tovabbi fuggosegek.
@@ -169,26 +175,21 @@ typedef struct
         struct resourceUser_t*   last;        
     } userList;
 
-    //Az inditasra varo eroforrasok listaja
-    struct
-    {
-        struct resource_t* next;
-        struct resource_t* prev;
-        bool inTheList;
-    } startReqList;
-
-    //A leallitando eroforrasok listaja
-    struct
-    {
-        struct resource_t* next;
-        struct resource_t* prev;
-        bool inTheList;
-    } stopReqList;
 
     //Fuggoben levo inditasi kerelmek. Az eroforras hasznalatbavetele noveli.
     uint32_t startReqCnt;
     //Az eroforrasrol torteno lemondasok szama.
     uint32_t stopReqCnt;
+
+    //A kiertekelesre varo eroforrasok lancolt listaja.
+    //A taszkban azokkal az eroforrasokkal kell foglalkozni, melyek hozza
+    //vannak adva a listahoz.
+    struct
+    {
+        struct resource_t* next;
+        struct resource_t* prev;
+        bool inTheList;
+    } processReqList;
 
 
     //Az eroforras utolso hibakodja, melyet kapott egy statusz callbackben
@@ -282,19 +283,16 @@ typedef struct
     //A callback szamara atadott tetszoleges parameter
     void* callbackData;
 
-    //Az inditando eroforrasok listaja
-    struct
-    {
-        resource_t* first;
-        resource_t* last;
-    } startReqList;
 
-    //A leallitando eroforrasok listaja
+    //A kiertekelesre varo eroforrasok lancolt listaja.
+    //A taszkban azokkal az eroforrasokkal kell foglalkozni, melyek hozza
+    //vannak adva a listahoz.
     struct
     {
         resource_t* first;
         resource_t* last;
-    } stopReqList;
+        bool inTheList;
+    } processReqList;
 
     //A nyilvantartott eroforrasok lancolt listajanak az elso es utolso eleme.
     //Az MyRDM_createResource() management rutinnal kerulnek hozzadasra.
@@ -363,14 +361,14 @@ void MyRM_addDependency(resourceDep_t* dep,
 //ikat.
 //Megj: Ezt a callbacket az eroforrasok a Start vagy Stop funkciojukbol is
 //hivhatjak!
-void MyRDM_resourceStatus(resource_t* resource,
-                          resourceStatus_t resourceStatus,
-                          status_t errorCode);
+void MyRM_resourceStatus(resource_t* resource,
+                         resourceStatus_t resourceStatus,
+                         status_t errorCode);
 
-//Eroforarsok inditasa/megallitasa
+//Eroforrasok inditasa/megallitasa
 //csak teszteleshez hasznalhato, ha kivulrol hivjuk.
-status_t MyRM_useResourceCore(resource_t* resource);
-status_t MyRM_unuseResourceCore(resource_t* resource);
+status_t MyRM_useResource(resource_t* resource);
+status_t MyRM_unuseResource(resource_t* resource);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
