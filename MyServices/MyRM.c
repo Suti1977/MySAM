@@ -876,6 +876,15 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
 {
     (void) errorCode;
 
+
+    if (resource->state==RESOURCE_STATE_UNKNOWN)
+    {   //Amig az eroforras nincs inicializalva, addig nem fogadhat statuszt!
+        ASSERT(0);
+    }
+
+    //Ha az erorCode hibat jelez, akkor hibara visszuk az eroforrast
+    if (errorCode) resourceStatus=RESOURCE_ERROR;
+
     switch(resourceStatus)
     {
         //......................................................................
@@ -972,11 +981,43 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
             //Eloirjuk, hogy az eroforras tesztelje a hasznalati szamlalojat.
             resource->checkUsageCntRequest=true;
             break;
-
-        case RESOURCE_ERROR:
+        //......................................................................
+        case RESOURCE_ERROR: {
             //Az eroforras hibat jelez
 
-           break;
+            resourceErrorInfo_t errorInfo=
+            {   //Reportoljuk, hogy melyik eroforarssal van a hiba
+                .resource=(struct resource_t*)resource,
+                //informaljuk, hogy mi a hibakod
+                .errorCode=errorCode,
+                //az aktualis modul allapotot is reportoljuk
+                .resourceState=resource->state,
+            };
+
+            //Hiba figyelmenkivul hagyasanak lehetosege. (ha true)
+            bool ignoreError=false;
+
+            //Ha az eroforrasnak van sajat error callbackje, akkor azt meghivja
+            if (resource->funcs->error)
+            {
+                resource->funcs->error(&errorInfo,
+                                       &ignoreError,
+                                       resource->funcsParam);
+            }
+
+            if (ignoreError==true)
+            {   //a hibat elnyomjuk.
+
+            } else
+            {   //A hibaval kezdeni kell valamit.
+                //Hiba allapotot veszunk fel
+                resource->state=RESOURCE_STATE_ERROR;
+                //Elmentjuk a hibakodot.
+                resource->lastErrorCode=errorCode;
+            }
+
+            break;
+            }
 
     }
 
