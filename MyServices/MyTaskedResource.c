@@ -1,9 +1,11 @@
 //------------------------------------------------------------------------------
-//  Task-al tamogatott eroforras modul (MyRDM resze)
+//  Task-al tamogatott eroforras modul (MyRM resze)
 //
 //    File: MyTaskedResource.c
 //------------------------------------------------------------------------------
 #include "MyTaskedResource.h"
+
+#define MyTASKEDRESOURCE_TRACING    1
 
 static status_t MyTaskedResource_resource_init(void* param);
 static status_t MyTaskedResource_resource_start(void* param);
@@ -34,7 +36,7 @@ void MyTaskedResource_create(resource_t* resource,
     //Eroforras letrehozasa.
     //Az "ext" mezojeben beallitasra kerul a taszkos mukodeshez szukseges
     //bovitett adatok (tehat amit most hozunk letre)
-    MyRDM_createResourceExt(resource,
+    MyRM_createResourceExt(resource,
                             &resourceFuncs,
                             this,
                             this->cfg.name,
@@ -57,6 +59,10 @@ static status_t MyTaskedResource_resource_init(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
 
+    #if MyTASKEDRESOURCE_TRACING
+    printf("MyTaskedResource_resource_init(). (%s)\n", this->cfg.name);
+    #endif
+
     status_t status=kStatus_Success;
 
     if (this->cfg.initFunc)
@@ -65,7 +71,7 @@ static status_t MyTaskedResource_resource_init(void* param)
     }
 
     //Megj: Ha a callback nem kStatus_Success-el terne vissza, akkor a modul
-    //      hiba allapotot fog felvenni. Ezt a MyRDM Eroforras manager oldja meg
+    //      hiba allapotot fog felvenni. Ezt a MyRM Eroforras manager oldja meg
 
     return status;
 }
@@ -74,6 +80,10 @@ static status_t MyTaskedResource_resource_init(void* param)
 static status_t MyTaskedResource_resource_start(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
+
+    #if MyTASKEDRESOURCE_TRACING
+    printf("MyTaskedResource_resource_start(). (%s)\n", this->cfg.name);
+    #endif
 
     if (this->cfg.startRequestFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
@@ -90,6 +100,11 @@ static status_t MyTaskedResource_resource_start(void* param)
 static status_t MyTaskedResource_resource_stop(void* param)
 {
     taskedResourceExtension_t* this=(taskedResourceExtension_t*) param;
+
+    #if MyTASKEDRESOURCE_TRACING
+    printf("MyTaskedResource_resource_stop(). (%s)\n", this->cfg.name);
+    #endif
+
 
     if (this->cfg.stopRequestFunc)
     {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
@@ -142,7 +157,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         }
 
         //Az eroforras elindult. Reportoljuk az eroforras manager fele...
-        MyRDM_resourceStatus(resource, RESOURCE_RUN, status);
+        MyRM_resourceStatus(resource, RESOURCE_RUN, status);
 
         //Az elso futasnal nem akad meg az eventekre varasnal.
         control.waitTime=0;
@@ -152,7 +167,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         {
             if (control.done)
             {   //Az eroforras befejezte a mukodeset. Jelzes a manager fele.
-                MyRDM_resourceStatus(resource, RESOURCE_DONE, status);
+                MyRM_resourceStatus(resource, RESOURCE_DONE, status);
 
                 //A loop funkcio mar nem kerul futtatasra. Kilep a belso
                 //ciklusbol, majd a kulos ciklusban ujra a start jelre fog varni.
@@ -184,7 +199,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
                 }
 
                 //Az eroforras leallt. Reportoljuk az eroforras manager fele...
-                MyRDM_resourceStatus(resource, RESOURCE_STOP, status);
+                MyRM_resourceStatus(resource, RESOURCE_STOP, status);
                 //kilepes a belso ciklusbol. A kulso ciklusban ujra a start
                 //esemenyre fog varakozni.
                 break;
@@ -230,7 +245,7 @@ error:  //<--ide ugrunk hibak eseten
         }
 
         //Jelzes a manager fele, hogy hiba van.
-        MyRDM_resourceStatus(resource, RESOURCE_ERROR, status);
+        MyRM_resourceStatus(resource, RESOURCE_ERROR, status);
 
 
         //Hiba eseten a modult le kell allitani, tehat meg kell, hogy hivodjon
@@ -244,7 +259,7 @@ error:  //<--ide ugrunk hibak eseten
                                           portMAX_DELAY);
 
         //Jelzes a manager fele, hogy a modul le lett allitva.
-        MyRDM_resourceStatus(resource, RESOURCE_STOP, kStatus_Success);
+        MyRM_resourceStatus(resource, RESOURCE_STOP, kStatus_Success);
     } //while(1)
 
 }

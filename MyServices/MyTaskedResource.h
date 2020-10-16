@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------------
-//  Task-al tamogatott eroforras modul (MyRDM resze)
+//  Task-al tamogatott eroforras modul (MyRM resze)
 //
 //    File: MyTaskedResource.h
 //------------------------------------------------------------------------------
 #ifndef MYTASKEDRESOURCE_H_
 #define MYTASKEDRESOURCE_H_
 
-#include "MyRDM.h"
+#include "MyRM.h"
 #include "MyCommon.h"
 
 //------------------------------------------------------------------------------

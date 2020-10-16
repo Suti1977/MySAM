@@ -10,7 +10,7 @@
 
 //Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
 //Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
-#define MyRM_INSTANCE  MyRM_t myrm;
+#define MyRM_INSTANCE  MyRM_t myRM;
 //------------------------------------------------------------------------------
 //Minden eroforras sikeres leallitasa utan hihato callback fuggveny definialasa
 typedef void MyRM_allResourceStoppedFunc_t(void* callbackData);
@@ -295,7 +295,7 @@ typedef struct
     } processReqList;
 
     //A nyilvantartott eroforrasok lancolt listajanak az elso es utolso eleme.
-    //Az MyRDM_createResource() management rutinnal kerulnek hozzadasra.
+    //Az MyRM_createResource() management rutinnal kerulnek hozzadasra.
     //Ez alapjan az eroforrasokon vegig lehet haladni, es azokon csoportos
     //muveleteket vegrehajtani.
     struct
@@ -337,7 +337,7 @@ void MyRM_createResourceExt(resource_t* resource,
 
 //Eroforras leirojanak lekerdezese az eroforras neve alapjan.
 //NULL-t ad vissza, ha az eroforras nem talalhato.
-resource_t* MyRDM_getResourceByName(const char* name);
+resource_t* MyRM_getResourceByName(const char* name);
 
 //Eroforrasok koze fuggoseg beallitasa (hozzaadasa).
 //highLevel: Magasabb szinten levo eroforras, melynek a fuggoseget definialjuk
@@ -367,8 +367,76 @@ void MyRM_resourceStatus(resource_t* resource,
 
 //Eroforrasok inditasa/megallitasa
 //csak teszteleshez hasznalhato, ha kivulrol hivjuk.
-status_t MyRM_useResource(resource_t* resource);
-status_t MyRM_unuseResource(resource_t* resource);
+status_t MyRM_startResource(resource_t* resource);
+status_t MyRM_stopResource(resource_t* resource);
+
+//------------------------------------------------------------------------------
+//Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
+//A hasznalok lancolt listajahoz adja az User-t.
+void MyRM_addUser(resource_t* resource,
+                   resourceUser_t* user,
+                   const char* userName);
+//Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
+//A hasznalok lancolt listajabol kivesszuk az elemet
+void MyRM_removeUser(resource_t* resource, resourceUser_t* user);
+
+//Eroforras igenylese.
+//Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
+//beregisztraltkeresztul jelzi, annak sikeresseget, vagy hibajat.
+//Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
+status_t MyRM_useResource(resourceUser_t* user);
+//Eroforrasrol lemondas.
+//Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
+//Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
+//eroforras mukodese befejezodott.
+status_t MyRM_unuseResource(resourceUser_t* user);
+
+
+
+//------------------------------------------------------------------------------
+//Altalanos eroforras hasznalat eseten beallithato hiba callback felepitese,
+//melyben az applikacio fele jelezni tudja az eroforras hibait.
+typedef void generalResourceUserErrorFunc_t(status_t errorCode,
+                                            void* callbackData);
+
+//Az altalonsitott felhasznalo kezeleshez hasznalt leiro.
+typedef struct
+{
+    //Eroforras hasznalat valtozoi. (Gyakorlatilag ez kerul felbovitesre.)
+    resourceUser_t user;
+
+    //Az user mukodesere vonatkozo esemenyflag mezo, melyekkel az applikacio
+    //fele lehet jelezni az allapotokat. Ezekre varhatnak az indito/megallito
+    //rutinok. (Statikus)
+    //GENUSEREVENT_xxx bitekkel operalunk rajta
+    EventGroupHandle_t  events;
+  #if configSUPPORT_STATIC_ALLOCATION
+    StaticEventGroup_t  eventsBuff;
+  #endif
+
+    //Hiba eseten meghivhato callback funkcio cime. Ezen keresztul lehet jelezni
+    //az applikacio fele az eroforras mukodese kozbeni hibakat.
+    generalResourceUserErrorFunc_t* errorFunc;
+    //A funkcio meghivasakor atadott tetszoleges adat
+    void*  callbackData;
+
+} generalResourceUser_t;
+
+//Az eroforrashoz altalanos user kezelo hozzaadasa. A rutin letrehozza a
+//szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
+//regisztraciot.
+void MyRM_addGeneralUser(resource_t* resource,
+                         generalResourceUser_t* genUser,
+                         const char* userName);
+//Torli az usert a eroforras hasznaloi kozul.
+//Fontos! Elotte a eroforras hasznalatot le kell mondani!
+void MyRM_removeGeneralUser(generalResourceUser_t* generalUser);
+//Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
+//vagy hibara nem fut az inditasi folyamatban valami miatt.
+status_t MyRM_generalUseResource(generalResourceUser_t* generalUser);
+//Eroforras hasznalatanak lemondasa. A rutin megvarja, amig az eroforras leall,
+//vagy hibara nem fut a leallitasi folyamatban valami.
+status_t MyRM_generalUnuseResource(generalResourceUser_t* generalUser);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
