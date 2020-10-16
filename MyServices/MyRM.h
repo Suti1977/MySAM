@@ -100,6 +100,7 @@ typedef void resourceErrorFunc_t(resourceErrorInfo_t* info,
 
 //Az eroforars valamelyik fuggosegenek hibaja eseten hivodo callback.
 typedef void resourceDependencyErrorFunc_t(resourceErrorInfo_t* info,
+                                           bool* ignoreError,
                                            void* param);
 //------------------------------------------------------------------------------
 //Eroforrasokhoz tartozo callbackek
@@ -142,6 +143,13 @@ typedef struct
     //A kerelmezo eroforras fuggosegi listaja
     struct resourceDep_t*  nextDependency;
 
+    //Az eroforras altal hasznalt hibara futott eroforrasok listajanak kovetkezo
+    //elemere mutat.
+    //Ha egy eroforras fuggosege hibara fut, akkor annak statusz fuggveny
+    //hivasaban a hibara futott eroforras regisztralja magat a listaban. Ez a
+    //leiro is becsatolasra kerul.    
+    struct resourceDep_t* nextDepError;
+
 } resourceDep_t;
 //------------------------------------------------------------------------------
 //Az egyes eroforrasok manageleshez tartozo valtozok halmaza.
@@ -177,8 +185,11 @@ typedef struct
     bool checkUsageCntRequest;
 
     //Az eroforrast igenylo eroforrasok lancolt listaja.
-    resourceDep_t*    firstRequester;
-    resourceDep_t*    lastRequester;
+    struct
+    {
+        resourceDep_t*    first;
+        resourceDep_t*    last;
+    } requesterList;
 
     //Az eroforrashoz tartozo fuggosegek szama.
     uint32_t        depCount;
@@ -192,8 +203,11 @@ typedef struct
 
     //Az eroforrashoz tartozo sajat fuggosegek lancolt listajanak eleje es vege.
     //Ebben sorakoznak az eroforras mukodesehez szukseges tovabbi fuggosegek.
-    resourceDep_t*    firstDependency;
-    resourceDep_t*    lastDependency;
+    struct
+    {
+        resourceDep_t*    first;
+        resourceDep_t*    last;
+    } dependencyList;
 
     //Az eroforrast hasznalok lancolt listajanak elso es utolso eleme
     struct
@@ -219,8 +233,22 @@ typedef struct
     } processReqList;
 
 
+    //Az eroforras altal hasznalt hibara futott eroforrasok listaja.
+    //Ha egy fuggosege hibara fut, akkor annak statusz fuggveny hivasaban a
+    //hibara futott eroforras regisztralja magat a listaban, mely listat a
+    //manager taszkjaban dolgozunk fel. A feldolgozott lista elem torlodik.
+    struct
+    {
+        resourceDep_t* first;
+        resourceDep_t* last;
+    } depErrorList;
+
     //Az eroforras utolso hibakodja, melyet kapott egy statusz callbackben
     status_t lastErrorCode;
+
+    //Hiba informacios blokk, melyen keresztul kesobb az eroforrast hasznalo
+    //masik  eroforrasok, vagy userek fele riportolhatja a hibat.
+    resourceErrorInfo_t errorInfo;
 
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
     //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
@@ -318,7 +346,6 @@ typedef struct
     {
         resource_t* first;
         resource_t* last;
-        bool inTheList;
     } processReqList;
 
     //A nyilvantartott eroforrasok lancolt listajanak az elso es utolso eleme.
@@ -394,8 +421,8 @@ void MyRM_resourceStatus(resource_t* resource,
 
 //Eroforrasok inditasa/megallitasa
 //csak teszteleshez hasznalhato, ha kivulrol hivjuk.
-status_t MyRM_startResource(resource_t* resource);
-status_t MyRM_stopResource(resource_t* resource);
+void MyRM_startResource(resource_t* resource);
+void MyRM_stopResource(resource_t* resource);
 
 //------------------------------------------------------------------------------
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
