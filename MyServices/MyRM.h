@@ -255,6 +255,9 @@ typedef struct
     //beallitasra.
     bool    started;
 
+    //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
+    bool signallingUsers;
+
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
     //eroforrashoz letrehoztak taszkot.
     void* ext;
@@ -264,8 +267,8 @@ typedef struct
 //Ezen keresztul jelez vissza, ha az hasznalt eroforrasban valami allapot
 //valtozas all be. (pl elindul, megallt, hiba van vele, ...)
 typedef void resourceStatusFunc_t( resourceStatus_t resourceStatus,
-                                    status_t errorCode,
-                                    void* callbackData);
+                                   resourceErrorInfo_t* errorInfo,
+                                   void* callbackData);
 //------------------------------------------------------------------------------
 //Eroforrasokat hasznalo userek (igenylok) allapotai.
 typedef enum
@@ -282,11 +285,11 @@ typedef enum
     //Az eroforras varja, hogy az eroforras lealljon, vagy a feladataval
     //elkeszuljon.
     RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE,
-    //A z eroforras hibara futott
+    //Az eroforras hibara futott
     RESOURCEUSERSTATE_ERROR,
 } resourceUserState_t;
 //------------------------------------------------------------------------------
-//Az eroforrast hasznalo (birtoklo) egysegekhez tartozik egy-egy ilyen leiro.
+//Az eroforrast hasznalo (birtoklo) folyamatokhoz tartozik egy-egy ilyen leiro.
 //Ezen keresztul tortenik az egyes eroforrasok kerelme az applikacio felol.
 typedef struct
 {
@@ -298,7 +301,7 @@ typedef struct
 
     //true, ha a hozza tartozo eroforrasrol valo lemondaskor az eroforrasnak meg
     //tovabb kell mukodni, mivel mas userek vagy eroforrasok meg hasznaljak.
-    bool resourceContinuesWork;
+    //bool resourceContinuesWork;
 
     //Az eroforras allapotvaltozasa eseten feljovo callback. Ez alapjan tudja
     //peldaul a kerelmezo, hogy a kert eroforras elindult, es hasznalhatja, vagy
@@ -307,7 +310,7 @@ typedef struct
     resourceStatusFunc_t*     statusFunc;
     void*                   callbackData;
 
-    //A felhasznalo neve. (Ezt a debuggolashoz tudjuk hasznalni.)
+    //A felhasznalo neve. (Ezt a debuggolashoz es listazashoz tudjuk hasznalni.)
     const char*             userName;
 
     //Az eroforrast hasznalo userek lancolt listajahoz szukseges
@@ -434,23 +437,23 @@ void MyRM_addUser(resource_t* resource,
 //A hasznalok lancolt listajabol kivesszuk az elemet
 void MyRM_removeUser(resource_t* resource, resourceUser_t* user);
 
-//Eroforras igenylese.
+//Eroforras hasznalata.
 //Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
 //beregisztraltkeresztul jelzi, annak sikeresseget, vagy hibajat.
 //Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
-status_t MyRM_useResource(resourceUser_t* user);
+void MyRM_useResource(resourceUser_t* user);
 //Eroforrasrol lemondas.
 //Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
 //Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
-status_t MyRM_unuseResource(resourceUser_t* user);
+void MyRM_unuseResource(resourceUser_t* user);
 
 
 
 //------------------------------------------------------------------------------
 //Altalanos eroforras hasznalat eseten beallithato hiba callback felepitese,
 //melyben az applikacio fele jelezni tudja az eroforras hibait.
-typedef void generalResourceUserErrorFunc_t(status_t errorCode,
+typedef void generalResourceUserErrorFunc_t(resourceErrorInfo_t* errorInfo,
                                             void* callbackData);
 
 //Az altalonsitott felhasznalo kezeleshez hasznalt leiro.
