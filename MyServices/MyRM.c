@@ -1022,6 +1022,19 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
         //......................................................................
         case RESOURCE_RUN:
             //Az eroforras azt jelzi, hogy elindult
+
+            if (resource->state == RESOURCE_STATE_ERROR)
+            {   //Az eroforras korabban hibara futott. Ez az elindult jelzes
+                //nem juthat ervenyre.
+                //
+                //Ilyen szituacio pl, ha egy fuggosege hibat jelez, melyet nem
+                //nyom el az eroforras a depError fuggvenyeben, es kozben tovabb
+                //fojtatja az indulasi procedurat, mely vegen RUN jelzest ad.
+                //Ezt a RUN jelzest akkor adja ki, amikor az eroforras mar
+                //korabban beallitotta magara nezve az ERROR statuszt.
+                break;
+            }
+
             if (resource->state != RESOURCE_STATE_STARTING)
             {   //Az eroforras ugy kuldte az elindult jelzest, hogy kozben nem
                 //is inditasi allapotban van. Ez szoftverhiba!
@@ -1081,50 +1094,11 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                 //leallitasi folyamatban. Ez szoftverhiba!
                 ASSERT(0);
             }
-#if 0
-            //Leallitott allapotot allitunk be az eroforrasra.
-            resource->state=RESOURCE_STATE_STOP;
 
-            //Az eroforras fuggosegeiben lemondjuk a hasznalatot, igy azok ha
-            //mar senkinek sem kellenek, leallhatnak
-            //Az eszkoz fuggosegeiben elo kell irni a hasznalatot.
-            //Vegig fut a fuggosegeken, es kiadja azokra az inditasi
-            //kerelmet...
-            resourceDep_t* dep=resource->dependencyList.first;
-            while(dep)
-            {
-                resource_t* depRes=(resource_t*) dep->requiredResource;
-                MyRM_stopResourceCore(rm, depRes);
-
-                //Eloirjuk, hogy ellenorizve legyen az eroforras usage
-                //szamlaloja, es ha az 0 (vagy 0-ra csokkent), akkor allitsa le
-                //az eroforrast.
-                depRes->checkUsageCntRequest=true;
-                MyRM_addResourceToProcessReqList(rm, depRes);
-
-                //lancolt list akovetkezo elemere allas.
-                dep=(resourceDep_t*)dep->nextDependency;
-            }
-
-            //A leallitasi folyamat alatt viszont elkepzelheto olyan eset, hogy
-            //az eroforrast valaki(k) ujra hasznalatba veszik. Ezt az usageCnt
-            //nem 0 erteke jelenti. Ebben az esetben az eroforrast ujra el kell
-            //inditani. Ezt a taszkban oldjuk meg.
-            //Eloirjuk, hogy az eroforras tesztelje a hasznalati szamlalojat.
-            resource->checkUsageCntRequest=true;
-
-            //Az eroforrast hasznalo userek fele torteno jelzes eloirasa.
-            //A jelzes igy a manager taszkjaban fut majd le.
-            resource->signallingUsers=true;
-
-            //Csokkenteheto a futo eroforrasok szamlaloja.
-            //TODO: ezt innen ki kell szervezni a taszkba!  !!!!!!!!!!!!!!!!!!!!!!!!!!
-            MyRM_decrementRunningResourcesCnt(rm);
-#else
             //Eloirjuk, hogy az eroforras tesztelje a hasznalati szamlalojat.
             //Ha az tenyleg 0-ra csokken, akkor az eroforars leallithato.
             resource->checkUsageCntRequest=true;
-#endif
+
             break;
         //......................................................................
         case RESOURCE_ERROR: {
@@ -1162,7 +1136,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                 //Hiba allapotot veszunk fel
                 resource->state=RESOURCE_STATE_ERROR;
 
-                //Jelezzuk a hibat az eroforarst hasznalok szamara...
+                //Jelezzuk a hibat az eroforrast hasznalok szamara...
                 MyRM_addToRequestersDepErrorList(rm, resource);
 
                 //Az eroforrast hasznalo userek fele torteno jelzes eloirasa.
@@ -1190,7 +1164,7 @@ static void MyRM_addToRequestersDepErrorList(MyRM_t* rm, resource_t* resource)
         //A kovetkezo, a hibas eroforrast hasznalo eroforras
         resource_t* requester=(resource_t*)requesterDep->requesterResource;
 
-        //CSak azokkal a kerelmezokkel (hasznalokkal) foglalkozunk, melyek
+        //Csak azokkal a kerelmezokkel (hasznalokkal) foglalkozunk, melyek
         //aktivak. Az inaktivak nem kaphatjak meg a hiba jelzest.
         if (MyRM_resourceIsActive(requester))
         {   //A soron levo kerelmezo/hazsnlo aktiv, tehat neki jelzest kell
