@@ -244,7 +244,7 @@ typedef struct
     } depErrorList;
 
     //Az eroforras utolso hibakodja, melyet kapott egy statusz callbackben
-    status_t lastErrorCode;
+    //status_t lastErrorCode;
 
     //Hiba informacios blokk, melyen keresztul kesobb az eroforrast hasznalo
     //masik  eroforrasok, vagy userek fele riportolhatja a hibat.
@@ -253,7 +253,7 @@ typedef struct
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
     //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
     //beallitasra.
-    bool    started;
+    //bool    started;
 
     //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
     bool signallingUsers;
@@ -448,7 +448,17 @@ void MyRM_useResource(resourceUser_t* user);
 //eroforras mukodese befejezodott.
 void MyRM_unuseResource(resourceUser_t* user);
 
-
+//Az resourceUser_t struktura beallitasat segito rutin.
+//user: a hasznalati leirora mutat
+//statusFunc: A hasznalt eroforras allapotat visszajelzo callback rutin
+//callbackData: A callbackban visszaadott tetszolseges valtozo
+static inline void MyRM_configUser( resourceUser_t* user,
+                                    resourceStatusFunc_t* statusFunc,
+                                    void* callbackData)
+{
+    user->statusFunc=statusFunc;
+    user->callbackData=callbackData;
+}
 
 //------------------------------------------------------------------------------
 //Altalanos eroforras hasznalat eseten beallithato hiba callback felepitese,

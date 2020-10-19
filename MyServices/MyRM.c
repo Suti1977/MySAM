@@ -101,11 +101,13 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
         printf("  [%s]", resourceStateStrings[resource->state]);
     }
 
-    printf("   D:%d  U:%d Started:%d L.ErrCode:%d",
+    printf("   DC:%d DCnt:%d UCnt:%d L.ErrCode:%d (%s)",
+                                            (int)resource->depCount,
                                             (int)resource->depCnt,
-                                            (int)resource->usageCnt,
-                                            (int)resource->started,
-                                            (int)resource->lastErrorCode);
+                                            (int)resource->usageCnt,                                            
+                                            (int)resource->errorInfo.errorCode,
+                                            ((resource_t*) resource->errorInfo.resource)->resourceName
+                                            );
 
     printf("\n");
 
@@ -670,7 +672,7 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
                 //MyRM_resourceStatusCore() fuggvenyen keresztul az eroforras
                 //allapotat.
                 //A start funkcio alatt a mutexeket feloldjuk
-                resource->started=true;
+                //resource->started=true;
                 xSemaphoreGive(rm->mutex);
                 status=resource->funcs->start(resource->funcsParam);
                 xSemaphoreTake(rm->mutex, portMAX_DELAY);
@@ -739,7 +741,7 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
                 if (resource->state==RESOURCE_STATE_UNKNOWN)
                 {   //Az eroforras most lesz eloszor igenybe veve. Annak meg nem
                     //futott le az inicializalo fuggvenye.
-                    resource->started=false;
+                    //resource->started=false;
 
                     //Jelezzuk, hogy az eroforras inditasi allapotba kerult
                     resource->state=RESOURCE_STATE_STARTING;
@@ -854,7 +856,7 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
 
                 //Ha van az eroforrasnak stop funkcioja, akkor azt meghivja, ha
                 //nincs, akkor ugy vesszuk, hogy az eroforras leallt.
-                if ((resource->funcs->stop) && (resource->started))
+                if ((resource->funcs->stop) /*&& (resource->started)*/)
                 {   //Leallito callback meghivasa.
                     //A hivott callbackban hivodhat a MyRM_resourceStatus()
                     //fuggveny, melyben azonnal jelezheto, ha az eroforras le-
@@ -1158,8 +1160,6 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
             {   //A hibaval kezdeni kell valamit.
                 //Hiba allapotot veszunk fel
                 resource->state=RESOURCE_STATE_ERROR;
-                //Elmentjuk a hibakodot.
-                resource->lastErrorCode=errorCode;
 
                 //Jelezzuk a hibat az eroforarst hasznalok szamara...
                 MyRM_addToRequestersDepErrorList(rm, resource);
@@ -1623,7 +1623,7 @@ status_t MyRM_generalUseResource(generalResourceUser_t* generalUser)
     if (Events & GENUSEREVENT_ERROR)
     {   //Hiba volt az eroforras inditasakor
         //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=generalUser->user.resource->lastErrorCode;
+        status=generalUser->user.resource->errorInfo.errorCode;
 
         //eroforras leallitasa, igy biztositva abban a hiba torleset
         /*status=*/ MyRM_unuseResource(&generalUser->user);
@@ -1662,7 +1662,7 @@ status_t MyRM_generalUnuseResource(generalResourceUser_t* generalUser)
     if (events & GENUSEREVENT_ERROR)
     {   //Hiba volt az eroforras leallitasakor
         //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=generalUser->user.resource->lastErrorCode;
+        status=generalUser->user.resource->errorInfo.errorCode;
 
         //eroforras leallitasa, igy biztositva abban a hiba torleset
         /*status=*/ MyRM_unuseResource(&generalUser->user);
