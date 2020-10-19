@@ -565,7 +565,7 @@ static void __attribute__((noreturn)) MyRM_task(void* taskParam)
             MyRM_deleteResourceFromProcessReqList(rm, resource);
 
             //eroforras allapotok feldolgozasa...
-            MyRM_processResource(rm, resource);
+            MyRM_processResource(rm, resource);            
 
             //kovetkezo eroforrasra allas. (Mindig a lista elso eleme)
             resource=rm->processReqList.first;
@@ -687,17 +687,6 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
                                         resource,
                                         RESOURCE_RUN,
                                         kStatus_Success);
-
-                if (resource->signallingUsers)
-                {   //Az eroforrast hasznalo userek fele elo van irva a jelzes
-                    //kuldes, az eroforras allapotarol.
-
-                    //Jelzesi kerelem torlese
-                    resource->signallingUsers=false;
-
-                    MyRM_signallingUsers(rm, resource, continueWorking);
-                }
-
             }
         } else
         {   //Tovabb varakozunk, hogy az osszes fuggosege elinduljon...
@@ -892,7 +881,19 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
             } //if (resource->usageCnt==0)
         } //if RUN, STARTING
 
-    } //if (resource->checkUsageCntRequest)       
+    } //if (resource->checkUsageCntRequest)
+
+exit:
+    if (resource->signallingUsers)
+    {   //Az eroforrast hasznalo userek fele elo van irva a jelzes
+        //kuldes, az eroforras allapotarol.
+
+        //Jelzesi kerelem torlese
+        resource->signallingUsers=false;
+
+        MyRM_signallingUsers(rm, resource, continueWorking);
+    }
+
     return;
 
 init_error:
@@ -901,7 +902,7 @@ stop_error:
     //Hibakoddal jelzes generalasa. Ez magaval vonja, hogy jelzesre kerul a
     //hiba az eroforrast
     MyRM_resourceStatusCore(rm, resource, RESOURCE_ERROR, status);
-    return;
+    goto exit;
 }
 //------------------------------------------------------------------------------
 //Inditasi kerelmek kezelese
