@@ -37,8 +37,10 @@ typedef enum
     RESOURCE_RUN,
     //Az eroforras mukodese/initje hibara futott
     RESOURCE_ERROR,
-    //Az eroforras befejezte a mukodeset
+    //Az eroforras befejezte a mukodeset (kesobbi fejlesztesre var.)
     RESOURCE_DONE,
+    //Az eroforras kenyszer leallitasa befejezodott
+    RESOURCE_HALTED,
 } resourceStatus_t;
 //------------------------------------------------------------------------------
 //eroforras allapotat leiro enumok.
@@ -58,7 +60,12 @@ typedef enum
     //illetve STOPPING allapotban keletkezo hibaktol, mert azok nem viszik ebbe
     //a hiba allapotba, azok a hibak csak jelzesre kerulnek az eroforrast
     //hasznalok fele.
-    RESOURCE_STATE_ERROR
+    //RESOURCE_STATE_ERROR
+    //Eroforras kenyszeritett leallitasa folyik, valamilyen hiba miatt. Ebbol az
+    //alalpotbol ha az leallt, a STOP allapotba kerul.
+    RESOURCE_STATE_HALTING,
+    //Az eroforras kenyszeritett leallitasa befejezodott
+    RESOURCE_STATE_HALTED,
 } resourceState_t;
 
 //eroforrasok allapotahoz tartozo stringek.
@@ -69,10 +76,12 @@ typedef enum
     "STARTING",                 \
     "RUN     ",                 \
     "STOPPING",                 \
-    "ERROR   "}
+    "HALTING ",                 \
+    "HALTED  ",                 \
+}
 //------------------------------------------------------------------------------
 //Eroforras hibajaval kapcsolatos informacios struktura definicioja.
-//Az egyes hiba callbackek iylen informacios mezot kapnak
+//EZt a strukturat publikaljak magukrol az egyes eroforrasok.
 typedef struct
 {
     //A hibas fuggosegre mutat
@@ -91,6 +100,9 @@ typedef status_t resourceStartFunc_t(void* param);
 
 //Eroforrast leallito callback
 typedef status_t resourceStopFunc_t(void* param);
+
+//Eroforras kenyszeritett leallitasa
+typedef void resourceHaltFunc_t(void* param);
 
 //Eroforras mukodese kozben keletkezo hiba hatasara hivott callback
 //ignoreError true-ba allitasa eseten a hibat nem jelzi tovabb.
@@ -114,9 +126,10 @@ typedef struct
     resourceStopFunc_t*             stop;
     //Eroforras mukodese kozben keletkezo hiba hatasara hivott callback
     resourceErrorFunc_t*            error;
-    //Az eroforars valamelyik fuggosegenek hibaja eseten hivodo callback.
+    //Az eroforra s valamelyik fuggosegenek hibaja eseten hivodo callback.
     resourceDependencyErrorFunc_t*  depError;
-
+    //Eroforras kenyszeritett leallitasa hiba miatt
+    resourceHaltFunc_t*             halt;
 } resourceFuncs_t;
 //------------------------------------------------------------------------------
 //Egy eroforras mas eroforrasoktol valo fuggoseget leiro struktura.
@@ -249,6 +262,17 @@ typedef struct
     //Hiba informacios blokk, melyen keresztul kesobb az eroforrast hasznalo
     //masik  eroforrasok, vagy userek fele riportolhatja a hibat.
     resourceErrorInfo_t errorInfo;
+
+    //Az eroforras altal riportolt hibara mutat. Ezt beallithatja valamelyik
+    //hibat jelzo fuggosege alalapjan, vagy allithatja sajat magara is.
+    //Ha ez NULL, akkor sem az eroforras, sem valamelyik fuggosege nem jelez
+    //hibat.
+    //Amikor az eroforras hibara fut, es ez a pointer NULL, akkor raallitja a
+    //sajat errorInfo-jara, hiszen a sorban o idezte elo a hibat, melyet
+    //a feljebbi szintek fele reportolunk.
+    //Ha fuggosegi hibat kap, akkor az egyik (a feldolgozasi sorban levo elso)
+    //fuggosegetol veszi at, es kesobb azt publikalja tovabb.
+    resourceErrorInfo_t* reportedError;
 
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
     //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
