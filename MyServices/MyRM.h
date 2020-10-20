@@ -253,7 +253,11 @@ typedef struct
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
     //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
     //beallitasra.
-    //bool    started;
+    //Ez akkor erdekes, ha egy eroforras STARTING allapotban van, de meg var
+    //valamelyik fuggosegere, igy annak addig nem hivodik meg a start()
+    //fuggvenye. A flag segitsegevel tudhato, hogy az eroforras belso mecha-
+    //nizmusai meg nem allnak keszen a hibakezeles fogadasara.
+    bool    started;
 
     //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
     bool signallingUsers;
