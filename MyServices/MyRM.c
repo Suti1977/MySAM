@@ -116,6 +116,16 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
     if (printDeps)
     {
         printf("              startReqCnt: %d  stopReqCnt: %d\n", resource->startReqCnt, resource->stopReqCnt);
+
+        if (resource->reportedError)
+        {
+            resourceErrorInfo_t* ei=resource->reportedError;
+            printf("              Error Initiator: %s   ErrorCode: %d  State: %d\n",
+                                            ((resource_t*) ei->resource)->resourceName,
+                                            ei->errorCode,
+                                            ei->resourceState);
+        }
+
         printf("              Reqs: ");
 
         resourceDep_t* requester=resource->requesterList.first;
@@ -600,6 +610,8 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
     status_t status;
     bool continueWorking=false;
 
+volatile static resource_t* rrrrr; rrrrr=resource;
+
     //Annak ellenorzese, hogy valamely fuggosegeben eloallt-e (ujabb) hiba.
     //A hibas fuggosegeket jelzi az eroforras szamara.
     while(resource->depErrorList.first)
@@ -1028,12 +1040,12 @@ static inline void MyRM_processStartRequest(MyRM_t* rm, resource_t* resource)
         resource->checkUsageCntRequest=true;
     }
     else
-    if (resource->state==RESOURCE_STATE_ERROR)
-    {   //Az eroforras hiba allapotban van. Az inditast igenylo user fele
-        //jelezni kell, hogy az eroforras hibas.
-        resource->signallingUsers=true;
-    }
-    else
+    //  if (resource->state==RESOURCE_STATE_ERROR)
+    //  {   //Az eroforras hiba allapotban van. Az inditast igenylo user fele
+    //      //jelezni kell, hogy az eroforras hibas.
+    //      resource->signallingUsers=true;
+    //  }
+    //  else
     if (resource->state==RESOURCE_STATE_RUN)
     {   //Az eroforras mar el van inditva.
         //Jelezni kell az eroforarst ujonnan igenybe vevo user(ek) fele, hogy
@@ -1350,8 +1362,10 @@ static void MyRM_signallingUsers(MyRM_t* rm,
         }
 
 
-        if (resource->state==RESOURCE_STATE_ERROR)
-        {   //Hiba van az eroforrasal.
+        if ((resource->state==RESOURCE_STATE_HALTING) ||
+            (resource->state==RESOURCE_STATE_HALTED))
+        {   //Hiba van az eroforrasal. Az eppen a kenyszeritett leallitasi
+            //allapotban van, vagy mar le is allt.
 
             //Ha az user meg nincs hiba allapotban, akkor atadjuk neki a
             //hibat.
