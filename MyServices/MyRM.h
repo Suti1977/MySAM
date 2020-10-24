@@ -36,36 +36,23 @@ typedef enum
     //Eroforras elindult, mukodik, a resdszer szamara hasznalhato
     RESOURCE_RUN,
     //Az eroforras mukodese/initje hibara futott
-    RESOURCE_ERROR,
+    RESOURCE_ERROR,    
     //Az eroforras befejezte a mukodeset (kesobbi fejlesztesre var.)
     RESOURCE_DONE,
-    //Az eroforras kenyszer leallitasa befejezodott
-    RESOURCE_HALTED,
 } resourceStatus_t;
 //------------------------------------------------------------------------------
 //eroforras allapotat leiro enumok.
 typedef enum
 {
-    //Ismeretlen allapot. Reset utan, amig nem kap inicializalast
-    RESOURCE_STATE_UNKNOWN=0,
     //Eroforras leallitott allapota. Inicializaltsag utani allapot is ez.
-    RESOURCE_STATE_STOP,
+    RESOURCE_STATE_STOP=0,
     //Eroforras inditasi folyamata van
     RESOURCE_STATE_STARTING,
     //Eroforras elindult, az applikacio hasznalhatja.
     RESOURCE_STATE_RUN,
     //Eroforras leallitasa folyamatban van. Varjuk annak veget.
+    //Ha az errorFlag true, akkor az eroforras hiba miatt all le.
     RESOURCE_STATE_STOPPING,
-    //Eroforras elinditasa vagy megallitasa hibara futott. Ez kulonbozik a RUN
-    //illetve STOPPING allapotban keletkezo hibaktol, mert azok nem viszik ebbe
-    //a hiba allapotba, azok a hibak csak jelzesre kerulnek az eroforrast
-    //hasznalok fele.
-    //RESOURCE_STATE_ERROR
-    //Eroforras kenyszeritett leallitasa folyik, valamilyen hiba miatt. Ebbol az
-    //alalpotbol ha az leallt, a STOP allapotba kerul.
-    RESOURCE_STATE_HALTING,
-    //Az eroforras kenyszeritett leallitasa befejezodott
-    RESOURCE_STATE_HALTED,
 } resourceState_t;
 
 //eroforrasok allapotahoz tartozo stringek.
@@ -76,8 +63,6 @@ typedef enum
     "STARTING",                 \
     "RUN     ",                 \
     "STOPPING",                 \
-    "HALTING ",                 \
-    "HALTED  ",                 \
 }
 //------------------------------------------------------------------------------
 //Eroforras hibajaval kapcsolatos informacios struktura definicioja.
@@ -101,19 +86,17 @@ typedef status_t resourceStartFunc_t(void* param);
 //Eroforrast leallito callback
 typedef status_t resourceStopFunc_t(void* param);
 
-//Eroforras kenyszeritett leallitasa
-typedef void resourceHaltFunc_t(void* param);
 
 //Eroforras mukodese kozben keletkezo hiba hatasara hivott callback
 //ignoreError true-ba allitasa eseten a hibat nem jelzi tovabb.
-typedef void resourceErrorFunc_t(resourceErrorInfo_t* info,
-                                 bool* ignoreError,
-                                 void* param);
+//typedef void resourceErrorFunc_t(resourceErrorInfo_t* info,
+//                                 bool* ignoreError,
+//                                 void* param);
 
 //Az eroforars valamelyik fuggosegenek hibaja eseten hivodo callback.
-typedef void resourceDependencyErrorFunc_t(resourceErrorInfo_t* info,
-                                           bool* ignoreError,
-                                           void* param);
+//typedef void resourceDependencyErrorFunc_t(resourceErrorInfo_t* info,
+//                                           bool* ignoreError,
+//                                           void* param);
 //------------------------------------------------------------------------------
 //Eroforrasokhoz tartozo callbackek
 typedef struct
@@ -124,12 +107,6 @@ typedef struct
     resourceStartFunc_t*            start;
     //Eroforrast leallito callback
     resourceStopFunc_t*             stop;
-    //Eroforras mukodese kozben keletkezo hiba hatasara hivott callback
-    resourceErrorFunc_t*            error;
-    //Az eroforra s valamelyik fuggosegenek hibaja eseten hivodo callback.
-    resourceDependencyErrorFunc_t*  depError;
-    //Eroforras kenyszeritett leallitasa hiba miatt
-    resourceHaltFunc_t*             halt;
 } resourceFuncs_t;
 //------------------------------------------------------------------------------
 //Egy eroforras mas eroforrasoktol valo fuggoseget leiro struktura.
@@ -192,12 +169,8 @@ typedef struct
     //minden lemondas csokkenti.
     //Ha a szamlalo 0-ra csokken, akkor az eroforras hasznalata leallithato.
     uint32_t        usageCnt;
-    //true-ba allitjuk, ha az usageCnt 0-ba allt, tehat eloirjuk a szalnak, hogy
-    //ellenorizze a usageCnt allapotat, es ha az 0, akkor allitsa le az
-    //eroforrast
-    bool checkUsageCntRequest;
 
-    //Az eroforrast igenylo eroforrasok lancolt listaja.
+    //Az eroforrast igenylo eroforrasok lancolt listaja. (felso szinetk a faban)
     struct
     {
         resourceDep_t*    first;
@@ -210,8 +183,8 @@ typedef struct
     //Ha erteke 0-ra csokken, akkor az eroforras mukodesehez tratozo egyeb
     //fuggosegek elindultak, es az eroforras is indithato.
     uint32_t        depCnt;
-    //true-ba allitjuk, ha a depCnt 0-ba allt, tehat eloirjuk a szalnak, hogy
-    //ellenorizze a depCnt allapotat, es ha az 0, akkor inditsa el az eroforrast
+    //true-val irjuk elo, hogy az eroforras ellenorizze a depCnt szamlalojat,
+    //es ha az 0, akkor inditsa el az eroforrast.
     bool checkDepCntRequest;
 
     //Az eroforrashoz tartozo sajat fuggosegek lancolt listajanak eleje es vege.
@@ -272,6 +245,11 @@ typedef struct
     //a feljebbi szintek fele reportolunk.
     //Ha fuggosegi hibat kap, akkor az egyik (a feldolgozasi sorban levo elso)
     //fuggosegetol veszi at, es kesobb azt publikalja tovabb.
+    //- Ha a reportedError pointere nem NULL, akkor az eroforras hibas.
+    //- Ha NULL, akkor nincs hiba
+    //- Ha sajat magara mutat, akkor o kezdte a hibas mukodest
+    //- Ha az error pointere nem sajat magara mutat, akkor egy fuggosege miatt
+    //  kerult hibara, es annak a hibajat mutatja.
     resourceErrorInfo_t* reportedError;
 
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
@@ -281,10 +259,32 @@ typedef struct
     //valamelyik fuggosegere, igy annak addig nem hivodik meg a start()
     //fuggvenye. A flag segitsegevel tudhato, hogy az eroforras belso mecha-
     //nizmusai meg nem allnak keszen a hibakezeles fogadasara.
-    bool    started;
+    bool    started;                        //TODO: kivenni, ha nem kell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
+    //vagy le kell-e valami miatt allitani az eroforarst.
+    bool checkStartStopReq;
 
     //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
     bool signallingUsers;
+
+    //true-val jelzi, hogy az eroforras inicializalva van. Annak az elso
+    //inditasnal lefutott az init() callbackje.
+    bool inited;
+
+    //true-val jelzi, ha hibas allapotban van
+    bool errorFlag;
+
+    //true-val jelzi, hogy az eroforars vegzett a feladataval. Ez az egyszer
+    //lefuto feladatokat elvegzo eroforarsoknal hasznaljuk. (kesobbi fejlesztes)
+    bool doneFlag;
+
+    //az eroforars kenyszeritett leallitasanak kerelmet jelzo flag
+    bool haltReq;
+
+    //Az eroforras hiba allapotban volt, es leallt, tehat STOP statuszt
+    //jelentett magarol.
+    bool haltedFlag;
 
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
     //eroforrashoz letrehoztak taszkot.
