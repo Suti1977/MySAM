@@ -6,7 +6,7 @@
 #include "MyRM.h"
 #include <string.h>
 
-#define MyRM_TRACE  0
+#define MyRM_TRACE  1
 
 //Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
 //Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
@@ -40,23 +40,13 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                                  resource_t* resource,
                                  bool continueWorking);
 
+//Manager taszkot ebreszteni kepes eventek definicioi
 #define MyRM_NOTIFY__RESOURCE_START_REQUEST     BIT(0)
 #define MyRM_NOTIFY__RESOURCE_STOP_REQUEST      BIT(1)
 #define MyRM_NOTIFY__RESOURCE_STATUS            BIT(2)
 #define MyRM_NOTIFY__RESOURCE_USE               BIT(3)
 #define MyRM_NOTIFY__RESOURCE_UNUSE             BIT(4)
 
-//Az altalanos eroforras felhasznalok (userek) eseteben hasznalhato esemeny
-//flagek, melyekkel az altalanos user statusz callbackbol jelzunk a varakozo
-//taszk fele.
-//Az eroforras elindult
-#define GENUSEREVENT_RUN                        BIT(0)
-//Az eroforras leallt
-#define GENUSEREVENT_STOP                       BIT(1)
-//Az eroforrassal hiba van.
-#define GENUSEREVENT_ERROR                      BIT(2)
-//Az eroforras vegzett (egyszer lefuto folyamatok eseten)
-#define GENUSEREVENT_DONE                       BIT(3)
 //------------------------------------------------------------------------------
 //Eroforras management reset utani kezdeti inicializalasa
 void MyRM_init(const MyRM_config_t* cfg)
@@ -1502,9 +1492,10 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                 //jelzesre. Ez utobbi eseten is STOP allapotba megy az
                 //eroforras.
 
-                if ((resource->state==RESOURCE_STATE_STOP) ||
-                    (resource->state=RESOURCE_STATE_RUN) & (continueWorking))
-                {   //Az eroforras leallt, vagy tovabb mukodeik, mert
+                if ( (resource->state==RESOURCE_STATE_STOP) ||
+                    ((resource->state==RESOURCE_STATE_RUN) &&
+                     (continueWorking==true)))
+                {   //Az eroforras leallt, vagy tovabb mukodik, mert
                     //egy vagy tobb masik eroforrasnak szuksege van ra.
                     //Ez utobbi esetben a leallast varo user fele
                     //jelezheto a leallt allapot. Igy az befejezheti a
@@ -1619,11 +1610,14 @@ void MyRM_useResource(resourceUser_t* user)
     MyRM_t* rm=&myRM;
     resource_t* resource=user->resource;
 
+
     xSemaphoreTake(rm->mutex, portMAX_DELAY);
 
-    //TODO: mit tegyunk, ha hiba allapotban van az user?????????????????????????????????????????????????????????????????????
+    #if MyRM_TRACE
+    printf("MyRM_useResource() user: %s  state: %d\n", user->userName, user->state);
+    #endif
 
-    switch(user->state)
+    switch((int)user->state)
     {
         case RESOURCEUSERSTATE_IDLE:
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
@@ -1642,6 +1636,20 @@ void MyRM_useResource(resourceUser_t* user)
         case RESOURCEUSERSTATE_RUN:
             //Mar egy korabbi inditasra varunk, vagy mar mukodik az eroforras.
             //Nem inditunk ra ujra.
+            break;
+
+
+        case RESOURCEUSERSTATE_ERROR:
+            //Az eroforras hibas allapotban van. Abbol csak ugy lehet kilepni,
+            //ha elobb leallitjak az eroforrast.
+            //Generalunk az applikacio fele jelzest, hogy az eroforars hibas.
+            if (user->statusFunc)
+            {
+                user->statusFunc(RESOURCE_ERROR,
+                                 &resource->errorInfo,
+                                 user->callbackData);
+            }
+
             break;
 
         default:
@@ -1667,15 +1675,22 @@ void MyRM_unuseResource(resourceUser_t* user)
 
     xSemaphoreTake(rm->mutex, portMAX_DELAY);
 
-    //TODO: mit tegyunk, ha hiba allapotban van az user?????????????????????????????????????????????????????????????????????
+    #if MyRM_TRACE
+    printf("MyRM_unuseResource() user: %s  state: %d\n", user->userName, user->state);
+    #endif
 
-    switch(user->state)
+    switch((int)user->state)
     {
+
         case RESOURCEUSERSTATE_RUN:
         case RESOURCEUSERSTATE_WAITING_FOR_START:
+        case RESOURCEUSERSTATE_ERROR:
             //Az eroforras el van inidtva vagy varunk annak elindulasara.
             //Ez utobbi akkor lehet, ha inditasi folyamat kozben megis lemond
             //az user az eroforrasrol.
+
+            //Vagy az eroforras hibaja miatt az user hiba allapotban van.
+            //Ebbol kilepni, az eroforras leallitasaval lehet.
 
             //Beallitjuk, hogy varunk annak leallasara
             user->state=RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE;
@@ -1686,7 +1701,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             MyRM_stopResourceCore(rm, resource);
 
             //Jelzes a taszknak...
-            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
+            //MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
@@ -1711,6 +1726,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             }
             break;
 
+
         default:
             //Ismeretlen allapot.
             ASSERT(0);
@@ -1723,146 +1739,4 @@ void MyRM_unuseResource(resourceUser_t* user)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-//Altalanos callback rutin, melyet az altalanos userre varas eseten hasznalunk
-static void MyRM_generalUserStatusCallback(resourceStatus_t resourceStatus,
-                                            resourceErrorInfo_t* errorInfo,
-                                            void* callbackData)
-{
-    generalResourceUser_t* genUser=(generalResourceUser_t*) callbackData;
-
-    //Elagaz a statusz alapjan
-    switch((int)resourceStatus)
-    {
-        case RESOURCE_RUN:
-            //Az eroforras elindult. Jelezzuk a varakozo taszknak.
-            xEventGroupSetBits(genUser->events, GENUSEREVENT_RUN);
-            break;
-        case RESOURCE_STOP:
-            //Az eroforras rendben leallt. Jelezzuk a varakozo taszknak.
-            xEventGroupSetBits(genUser->events, GENUSEREVENT_STOP);
-            break;
-        case RESOURCE_DONE:
-            //Az eroforras vegzett, es leallt
-            //vagy az eroforrasrol az user sikeresen lemondott.
-            xEventGroupSetBits(genUser->events, GENUSEREVENT_DONE);
-            break;
-        case RESOURCE_ERROR:
-            //Ha van megadva az altalanos user-hez statusz callback, akkor hibak
-            //eseten az meghivasra kerul.
-            if (genUser->errorFunc)
-            {   //Van beallitva callback
-                genUser->errorFunc(errorInfo, genUser->callbackData);
-            }
-            xEventGroupSetBits(genUser->events, GENUSEREVENT_ERROR);
-            break;
-        default:
-            ASSERT(0);
-            break;
-    }
-}
-//------------------------------------------------------------------------------
-//Az eroforrashoz altalanos user kezelo hozzaadasa. A rutin letrehozza a
-//szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
-//regisztraciot.
-void MyRM_addGeneralUser(resource_t* resource,
-                          generalResourceUser_t* genUser,
-                          const char* userName)
-{
-    //Esemenyflag mezo letrehozasa, melyekre az alkalmazas taszkja varhat.
-  #if configSUPPORT_STATIC_ALLOCATION
-    genUser->events=xEventGroupCreateStatic(&genUser->eventsBuff);
-  #else
-    genUser->events=xEventGroupCreate();
-  #endif
-
-    //Az altalanos usrekehez tartozo kozos allapot callback lesz beallitva
-    genUser->user.statusFunc=MyRM_generalUserStatusCallback;
-    genUser->user.callbackData=genUser;
-
-    //A kiejlolt eroforrashoz user hozzaadasa
-    MyRM_addUser(resource, &genUser->user, userName);
-}
-//------------------------------------------------------------------------------
-//Torli az usert az eroforras hasznaloi kozul.
-//Fontos! Elotte az eroforras hasznalatot le kell mondani!
-void MyRM_removeGeneralUser(generalResourceUser_t* generalUser)
-{
-    MyRM_removeUser(generalUser->user.resource, &generalUser->user);
-}
-//------------------------------------------------------------------------------
-//Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
-//vagy hibara nem fut az inditasi folyamatban valami miatt.
-status_t MyRM_generalUseResource(generalResourceUser_t* generalUser)
-{
-    status_t status=kStatus_Success;
-
-    //Eroforras hasznalatba vetele. A hivas utan a callbackben kapunk jelzest
-    //az eroforras allapotarol.
-    MyRM_useResource(&generalUser->user);
-
-    //Varakozas, hogy megjojjon az inditasi folyamtrol a statusz.
-    //TODO: timeoutot belefejleszteni?
-    EventBits_t Events=xEventGroupWaitBits( generalUser->events,
-                                            GENUSEREVENT_RUN |
-                                            GENUSEREVENT_ERROR,
-                                            pdTRUE,
-                                            pdFALSE,
-                                            portMAX_DELAY);
-    if (Events & GENUSEREVENT_RUN)
-    {   //elindult az eroforras.
-
-    }
-
-    if (Events & GENUSEREVENT_ERROR)
-    {   //Hiba volt az eroforras inditasakor
-        //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=generalUser->user.resource->errorInfo.errorCode;
-
-        //eroforras leallitasa, igy biztositva abban a hiba torleset
-        /*status=*/ MyRM_unuseResource(&generalUser->user);
-        //if (status) return status;
-
-    }
-
-    return status;
-}
-//------------------------------------------------------------------------------
-//Eroforras hasznalatanak lemondasa. A rutin megvarja, amig az eroforras leall,
-//vagy hibara nem fut a leallitasi folyamatban valami.
-status_t MyRM_generalUnuseResource(generalResourceUser_t* generalUser)
-{
-    status_t status=kStatus_Success;
-
-    //Eroforras hasznalatanak lemondasa. A hivas utan a callbackben kapunk
-    //jelzest az eroforras allapotarol.
-    MyRM_unuseResource(&generalUser->user);
-
-
-    //Varakozas, hogy megjojjon a leallast jelzo esemeny
-    //TODO: timeoutot belefejleszteni?
-    EventBits_t events=xEventGroupWaitBits( generalUser->events,
-                                            GENUSEREVENT_STOP |
-                                            GENUSEREVENT_ERROR |
-                                            GENUSEREVENT_DONE,
-                                            pdTRUE,
-                                            pdFALSE,
-                                            portMAX_DELAY);
-    //if (events & GENUSEREVENT_STOP)
-    //{   //az eroforras rendben leallt
-    //
-    //}
-
-    if (events & GENUSEREVENT_ERROR)
-    {   //Hiba volt az eroforras leallitasakor
-        //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=generalUser->user.resource->errorInfo.errorCode;
-
-        //eroforras leallitasa, igy biztositva abban a hiba torleset
-        /*status=*/ MyRM_unuseResource(&generalUser->user);
-        //if (status) return status;
-    }
-
-    return status;
-}
 //------------------------------------------------------------------------------

@@ -493,52 +493,6 @@ static inline void MyRM_configUser( resourceUser_t* user,
     user->statusFunc=statusFunc;
     user->callbackData=callbackData;
 }
-
-//------------------------------------------------------------------------------
-//Altalanos eroforras hasznalat eseten beallithato hiba callback felepitese,
-//melyben az applikacio fele jelezni tudja az eroforras hibait.
-typedef void generalResourceUserErrorFunc_t(resourceErrorInfo_t* errorInfo,
-                                            void* callbackData);
-
-//Az altalonsitott felhasznalo kezeleshez hasznalt leiro.
-typedef struct
-{
-    //Eroforras hasznalat valtozoi. (Gyakorlatilag ez kerul felbovitesre.)
-    resourceUser_t user;
-
-    //Az user mukodesere vonatkozo esemenyflag mezo, melyekkel az applikacio
-    //fele lehet jelezni az allapotokat. Ezekre varhatnak az indito/megallito
-    //rutinok. (Statikus)
-    //GENUSEREVENT_xxx bitekkel operalunk rajta
-    EventGroupHandle_t  events;
-  #if configSUPPORT_STATIC_ALLOCATION
-    StaticEventGroup_t  eventsBuff;
-  #endif
-
-    //Hiba eseten meghivhato callback funkcio cime. Ezen keresztul lehet jelezni
-    //az applikacio fele az eroforras mukodese kozbeni hibakat.
-    generalResourceUserErrorFunc_t* errorFunc;
-    //A funkcio meghivasakor atadott tetszoleges adat
-    void*  callbackData;
-
-} generalResourceUser_t;
-
-//Az eroforrashoz altalanos user kezelo hozzaadasa. A rutin letrehozza a
-//szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
-//regisztraciot.
-void MyRM_addGeneralUser(resource_t* resource,
-                         generalResourceUser_t* genUser,
-                         const char* userName);
-//Torli az usert a eroforras hasznaloi kozul.
-//Fontos! Elotte a eroforras hasznalatot le kell mondani!
-void MyRM_removeGeneralUser(generalResourceUser_t* generalUser);
-//Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
-//vagy hibara nem fut az inditasi folyamatban valami miatt.
-status_t MyRM_generalUseResource(generalResourceUser_t* generalUser);
-//Eroforras hasznalatanak lemondasa. A rutin megvarja, amig az eroforras leall,
-//vagy hibara nem fut a leallitasi folyamatban valami.
-status_t MyRM_generalUnuseResource(generalResourceUser_t* generalUser);
-
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYRM_H_
