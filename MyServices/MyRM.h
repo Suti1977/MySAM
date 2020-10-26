@@ -58,8 +58,7 @@ typedef enum
 //eroforrasok allapotahoz tartozo stringek.
 //FONTOS, HOGY A SORRENDJUK SZINKRONBAN LEGYEN AZ ENUMOKKAL!
 #define RESOURCE_STATE_STRINGS  \
-{   "UNKNOWN ",                 \
-    "STOP    ",                 \
+{   "STOP    ",                 \
     "STARTING",                 \
     "RUN     ",                 \
     "STOPPING",                 \
@@ -139,6 +138,8 @@ typedef struct
     //hivasaban a hibara futott eroforras regisztralja magat a listaban. Ez a
     //leiro is becsatolasra kerul.    
     struct resourceDep_t* nextDepError;
+    //true, ha mar a fuggosegi hiba listahoz van adva a leiro
+    bool depErrorInTheList;
 
 } resourceDep_t;
 //------------------------------------------------------------------------------
@@ -260,6 +261,11 @@ typedef struct
     //fuggvenye. A flag segitsegevel tudhato, hogy az eroforras belso mecha-
     //nizmusai meg nem allnak keszen a hibakezeles fogadasara.
     bool    started;                        //TODO: kivenni, ha nem kell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //true, ha az eroforras fut, es kiadta az igenyloi fele a jelzest, hogy
+    //elindult. Csak akkor hivhatjuk meg a kerelmezoinek a dependencyStop()
+    //fuggvenyet, ha ez true.
+    bool run;
 
     //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
     //vagy le kell-e valami miatt allitani az eroforarst.
