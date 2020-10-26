@@ -6,6 +6,8 @@
 #include "MyRM.h"
 #include <string.h>
 
+#define MyRM_TRACE  0
+
 //Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
 //Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben
 //MyRM_INSTANCE
@@ -116,14 +118,12 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
         }
     }
 
-    printf("   DC:%d DCnt:%d UCnt:%d Started: %d L.ErrCode:%d (%s)",
+    printf("   DC:%d DCnt:%d UCnt:%d Started: %d L.ErrCode:%d",
                                             (int)resource->depCount,
                                             (int)resource->depCnt,
                                             (int)resource->usageCnt,
                                             (int)resource->started,
-                                            (int)resource->errorInfo.errorCode,
-                                            ((resource_t*) resource->errorInfo.resource)->resourceName
-                                            );
+                                            (int)resource->errorInfo.errorCode);
 
     printf("\n");
 
@@ -587,7 +587,7 @@ static void __attribute__((noreturn)) MyRM_task(void* taskParam)
         //Vegig a feldolgozando eroforrasok listajan...
         resource_t* resource=rm->processReqList.first;
         while(resource)
-        {
+        {            
             //Az eroforrast kiveszi a listabol. (Ez a lista legelso eleme)
             MyRM_deleteResourceFromProcessReqList(rm, resource);
 
@@ -609,7 +609,13 @@ static inline void MyRM_depError(MyRM_t* rm,
                                  resource_t* resource,
                                  resource_t* faultyDependency)
 {
-    printf("  DEP ERROR. %s --> %s\n", faultyDependency->resourceName, resource->resourceName);
+    #if MyRM_TRACE
+    printf("  DEP ERROR. %s(%d) --> %s(%d)\n",
+           faultyDependency->resourceName,
+           faultyDependency->state,
+           resource->resourceName,
+           resource->state);
+    #endif
 
     //Annak ellenorzese, hogy az eroforras mar kapott-e valamely
     //fuggosegetol, vagy akar sajat magatol hibat. Ezt onnan tudni, hogy a
@@ -651,7 +657,9 @@ static inline void MyRM_depError(MyRM_t* rm,
 static  void MyRM_dependenyStarted(MyRM_t* rm, resource_t* resource)
 {
     //A fuggosegek szamanak csokkentese
+    #if MyRM_TRACE
     printf("[%s]MyRM_dependenyStarted\n", resource->resourceName);
+    #endif
 
     if (resource->depCnt==0)
     {   //A fuggoseg szamlalo elkeveredett.
@@ -678,12 +686,13 @@ static  void MyRM_dependenyStop(MyRM_t* rm, resource_t* resource)
 {
     (void) rm;
 
+    #if MyRM_TRACE
     printf("[%s]MyRM_dependenyStop\n", resource->resourceName);
+    #endif
 
     //A fuggosegek szamanak novelese
     if (resource->depCnt>=resource->depCount)
-    {   //A fuggoseg szamlalo elkeveredett.
-        printf("%s  %d  %d\n", resource->resourceName, resource->depCnt, resource->depCount);
+    {   //A fuggoseg szamlalo elkeveredett.        
         ASSERT(0);
         while(1);
     }
@@ -773,7 +782,7 @@ static inline void MyRM_depCntTest(MyRM_t* rm, resource_t* resource)
 //Annak ellenorzese, hogy az eroforarst el kell-e inditani, vagy le kell-e
 //allitani. Hiba eseten ebebn oldjuk meg a hiba miatti leallst is.
 //[MyRM_task-bol hivva]
-void static inline MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
+static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 {
     if (resource->haltReq)
     {   //hiba miatti leallitasi kerelem van.
@@ -1162,7 +1171,7 @@ static inline void MyRM_stopRequest(MyRM_t* rm,
 
         case RESOURCE_STATE_STOP:
             //Az eroforras mar le van allitva.
-            //Leallitott allapotban nem fogadhat inditasi kerelmet
+            //Leallitott allapotban nem fogadhat inditasi kerelmet            
             ASSERT(0);
             return;
 
@@ -1216,8 +1225,8 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                                     status_t errorCode)
 {
 
-    #if 1
-    const char* statusStr;
+    #if MyRM_TRACE
+    const char* statusStr="";
     switch(resourceStatus)
     {
         case RESOURCE_RUN: statusStr="RUN"; break;
@@ -1225,7 +1234,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
         case RESOURCE_DONE: statusStr="DONE"; break;
         case RESOURCE_ERROR: statusStr="ERROR"; break;
     }
-    printf("%s----RESOURCE STATUS=%s, errorCode:%d\n", resource->resourceName, statusStr, errorCode);
+    printf("%s----RESOURCE STATUS=%s, errorCode:%d\n", resource->resourceName, statusStr, (int)errorCode);
     #endif
 
 
@@ -1307,7 +1316,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                 case RESOURCE_STATE_STARTING:
                     break;
 
-                case RESOURCE_STATE_STOP:
+                case RESOURCE_STATE_STOP:                    
                 default:
                     //Az eroforras mar le van allitva.
                     //Leallitott allapotban nem kaphat hibajelzest
@@ -1408,6 +1417,11 @@ static void MyRM_signallingUsers(MyRM_t* rm,
     //Vegig halad az eroforras userein...
     for(;user; user=(resourceUser_t*)user->userList.next)
     {
+        #if MyRM_TRACE
+        printf("SIGNALLING USER! user: %s   resource: %s   state: %d   continueWorking: %d\n",
+               user->userName, resource->resourceName, resource->state, continueWorking);
+        #endif
+
         if (user->state==RESOURCEUSERSTATE_IDLE)
         {   //Amig nincs hasznalatban az user reszerol az eroforras, addig
             //nem kaphat jelzest.
