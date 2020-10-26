@@ -265,7 +265,7 @@ typedef struct
     //true, ha az eroforras fut, es kiadta az igenyloi fele a jelzest, hogy
     //elindult. Csak akkor hivhatjuk meg a kerelmezoinek a dependencyStop()
     //fuggvenyet, ha ez true.
-    bool run;
+    bool runningFlag;
 
     //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
     //vagy le kell-e valami miatt allitani az eroforarst.
