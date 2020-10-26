@@ -1630,6 +1630,8 @@ void MyRM_useResource(resourceUser_t* user)
 
             //Eroforrast inditjuk.
             MyRM_startResourceCore(rm, resource);
+
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_START:
@@ -1701,7 +1703,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             MyRM_stopResourceCore(rm, resource);
 
             //Jelzes a taszknak...
-            //MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
