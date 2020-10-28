@@ -63,7 +63,7 @@ void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState);
 #define MYSM_USER_DATA(type) ((type) (((MySM_t*)sm)->userData))
 
 //Makro, mely true-t ad vissza, ha egy allapotnak ez az elso hivasa.
-#define MYSM_INIT()     (((MySM_t*)sm)->init)
+#define MYSM_STATE_INIT()     (((MySM_t*)sm)->init)
 
 //Makro, mely segit letrehozni az allapotfuggvenyeket
 #define MYSM_STATE(functionName) \
