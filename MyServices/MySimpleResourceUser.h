@@ -11,8 +11,9 @@
 //------------------------------------------------------------------------------
 //Egyszeru eroforras hasznalat eseten beallithato hiba callback felepitese,
 //melyben az applikacio fele jelezni tudja az eroforras hibait.
-typedef void simplelResourceUserErrorFunc_t(resourceErrorInfo_t* errorInfo,
-                                            void* callbackData);
+typedef void simplelResourceUserStatusFunc_t(resourceStatus_t resourceStatus,
+                                             resourceErrorInfo_t* errorInfo,
+                                             void* callbackData);
 
 //Az egyszerusitett felhasznalo kezeleshez hasznalt leiro.
 typedef struct
@@ -30,7 +31,7 @@ typedef struct
 
     //Hiba eseten meghivhato callback funkcio cime. Ezen keresztul lehet jelezni
     //az applikacio fele az eroforras mukodese kozbeni hibakat.
-    simplelResourceUserErrorFunc_t* errorFunc;
+    simplelResourceUserStatusFunc_t* statusFunc;
     //A funkcio meghivasakor atadott tetszoleges adat
     void*  callbackData;
 

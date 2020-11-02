@@ -33,6 +33,13 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
            user->user.userName, resourceStatus);
     #endif
 
+    //Ha van megadva az user-hez statusz callback, akkor az meghivasra kerul.
+    if (user->statusFunc)
+    {   //Van beallitva callback
+        user->statusFunc(resourceStatus, errorInfo, user->callbackData);
+    }
+
+
     //Elagaz a statusz alapjan
     switch((int)resourceStatus)
     {
@@ -50,12 +57,7 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
             xEventGroupSetBits(user->events, SIMPLE_USER_EVENT__DONE);
             break;
         case RESOURCE_ERROR:
-            //Ha van megadva az user-hez statusz callback, akkor hibak
-            //eseten az meghivasra kerul.
-            if (user->errorFunc)
-            {   //Van beallitva callback
-                user->errorFunc(errorInfo, user->callbackData);
-            }
+            //Az eroforars hibara futott.
             xEventGroupSetBits(user->events, SIMPLE_USER_EVENT__ERROR);
             break;
         default:

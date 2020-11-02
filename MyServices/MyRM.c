@@ -714,7 +714,7 @@ static inline void MyRM_depCntTest(MyRM_t* rm, resource_t* resource)
     //eroforras inditasa elo van irva. Az eroforars indithato.
 
     //Eroforras initek...
-    resource->doneFlag=false;
+    //resource->doneFlag=false;
     resource->reportedError=NULL;
 
     status_t status;
@@ -789,6 +789,24 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
         //Ugrik az eroforrast leallito reszre. (igy egyszerubb)
         goto stop_resource;
 
+    }
+
+    if (resource->doneFlag)
+    {   //Egy egyszer lefuto eroforras elkeszult.
+        if (resource->state!=RESOURCE_STATE_STOPPING)
+        {   //Az eroforrasnak ilyenkor STOPPING allapotot kell mutatnia!
+            ASSERT(0); while(1);
+        }
+
+        if (resource->usageCnt!=1)
+        {   //Az eroforrast tobben is hasznaljak. Ez nem megengedett. Az egyszer
+            //lefutni kepes eroforrasoknak csak egy hasznalojuk lehet!
+            ASSERT(0); while(1);
+        }
+        //A hasznalati szamlalo nullazasaval elerjuk, hogy az usageCnt==0 ag
+        //fusson le, igy a STOPPING allapot automatikusan a STOP allapotba
+        //lepest fogja eloidezni.
+        resource->usageCnt=0;
     }
 
     if (resource->usageCnt)
@@ -1067,6 +1085,9 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
         resource->signallingUsers=false;
 
         MyRM_signallingUsers(rm, resource, continueWorking);
+
+        //Egyszer lefuto eroforarsok eseten a kesz jelzes torlese.
+        resource->doneFlag=false;
     }
 }
 //------------------------------------------------------------------------------
@@ -1291,10 +1312,13 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                 //mutatnia. Ha ez nem igy van, akkor az szoftverhiba.
                 ASSERT(0); while(1);
             }
+            //Jelzes, hogy kesz a folyamat
             resource->doneFlag=true;
-            resource->checkStartStopReq=true;
-            //TODO: kidolgozni!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+            //Az alalpot atmegy STOPPING-ba, amig a szalban be nem allitja ra a
+            //stop-ot.
+            resource->state=RESOURCE_STATE_STOPPING;
+            //Le kell futtatni a start/stop igeny ellenorzot
+            resource->checkStartStopReq=true;            
             break;
         //......................................................................
         case RESOURCE_ERROR:
@@ -1475,11 +1499,14 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                 {   //...es az eroforras most leallt vagy vegzett.
                     user->state=RESOURCEUSERSTATE_IDLE;
 
-                    //Jelezes az usernek a statusz callbacken keresztul
+                    //Jelezes az usernek a statusz callbacken keresztul.
+                    //Egyszer lefuto eroforarsok eseten DONE jelzes kerul
+                    //a statuszban atadasra.
                     if (user->statusFunc)
                     {
                         //xSemaphoreGive(rm->mutex);
-                        user->statusFunc(RESOURCE_STOP,
+                        user->statusFunc(resource->doneFlag ? RESOURCE_DONE
+                                                            : RESOURCE_STOP,
                                          &resource->errorInfo,
                                          user->callbackData);
                         //xSemaphoreTake(rm->mutex, portMAX_DELAY);
