@@ -105,5 +105,16 @@ EventGroupHandle_t MyTaskedResource_getEventHandler(resource_t* resource)
 {
     return ((taskedResourceExtension_t*)resource->ext)->events;
 }
+
+//A taszkkal bovitett eroforras taszkjanak esemeny kuldese
+static inline
+void MyTaskedResource_setEvent(resource_t* resource,
+                                             uint32_t event)
+{
+    xEventGroupSetBits(((taskedResourceExtension_t*)resource->ext)->events,
+                       event);
+}
+//------------------------------------------------------------------------------
+
 //------------------------------------------------------------------------------
 #endif //MYTASKEDRESOURCE_H_

@@ -146,6 +146,11 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
                                           pdTRUE,
                                           pdFALSE,
                                           control.waitTime);
+
+        //Az elso futasnal alapertelmezesben nem akad meg az eventekre varasnal,
+        //de a start callbackben ez feluldefinialhato.
+        control.waitTime=0;
+
         //Eroforras indul...
         if (this->cfg.startFunc)
         {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
@@ -159,8 +164,6 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         //Az eroforras elindult. Reportoljuk az eroforras manager fele...
         MyRM_resourceStatus(resource, RESOURCE_RUN, status);
 
-        //Az elso futasnal nem akad meg az eventekre varasnal.
-        control.waitTime=0;
 
         //Eroforrast futtato ciklus...
         while(1)
