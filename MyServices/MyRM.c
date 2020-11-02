@@ -6,7 +6,7 @@
 #include "MyRM.h"
 #include <string.h>
 
-#define MyRM_TRACE  1
+#define MyRM_TRACE  0
 
 //Ha hasznaljuk a modult, akkor annak valtozoira peldanyt kell kesziteni.
 //Az alabbi makrot el kell helyezni valahol a forrasban, peldaul main.c-ben

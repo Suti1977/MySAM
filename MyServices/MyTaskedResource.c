@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 #include "MyTaskedResource.h"
 
-#define MyTASKEDRESOURCE_TRACING    1
+#define MyTASKEDRESOURCE_TRACING    0
 
 static status_t MyTaskedResource_resource_init(void* param);
 static status_t MyTaskedResource_resource_start(void* param);
