@@ -189,3 +189,12 @@ void MyConsole_putString(MyConsole_t* console, const char* str)
                        console->callbackData);
 }
 //------------------------------------------------------------------------------
+//Taszkokhoz beallithato az stdio (konzol) kimenet
+#ifdef USE_FREERTOS
+#if configUSE_APPLICATION_TASK_TAG
+void MyConsole_setStdioForTask(TaskHandle_t task, MyConsole_t* console)
+{
+    vTaskSetApplicationTaskTag(task, (TaskHookFunction_t) console);
+}
+#endif
+#endif

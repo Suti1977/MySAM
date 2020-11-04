@@ -113,6 +113,13 @@ void MyConsole_putChar(MyConsole_t* console, const char txByte);
 void MyConsole_putString(MyConsole_t* console, const char* Str);
 
 void MyConsole_poll(MyConsole_t* console);
+
+//Taszkokhoz beallithato az stdio (konzol) kimenet
+#ifdef USE_FREERTOS
+ #if configUSE_APPLICATION_TASK_TAG
+    void MyConsole_setStdioForTask(TaskHandle_t task, MyConsole_t* console);
+ #endif
+#endif
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MY_CONSOLE_H_
