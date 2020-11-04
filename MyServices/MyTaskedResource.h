@@ -11,9 +11,9 @@
 
 //------------------------------------------------------------------------------
 //Eroforras inditasat eloiro esemeny flag
-#define MyTASKEDRESOURCE_EVENT__START_REQUEST   BIT(22)
+#define MyTASKEDRESOURCE_EVENT__START_REQUEST   BIT(30)
 //Eroforras leallitasat kero esemeny flag
-#define MyTASKEDRESOURCE_EVENT__STOP_REQUEST    BIT(23)
+#define MyTASKEDRESOURCE_EVENT__STOP_REQUEST    BIT(31)
 //------------------------------------------------------------------------------
 //Az eroforrast vezerlo valtozok halmaza
 typedef struct
@@ -87,7 +87,7 @@ typedef struct
     TaskHandle_t taskHandle;
 
     //Az eroforras mukodeset befolyasolo esemeny flagek csoprtja
-    EventGroupHandle_t events;
+    //EventGroupHandle_t events;
 
     //letrehozaskor kapott konfiguracio
     taskedResource_config_t cfg;
@@ -99,20 +99,26 @@ void MyTaskedResource_create(resource_t* resource,
                                      const taskedResource_config_t* cfg);
 
 
-//A taszkkal bovitett eroforrashoz tartozo esemenymezo handlerenek lekerdezese
+////A taszkkal bovitett eroforrashoz tartozo esemenymezo handlerenek lekerdezese
+//static inline
+//EventGroupHandle_t MyTaskedResource_getEventHandler(resource_t* resource)
+//{
+//    return ((taskedResourceExtension_t*)resource->ext)->events;
+//}
+//A taszkkal bovitett eroforrashoz taszk handlerenek lekerdezese
 static inline
-EventGroupHandle_t MyTaskedResource_getEventHandler(resource_t* resource)
+TaskHandle_t MyTaskedResource_getTaskHandler(resource_t* resource)
 {
-    return ((taskedResourceExtension_t*)resource->ext)->events;
+    return ((taskedResourceExtension_t*)resource->ext)->taskHandle;
 }
 
-//A taszkkal bovitett eroforras taszkjanak esemeny kuldese
+//A taszkkal bovitett eroforras taszkjanak esemeny(notify) kuldese
 static inline
-void MyTaskedResource_setEvent(resource_t* resource,
-                                             uint32_t event)
+void MyTaskedResource_setEvent(resource_t* resource, uint32_t event)
 {
-    xEventGroupSetBits(((taskedResourceExtension_t*)resource->ext)->events,
-                       event);
+    //xEventGroupSetBits(((taskedResourceExtension_t*)resource->ext)->events,
+    //                   event);
+    xTaskNotify(MyTaskedResource_getTaskHandler(resource), event, eSetBits);
 }
 //------------------------------------------------------------------------------
 

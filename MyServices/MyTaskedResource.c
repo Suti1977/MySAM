@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 #include "MyTaskedResource.h"
 
-#define MyTASKEDRESOURCE_TRACING    0
+#define MyTASKEDRESOURCE_TRACING    1
 
 static status_t MyTaskedResource_resource_init(void* param);
 static status_t MyTaskedResource_resource_start(void* param);
@@ -21,8 +21,8 @@ void MyTaskedResource_create(resource_t* resource,
     memcpy(&this->cfg, cfg, sizeof(taskedResource_config_t));
 
     //Eroforras vezerleset biztosito esemenymezo letrehozasa
-    this->events=xEventGroupCreate();
-    ASSERT(this->events);
+    //this->events=xEventGroupCreate();
+    //ASSERT(this->events);
 
     //Eroforras letrehozasa...
     //I2C buszok eroforras kezeleset biztosito fuggvenyek
@@ -91,7 +91,10 @@ static status_t MyTaskedResource_resource_start(void* param)
     }
 
     //Indito esemeny beallitasa, melyre a taszkban varakozo folyamat elindul
-    xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__START_REQUEST);
+    //xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__START_REQUEST);
+    xTaskNotify(this->taskHandle,
+                MyTASKEDRESOURCE_EVENT__START_REQUEST,
+                eSetBits);
 
     return kStatus_Success;
 }
@@ -113,9 +116,76 @@ static status_t MyTaskedResource_resource_stop(void* param)
 
     //Leallitasi kerelem esemeny beallitasa, melyre a taszkban a loop ciklus
     //elott minden korben ravizsglava kezdemenyezheto az eroforras leallasa.
-    xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
+    //xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
+    xTaskNotify(this->taskHandle,
+                MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+                eSetBits);
 
     return kStatus_Success;
+}
+//------------------------------------------------------------------------------
+//Taszkban meghatarozott notify esemenyekre varakozas
+uint32_t MyRTOS_waitForNotify(uint32_t waitedEvents,
+                              TickType_t waitTime)
+{
+    uint32_t ev;
+    if (waitTime==portMAX_DELAY)
+    {   //nincs szukseg idozites kezelesre. Csak a specifikus esemenyekre var.
+
+        do
+        {
+            xTaskNotifyStateClear( NULL );
+            xTaskNotifyWait(0,
+                            0xffffffff,
+                            &ev,
+                            waitTime);
+            //maszkoljuk a nem vart esemenyeket.
+            ev &= waitedEvents;
+            //ciklus, amig nem jon vart esemeny
+        } while(ev==0);
+
+    } else
+    {   //kell kezelni idozitest is
+
+        //A varakozas kezdo idopontja az idomeresjez, mivel mindenfele esemeny
+        //fe fogja tudni ebreszteni a taszkot, az is, amit nem vartunk.
+        TickType_t startTime=xTaskGetTickCount();
+        TickType_t wt=waitTime;
+
+        do
+        {
+            xTaskNotifyStateClear( NULL );
+            if (xTaskNotifyWait(0,
+                            0xffffffff,
+                            &ev,
+                            wt)==pdFAIL)
+            {   //timeout. Nem erkezett be esemeny. 0-val ter vissza.
+                ev=0;
+                break;
+            }
+
+            //maszkoljuk a nem vart esemenyeket.
+            ev &= waitedEvents;
+            //Ha legalabb egy vart esemeny beerkezett, akkor kilepes
+            if (ev) break;
+
+            //Az ido kiszamitasa, amennyit meg varni kell...
+
+            //Eltelt ido a varakozas kezdete ota.
+            TickType_t elapTime=xTaskGetTickCount()-startTime;
+
+            //A meg varakozasi ido kiszamitasa
+            if (elapTime>=waitTime)
+            {   //Az ido letelt, vagy mar meg is haladta
+                ev=0;
+                break;
+            }
+            wt=waitTime-elapTime;
+
+            //ciklus, amig nem jon vart esemeny
+        } while(ev==0);
+    }
+    return ev;
 }
 //------------------------------------------------------------------------------
 static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
@@ -141,11 +211,13 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         control.done=0;
 
         //varakozas arra, hogy az eroforrast elinditjak...
-        control.events=xEventGroupWaitBits(this->events,
-                                          control.waitedEvents,
-                                          pdTRUE,
-                                          pdFALSE,
-                                          control.waitTime);
+        //control.events=xEventGroupWaitBits(this->events,
+        //                                  control.waitedEvents,
+        //                                  pdTRUE,
+        //                                  pdFALSE,
+        //                                  control.waitTime);
+        control.events=MyRTOS_waitForNotify(control.waitedEvents,
+                                            control.waitTime);
 
         //Az elso futasnal alapertelmezesben nem akad meg az eventekre varasnal,
         //de a start callbackben ez feluldefinialhato.
@@ -182,11 +254,13 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
             control.waitedEvents |= MyTASKEDRESOURCE_EVENT__STOP_REQUEST;
 
             //varakozas esemenyre, vagy csak idozites...
-            control.events=xEventGroupWaitBits(this->events,
-                                              control.waitedEvents,
-                                              pdTRUE,
-                                              pdFALSE,
-                                              control.waitTime);
+            //control.events=xEventGroupWaitBits(this->events,
+            //                                  control.waitedEvents,
+            //                                  pdTRUE,
+            //                                  pdFALSE,
+            //                                  control.waitTime);
+            control.events=MyRTOS_waitForNotify(control.waitedEvents,
+                                                control.waitTime);
 
             //Annak ellenorzese, hogy le kell-e allitani az eroforrast...
             if (control.events & MyTASKEDRESOURCE_EVENT__STOP_REQUEST)
@@ -255,11 +329,13 @@ error:  //<--ide ugrunk hibak eseten
         //a STOP kerelme, hogy torlodni tudjon a hiba.
 
         //Varakozas a stop jelzesre...
-        control.events=xEventGroupWaitBits(this->events,
-                                          MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
-                                          pdTRUE,
-                                          pdFALSE,
-                                          portMAX_DELAY);
+        //control.events=xEventGroupWaitBits(this->events,
+        //                                  MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+        //                                  pdTRUE,
+        //                                  pdFALSE,
+        //                                  portMAX_DELAY);
+        control.events=MyRTOS_waitForNotify(MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+                                            portMAX_DELAY);
 
         //Jelzes a manager fele, hogy a modul le lett allitva.
         MyRM_resourceStatus(resource, RESOURCE_STOP, kStatus_Success);
