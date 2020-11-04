@@ -1218,7 +1218,7 @@ static inline void MyRM_stopRequest(MyRM_t* rm,
         resource->checkStartStopReq=true;
     } else
     if (resource->errorFlag)
-    {   //Az eroforras hibas alalpota torolheto, mert mindenki lemondott az
+    {   //Az eroforras hibas allapota torolheto, mert mindenki lemondott az
         //eroforrasrol a magasabb szinteken.
         resource->checkStartStopReq=true;
     }
@@ -1295,7 +1295,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
             {   //Hibas mukodes lezarasa megtortent. Az eroforras implementa-
                 //ciojaban mar nem futnak folyamatok. Jelezzuk, hogy ha az
                 //eroforrasrol mindenki lemondott, akkor az eroforras STOP
-                //alalpotba teheto.
+                //allapotba teheto.
                 resource->haltedFlag=true;
             }
 
@@ -1314,7 +1314,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
             }
             //Jelzes, hogy kesz a folyamat
             resource->doneFlag=true;
-            //Az alalpot atmegy STOPPING-ba, amig a szalban be nem allitja ra a
+            //Az allapot atmegy STOPPING-ba, amig a szalban be nem allitja ra a
             //stop-ot.
             resource->state=RESOURCE_STATE_STOPPING;
             //Le kell futtatni a start/stop igeny ellenorzot
@@ -1365,7 +1365,7 @@ static void MyRM_resourceStatusCore(MyRM_t* rm,
                 resource->reportedError=&resource->errorInfo;
             }
 
-            //A leallitasi alalpot felvetele. (hiba eseten le kell allni.)
+            //A leallitasi allapot felvetele. (hiba eseten le kell allni.)
             resource->state=RESOURCE_STATE_STOPPING;
 
             //leallitasi kerelem.

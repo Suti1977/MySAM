@@ -72,7 +72,7 @@ typedef struct
     struct resource_t* resource;
     //a hiba kodja
     status_t errorCode;
-    //A hibat jelento eroforras ebben az alalpotaban generalta a hibat
+    //A hibat jelento eroforras ebben az allapotaban generalta a hibat
     resourceState_t resourceState;
 } resourceErrorInfo_t;
 //------------------------------------------------------------------------------
