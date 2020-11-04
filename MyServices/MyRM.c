@@ -770,7 +770,7 @@ static inline void MyRM_depCntTest(MyRM_t* rm, resource_t* resource)
 }
 //------------------------------------------------------------------------------
 //Annak ellenorzese, hogy az eroforarst el kell-e inditani, vagy le kell-e
-//allitani. Hiba eseten ebebn oldjuk meg a hiba miatti leallst is.
+//allitani. Hiba eseten ebben oldjuk meg a hiba miatti leallst is.
 //[MyRM_task-bol hivva]
 static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 {

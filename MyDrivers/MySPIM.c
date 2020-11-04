@@ -202,7 +202,7 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
 
 
     //A kiirando byteok szamanak beallitasa az uj block szerint...
-    //De egyel kevesebbet, mivel ebebn a fuggevnyben el lesz inditva az elso.
+    //De egyel kevesebbet, mivel ebben a fuggevnyben el lesz inditva az elso.
     spim->leftByteCount=xferBlock->length-1;
 
     //pointerek beallitasa
