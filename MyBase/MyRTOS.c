@@ -68,6 +68,93 @@ static char MyRTOS_taskList[1024];
 #endif
 
 //------------------------------------------------------------------------------
+//Megadott notify esemeny bitekre varakozas, timeout kezelessel.
+//(A FreeRTOS xEventGroupWaitBits() helyett alkalmazzuk, ahol a taszkoknak event
+//bit jellegu jelzeseket kell kuldeni.)
+//waitedEvents: esemenybitek, melyekre varni kell.
+//waitTime: a varakozas ideje, mig a waitedEvents-ben megadott valamelyik notify
+//          bitje be nem all a taszknak.
+//Visszateresi erteke: 0 - timeout/nincs esemeny
+//                     nem 0 eseten, a taszknak kuldott es altalunk vart esemeny
+//                     bitek es kapcsolata.
+uint32_t MyRTOS_waitForNotifyEvents(uint32_t waitedEvents,
+                                    TickType_t waitTime)
+{
+    uint32_t ev;
+
+    taskENTER_CRITICAL();
+    //A jelenleg beallitott bitek olvasasa
+    xTaskNotifyWait(0, 0, &ev, 0);
+
+    //Lemaszkoljuk azokat a biteket, amikre varunk
+    ev &= waitedEvents;
+    //Ezeket a biteket toroljuk is a taszk notifyValue mezojeben
+    ulTaskNotifyValueClear(0, ev);
+    taskEXIT_CRITICAL();
+
+    if (ev)
+    {   //Van legalabb egy esemeny bit, amire vartunk. Avval visszaterunk.
+        return ev;
+    }
+
+    //Varni kell meg esemenyre...
+    if (waitTime==portMAX_DELAY)
+    {   //nincs szukseg idozites kezelesre. Csak a specifikus esemenyekre var.
+        do
+        {
+            ///xTaskNotifyStateClear( NULL );
+            xTaskNotifyWait(0,
+                            waitedEvents,
+                            &ev,
+                            waitTime);
+            //maszkoljuk a nem vart esemenyeket.
+            ev &= waitedEvents;
+            //ciklus, amig nem jon vart esemeny
+        } while(ev==0);
+
+    } else
+    {   //kell kezelni idozitest is
+
+        //A varakozas kezdo idopontja az idomereshez, mivel mindenfele esemeny
+        //fe fogja tudni ebreszteni a taszkot, az is, amit nem vartunk.
+        TickType_t startTime=xTaskGetTickCount();
+        TickType_t wt=waitTime;
+
+        do
+        {
+            if (xTaskNotifyWait(0,
+                                waitedEvents,
+                                &ev,
+                                wt)==pdFAIL)
+            {   //timeout. Nem erkezett be esemeny. 0-val ter vissza.
+                ev=0;
+                break;
+            }
+
+            //maszkoljuk a nem vart esemenyeket.
+            ev &= waitedEvents;
+            //Ha legalabb egy vart esemeny beerkezett, akkor kilepes
+            if (ev) break;
+
+            //Az ido kiszamitasa, amennyit meg varni kell...
+
+            //Eltelt ido a varakozas kezdete ota.
+            TickType_t elapTime=xTaskGetTickCount()-startTime;
+
+            //A meg varakozasi ido kiszamitasa
+            if (elapTime>waitTime)
+            {   //Az ido letelt, vagy mar meg is haladta
+                ev=0;
+                break;
+            }
+            wt=waitTime-elapTime;
+
+            //ciklus, amig nem jon vart esemeny, megadott ido alatt...
+        } while(ev==0);
+    }
+    return ev;
+}
+//------------------------------------------------------------------------------
 //64 bites sajat tick szamlalo lekerdezese. A rutinban a lekerdezes idejere
 //critical section kerul nyitasra.
 uint64_t MyRTOS_getTick(void)

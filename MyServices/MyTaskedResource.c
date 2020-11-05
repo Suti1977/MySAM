@@ -124,70 +124,7 @@ static status_t MyTaskedResource_resource_stop(void* param)
     return kStatus_Success;
 }
 //------------------------------------------------------------------------------
-//Taszkban meghatarozott notify esemenyekre varakozas
-uint32_t MyRTOS_waitForNotify(uint32_t waitedEvents,
-                              TickType_t waitTime)
-{
-    uint32_t ev;
-    if (waitTime==portMAX_DELAY)
-    {   //nincs szukseg idozites kezelesre. Csak a specifikus esemenyekre var.
-
-        do
-        {
-            xTaskNotifyStateClear( NULL );
-            xTaskNotifyWait(0,
-                            0xffffffff,
-                            &ev,
-                            waitTime);
-            //maszkoljuk a nem vart esemenyeket.
-            ev &= waitedEvents;
-            //ciklus, amig nem jon vart esemeny
-        } while(ev==0);
-
-    } else
-    {   //kell kezelni idozitest is
-
-        //A varakozas kezdo idopontja az idomeresjez, mivel mindenfele esemeny
-        //fe fogja tudni ebreszteni a taszkot, az is, amit nem vartunk.
-        TickType_t startTime=xTaskGetTickCount();
-        TickType_t wt=waitTime;
-
-        do
-        {
-            xTaskNotifyStateClear( NULL );
-            if (xTaskNotifyWait(0,
-                            0xffffffff,
-                            &ev,
-                            wt)==pdFAIL)
-            {   //timeout. Nem erkezett be esemeny. 0-val ter vissza.
-                ev=0;
-                break;
-            }
-
-            //maszkoljuk a nem vart esemenyeket.
-            ev &= waitedEvents;
-            //Ha legalabb egy vart esemeny beerkezett, akkor kilepes
-            if (ev) break;
-
-            //Az ido kiszamitasa, amennyit meg varni kell...
-
-            //Eltelt ido a varakozas kezdete ota.
-            TickType_t elapTime=xTaskGetTickCount()-startTime;
-
-            //A meg varakozasi ido kiszamitasa
-            if (elapTime>=waitTime)
-            {   //Az ido letelt, vagy mar meg is haladta
-                ev=0;
-                break;
-            }
-            wt=waitTime-elapTime;
-
-            //ciklus, amig nem jon vart esemeny
-        } while(ev==0);
-    }
-    return ev;
-}
-//------------------------------------------------------------------------------
+//Eroforrast futtato taszk
 static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
 {
     resource_t* resource=(resource_t*) taskParam;
@@ -216,7 +153,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         //                                  pdTRUE,
         //                                  pdFALSE,
         //                                  control.waitTime);
-        control.events=MyRTOS_waitForNotify(control.waitedEvents,
+        control.events=MyRTOS_waitForNotifyEvents(control.waitedEvents,
                                             control.waitTime);
 
         //Az elso futasnal alapertelmezesben nem akad meg az eventekre varasnal,
@@ -259,7 +196,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
             //                                  pdTRUE,
             //                                  pdFALSE,
             //                                  control.waitTime);
-            control.events=MyRTOS_waitForNotify(control.waitedEvents,
+            control.events=MyRTOS_waitForNotifyEvents(control.waitedEvents,
                                                 control.waitTime);
 
             //Annak ellenorzese, hogy le kell-e allitani az eroforrast...
@@ -334,7 +271,7 @@ error:  //<--ide ugrunk hibak eseten
         //                                  pdTRUE,
         //                                  pdFALSE,
         //                                  portMAX_DELAY);
-        control.events=MyRTOS_waitForNotify(MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+        control.events=MyRTOS_waitForNotifyEvents(MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
                                             portMAX_DELAY);
 
         //Jelzes a manager fele, hogy a modul le lett allitva.

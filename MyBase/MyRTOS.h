@@ -16,6 +16,17 @@
 #include "task.h"
 #include "stream_buffer.h"
 
+//Megadott notify esemeny bitekre varakozas, timeout kezelessel.
+//(A FreeRTOS xEventGroupWaitBits() helyett alkalmazzuk, ahol a taszkoknak event
+//bit jellegu jelzeseket kell kuldeni.)
+//waitedEvents: esemenybitek, melyekre varni kell.
+//waitTime: a varakozas ideje, mig a waitedEvents-ben megadott valamelyik notify
+//          bitje be nem all a taszknak.
+//Visszateresi erteke: 0 - timeout/nincs esemeny
+//                     nem 0 eseten, a taszknak kuldott es altalunk vart esemeny
+//                     bitek es kapcsolata.
+uint32_t MyRTOS_waitForNotifyEvents(uint32_t waitedEvents,
+                                    TickType_t waitTime);
 
 //64 bites sajat tick szamlalo lekerdezese. A rutinban a lekerdezes idejere
 //critical section kerul nyitasra.

@@ -106,6 +106,8 @@ void MyTaskedResource_create(resource_t* resource,
 //    return ((taskedResourceExtension_t*)resource->ext)->events;
 //}
 //A taszkkal bovitett eroforrashoz taszk handlerenek lekerdezese
+
+//A taszkkal bovitett eroforrashoz tartozo taszk handlerenek lekerdezese
 static inline
 TaskHandle_t MyTaskedResource_getTaskHandler(resource_t* resource)
 {
