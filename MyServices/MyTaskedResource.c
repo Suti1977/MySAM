@@ -24,8 +24,7 @@ void MyTaskedResource_create(resource_t* resource,
     //this->events=xEventGroupCreate();
     //ASSERT(this->events);
 
-    //Eroforras letrehozasa...
-    //I2C buszok eroforras kezeleset biztosito fuggvenyek
+    //Eroforras letrehozasa...    
     static const resourceFuncs_t resourceFuncs=
     {
         .init =MyTaskedResource_resource_init,
