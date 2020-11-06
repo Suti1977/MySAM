@@ -55,5 +55,16 @@ status_t MySimpleResourceUser_use(simpleResourceUser_t* user);
 //Eroforras hasznalatanak lemondasa. A rutin megvarja, amig az eroforras leall,
 //vagy hibara nem fut a leallitasi folyamatban valami.
 status_t MySimpleResourceUser_unuse(simpleResourceUser_t* user);
+
+
+//Userhez statusz funkcio beallitsasa
+static inline
+void MySimpleResourceUser_setStatusFunc(simpleResourceUser_t* user,
+                                        simplelResourceUserStatusFunc_t* func,
+                                        void*  callbackData)
+{
+    user->statusFunc=func;
+    user->callbackData=callbackData;
+}
 //------------------------------------------------------------------------------
 #endif //MYSIMPLERESOURCEUSER_H_
