@@ -54,6 +54,9 @@ static status_t MySM_dummyState(struct MySM_t* sm)
 void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState)
 {
     sm->newState=newState;
+    //Eloirjuk, hogy uj allapot eseten (vagy ha ugyan az az allapot is marad, de
+    //ezt a fuggvenyt meghivtak), hogy inicializalja az allapotot.
+    sm->init=true;
 }
 //------------------------------------------------------------------------------
 //Allapotgep futtatasa.
