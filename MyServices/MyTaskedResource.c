@@ -20,10 +20,6 @@ void MyTaskedResource_create(resource_t* resource,
     //Konfiguracio masolasa
     memcpy(&this->cfg, cfg, sizeof(taskedResource_config_t));
 
-    //Eroforras vezerleset biztosito esemenymezo letrehozasa
-    //this->events=xEventGroupCreate();
-    //ASSERT(this->events);
-
     //Eroforras letrehozasa...    
     static const resourceFuncs_t resourceFuncs=
     {
@@ -90,7 +86,6 @@ static status_t MyTaskedResource_resource_start(void* param)
     }
 
     //Indito esemeny beallitasa, melyre a taszkban varakozo folyamat elindul
-    //xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__START_REQUEST);
     xTaskNotify(this->taskHandle,
                 MyTASKEDRESOURCE_EVENT__START_REQUEST,
                 eSetBits);
@@ -115,7 +110,6 @@ static status_t MyTaskedResource_resource_stop(void* param)
 
     //Leallitasi kerelem esemeny beallitasa, melyre a taszkban a loop ciklus
     //elott minden korben ravizsglava kezdemenyezheto az eroforras leallasa.
-    //xEventGroupSetBits(this->events, MyTASKEDRESOURCE_EVENT__STOP_REQUEST);
     xTaskNotify(this->taskHandle,
                 MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
                 eSetBits);
@@ -145,15 +139,12 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         //Vegtelen ideig
         control.waitTime=portMAX_DELAY;
         control.done=0;
+        control.prohibitStop=0;
+        control.resourceStopRequest=0;
 
         //varakozas arra, hogy az eroforrast elinditjak...
-        //control.events=xEventGroupWaitBits(this->events,
-        //                                  control.waitedEvents,
-        //                                  pdTRUE,
-        //                                  pdFALSE,
-        //                                  control.waitTime);
         control.events=MyRTOS_waitForNotifyEvents(control.waitedEvents,
-                                            control.waitTime);
+                                                  control.waitTime);
 
         //Az elso futasnal alapertelmezesben nem akad meg az eventekre varasnal,
         //de a start callbackben ez feluldefinialhato.
@@ -181,27 +172,74 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
                 MyRM_resourceStatus(resource, RESOURCE_DONE, status);
 
                 //A loop funkcio mar nem kerul futtatasra. Kilep a belso
-                //ciklusbol, majd a kulos ciklusban ujra a start jelre fog varni.
+                //ciklusbol, majd a kulos ciklusban ujra a start jelre fog
+                //varni.
                 break;
             }
 
-            //Varakozas esemenyre...
-            //A kilepesei flagre mindig varakozhat
-            control.waitedEvents |= MyTASKEDRESOURCE_EVENT__STOP_REQUEST;
+            if ((control.resourceStopRequest) && (control.prohibitStop==0))
+            {   //leallitasi kerelem van, es mar az applikacio is engedi
+                if (this->cfg.stopFunc)
+                {   //Van megadva leallitasi funkcio. Meghivjuk...
+                    status=this->cfg.stopFunc(this->cfg.callbackData);
+                    if (status)
+                    {   //hiba volt a leallitas alatt. Hibakezeles...
+                        goto error;
+                    }
+                }
 
-            //varakozas esemenyre, vagy csak idozites...
-            //control.events=xEventGroupWaitBits(this->events,
-            //                                  control.waitedEvents,
-            //                                  pdTRUE,
-            //                                  pdFALSE,
-            //                                  control.waitTime);
-            control.events=MyRTOS_waitForNotifyEvents(control.waitedEvents,
-                                                control.waitTime);
+                //Az eroforras leallt. Reportoljuk az eroforras manager fele...
+                MyRM_resourceStatus(resource, RESOURCE_STOP, status);
 
-            //Annak ellenorzese, hogy le kell-e allitani az eroforrast...
-            if (control.events & MyTASKEDRESOURCE_EVENT__STOP_REQUEST)
-            {   //leallitasi kerelem van.
+                //kilepes a belso ciklusbol. A kulso ciklusban ujra a start
+                //esemenyre fog varakozni.
+                break;
+            }
 
+            //varakozas a kilepesre, vagy az applikacio altal megszabott
+            //valamelyik esemenyre. Ha van megadva ido, es nem jon egyetlen
+            //olyan esemeny sem, amit az applikacio var, akkor addig nem lephet
+            //ki. Ez alol egyetleb feltetel, ha leallitasi kerelem van, es az
+            //applikacio azt engedi.
+            uint64_t enterTime=MyRTOS_getTick();
+            uint32_t wt=control.waitTime;
+            while(1)
+            {
+                //Esemenyre, vagy timeoutra varas...
+                control.events=
+                MyRTOS_waitForNotifyEvents(control.waitedEvents |
+                                           MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
+                                           wt);
+
+                if (control.events & MyTASKEDRESOURCE_EVENT__STOP_REQUEST)
+                {   //leallitasi kerelem erkezett. Ezt a kerest eltaroljuk, de
+                    //csak akkor juthat ervenyre, ha a futtatott folyamat ezt
+                    //engedi.
+                    control.resourceStopRequest=true;
+
+                    if (control.prohibitStop==0)
+                    {   //az applikacio nem blokkolja a leallitasi kerelmet.
+                        //nem var tovabb. A leallitas ervenyre fog jutni.
+                        break;
+                    }
+                }
+
+                //kilepes, ha letet a megszabott ido, vagy jott legalabb egy
+                //olyan event, amire varunk
+                if ((control.events==0) ||
+                    (control.events & control.waitedEvents)) break;
+
+                //<--ha ide jut, akkor varakozni kell meg
+
+                //kiszamoljuk, hogy mennyit kell meg varni...
+                uint64_t elapTime= MyRTOS_getTick() - enterTime;
+                if (elapTime>=control.waitTime) break;
+                wt=(uint32_t)(control.waitTime - elapTime);
+            }
+
+
+            if ((control.resourceStopRequest) && (control.prohibitStop==0))
+            {   //leallitasi kerelem van, es mar az applikacio is engedi
                 if (this->cfg.stopFunc)
                 {   //Van megadva leallitasi funkcio. Meghivjuk...
                     status=this->cfg.stopFunc(this->cfg.callbackData);
@@ -243,7 +281,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
 
             //A loop elhagyasa utan a "control"-ban be vannak allitva az
             //eroforras altal eloirt esemeny flagek, melyekre a ciklus elejen
-            //talalhato xEventGroupWaitBits() fuggeveny varakozhat.
+            //talalhato MyRTOS_waitForNotifyEvents() fuggeveny varakozhat.
 
         } //while(1)
 
@@ -265,11 +303,6 @@ error:  //<--ide ugrunk hibak eseten
         //a STOP kerelme, hogy torlodni tudjon a hiba.
 
         //Varakozas a stop jelzesre...
-        //control.events=xEventGroupWaitBits(this->events,
-        //                                  MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
-        //                                  pdTRUE,
-        //                                  pdFALSE,
-        //                                  portMAX_DELAY);
         control.events=MyRTOS_waitForNotifyEvents(MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
                                             portMAX_DELAY);
 

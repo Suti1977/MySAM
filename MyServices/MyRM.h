@@ -260,7 +260,7 @@ typedef struct
     //valamelyik fuggosegere, igy annak addig nem hivodik meg a start()
     //fuggvenye. A flag segitsegevel tudhato, hogy az eroforras belso mecha-
     //nizmusai meg nem allnak keszen a hibakezeles fogadasara.
-    bool    started;                        //TODO: kivenni, ha nem kell!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    bool    started;
 
     //true, ha az eroforras fut, es kiadta az igenyloi fele a jelzest, hogy
     //elindult. Csak akkor hivhatjuk meg a kerelmezoinek a dependencyStop()

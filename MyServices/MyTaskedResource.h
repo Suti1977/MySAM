@@ -32,6 +32,13 @@ typedef struct
     //eroforras ujra a start feltetelre fog varni.
     bool done;
 
+    //leallitasi kerelem aktiv jelzes az eroforrasra
+    bool resourceStopRequest;
+    //Az applikacio jelezheti, hogy nem szabad az eroforrast leallitani.
+    //Ez akkor fontos, ha olyan folyamatot futtatunk, melynek indenkepen vegig
+    //kell tudi futnia.
+    bool prohibitStop;
+
 } taskedRsource_control_t;
 //------------------------------------------------------------------------------
 //Az eroforras inicializalasakor meghivodo callback definicioja
