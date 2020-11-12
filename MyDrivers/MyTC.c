@@ -40,6 +40,31 @@ const MyTC_Info_t g_MyTC_infos[]=
     #else
         NO_TC,
     #endif
+
+    #ifdef TC4
+        {TC4, TC4_GCLK_ID, &MCLK->APBCMASK.reg, MCLK_APBCMASK_TC4, TC4_IRQn},
+    #else
+        NO_TC,
+    #endif
+
+    #ifdef TC5
+        {TC5, TC5_GCLK_ID, &MCLK->APBCMASK.reg, MCLK_APBCMASK_TC5, TC5_IRQn},
+    #else
+        NO_TC,
+    #endif
+
+    #ifdef TC6
+        {TC6, TC6_GCLK_ID, &MCLK->APBDMASK.reg, MCLK_APBDMASK_TC6, TC6_IRQn},
+    #else
+        NO_TC,
+    #endif
+
+    #ifdef TC7
+        {TC7, TC7_GCLK_ID, &MCLK->APBDMASK.reg, MCLK_APBDMASK_TC7, TC7_IRQn},
+    #else
+        NO_TC,
+    #endif
+
 };
 //------------------------------------------------------------------------------
 //TC modul kezdeti inicializalasa
