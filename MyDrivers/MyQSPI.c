@@ -23,8 +23,10 @@ void MyQSPI_init(MyQSPI_t* dev, const MyQSPI_config_t* cfg)
     MY_LEAVE_CRITICAL();
 
     //Periferia szoftveres resetelese
-    hw->CTRLA.bit.SWRST=1;
-    while(hw->CTRLA.bit.SWRST);
+    hw->CTRLA.reg=QSPI_CTRLA_SWRST;
+    __DSB();
+    hw->CTRLA.reg=0;
+    __DSB();
 
     hw->CTRLB.reg=
             //Uzemmod kivalasztasa. A Driver memoria eleresi modot tamogat!
@@ -38,15 +40,18 @@ void MyQSPI_init(MyQSPI_t* dev, const MyQSPI_config_t* cfg)
             //Minimum Inactive CS Delay
             QSPI_CTRLB_DLYCS(cfg->dlyCS);
 
-    hw->CTRLB.reg=
+
+    hw->BAUD.reg=
             ((cfg->cpol) ? QSPI_BAUD_CPOL : 0) |
             ((cfg->cpha) ? QSPI_BAUD_CPHA : 0) |
             QSPI_BAUD_BAUD(cfg->baudValue) |
             //Delay Before SCK
             QSPI_BAUD_DLYBS(cfg->dlySC);
 
+
     //QSPI periferia engedelyezese
-    hw->CTRLA.bit.ENABLE=1;
+    hw->CTRLA.reg = QSPI_CTRLA_ENABLE;
+
 }
 //------------------------------------------------------------------------------
 //QSPI periferian adat transzfer
@@ -64,7 +69,6 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
     {   //Elo van irva, hogy parancs mezo is tartozik az uzenethez. Beallitjuk.
         tmp &= ~QSPI_INSTRCTRL_INSTR_Msk;
         tmp |= QSPI_INSTRCTRL_INSTR((uint32_t)cmd->instruction);
-        ((Qspi *)hw)->INSTRCTRL.reg = tmp;
     }
 
     if (cmd->instFrame.bits.opt_en)
