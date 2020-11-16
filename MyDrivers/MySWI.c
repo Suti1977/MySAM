@@ -2,7 +2,7 @@
 //  Single-Wire (SWI) driver
 //  A rendszerben tobb Wire is lehet. Az eroforrasok optimalizalasa erdekeben a
 //  Wire-okhoz egyetlen kozos kezelo modul tartozik, kozos hardver peri-
-//  feriakkal. Az egyes Wireo-ok kezelese viszont egy idoben nem lehetseges.
+//  feriakkal. Az egyes Wire-ok kezelese viszont egy idoben nem lehetseges.
 //  Ezt a kizarast mutexelessel oldjuk meg.
 //
 //    File: MySWI.c
