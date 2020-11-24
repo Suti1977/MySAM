@@ -3,6 +3,8 @@
 //
 //    File: MyQSPI.h
 //------------------------------------------------------------------------------
+//STUFF:
+// http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-44065-Execute-in-Place-XIP-with-Quad-SPI-Interface-SAM-V7-SAM-E7-SAM-S7_Application-Note.pdf
 #ifndef MYQSPI_H_
 #define MYQSPI_H_
 
@@ -60,6 +62,7 @@ typedef struct
 {
     union
     {
+       #pragma pack(1)
         struct
         {
             /* Width of QSPI Addr , inst data */
@@ -87,10 +90,12 @@ typedef struct
             /* Enable Double Data Rate */
             uint32_t ddr_enable : 1;
             /* Dummy Cycles Length */
+            //Dumy orajelek szama
             uint32_t dummy_cycles : 5;
             /* Reserved */
             uint32_t reserved3 : 11;
         } bits;
+        #pragma pack()
         uint32_t word;
     } instFrame;
 
@@ -98,9 +103,9 @@ typedef struct
     uint8_t  option;
     uint32_t address;
 
-    size_t      bufLen;
+    uint32_t    bufLen;
     const void* txBuf;
-    void*       rxBuf;
+    uint8_t*    rxBuf;
 } MyQSPI_cmd_t;
 //------------------------------------------------------------------------------
 //QSPI drivert inicializalo struktura
@@ -130,6 +135,12 @@ typedef struct
     uint32_t dlyCS;
     //Delay Before SCK
     uint32_t dlySC;
+
+    //true eseten tiltja a D cache ki/be kapcsolast az adatmozgatas idejere.
+    //Ez azert lenyeges, mert a QSPI adat regija (AHB buszon) alapertelmezesben
+    //cachelve van. A cache vezerlo pedig tobbszoros busz hozzaferest okoz, ami
+    //fals adat transzfert indit a QSPI-n.
+    bool disableCacheHandling;
 } MyQSPI_config_t;
 //------------------------------------------------------------------------------
 //MyQSPI valtozoi
@@ -137,6 +148,9 @@ typedef struct
 {
     //QSPI regisztereire mutato pointer
     Qspi* hw;
+    //Data cache letiltasanak tiltasa az adatmozgatasok idejere, a driver
+    //altal.
+    bool disableCacheHandling;
 } MyQSPI_t;
 //------------------------------------------------------------------------------
 //Driver inicializalasa

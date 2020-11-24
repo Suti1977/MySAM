@@ -13,6 +13,8 @@ void MyQSPI_init(MyQSPI_t* dev, const MyQSPI_config_t* cfg)
     memset(dev, 0, sizeof(MyQSPI_t));
 
     dev->hw=cfg->hw;
+    dev->disableCacheHandling=cfg->disableCacheHandling;
+
     Qspi* hw=cfg->hw;
 
     //periferia orajel engedelyezese
@@ -24,9 +26,7 @@ void MyQSPI_init(MyQSPI_t* dev, const MyQSPI_config_t* cfg)
 
     //Periferia szoftveres resetelese
     hw->CTRLA.reg=QSPI_CTRLA_SWRST;
-    __DSB();
-    hw->CTRLA.reg=0;
-    __DSB();
+    hw->CTRLA.reg=0;    
 
     hw->CTRLB.reg=
             //Uzemmod kivalasztasa. A Driver memoria eleresi modot tamogat!
@@ -52,6 +52,18 @@ void MyQSPI_init(MyQSPI_t* dev, const MyQSPI_config_t* cfg)
     //QSPI periferia engedelyezese
     hw->CTRLA.reg = QSPI_CTRLA_ENABLE;
 
+}
+//------------------------------------------------------------------------------
+//Memoria masolas.
+static inline void MyQSPI_memcpy(uint8_t *dst, const uint8_t *src, uint32_t count)
+{
+    //A QSPI periferia olyan hosszusagu buszciklusokat indit, mint amekkoraval
+    //az AHB buszt cimezzuk.
+    //Itt dedikaltan 8 bites adatokkal operalunk
+    while (count--)
+    {
+        *dst++ = *src++;
+    }
 }
 //------------------------------------------------------------------------------
 //QSPI periferian adat transzfer
@@ -87,43 +99,79 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
     {   //Van adattartalom mozgatas is.
 
         //Cim kiszamitasa...
-        uint8_t *qspiMemPtr = (uint8_t *)QSPI_AHB;
+        uint8_t* qspiMemPtr = (uint8_t*)QSPI_AHB;
         if (cmd->instFrame.bits.addr_en)
         {
             qspiMemPtr += cmd->address;
         }
 
         //Szinkronizacio a rendszerbuszhoz, az INSTRFRAME regiszter olvasasaval
-        volatile uint32_t dumy=hw->INSTRFRAME.reg;
+        uint32_t dumy=hw->INSTRFRAME.reg;
         (void) dumy;
 
         ASSERT(cmd->txBuf || cmd->rxBuf);
 
-        uint32_t leftByte=cmd->bufLen;
+        bool cacheEnabled=false;
+        if (dev->disableCacheHandling==false)
+        {
+            //Annak lekerdezese, hogy a cache kezeles be van-e kapcsolva....
+            MY_ENTER_CRITICAL();
+            cacheEnabled=((CMCC->SR.bit.CSTS) && (CMCC->CFG.bit.DCDIS==0));
+            if (cacheEnabled)
+            {   //Az adatmozgatas idejere a D cache-t ki kell kapcsolni
+                //cache tiltasa az atprogramozas idejere
+                CMCC->CTRL.bit.CEN = 0;
+                while (CMCC->SR.bit.CSTS) {}
+                //D cache tiltasa
+                CMCC->CFG.bit.DCDIS=1;
+                //Mindent invalidalunk
+                CMCC->MAINT0.bit.INVALL = 1;
+                //cache vezerlo visszakapcsolasa
+                CMCC->CTRL.bit.CEN = 1;
+                while (CMCC->SR.bit.CSTS==0) {}
+            }
+            MY_LEAVE_CRITICAL();
+        }
+
         //irany szerinti adatmozgatas...
         if (cmd->txBuf)
         {   //Van kimeneti buffer. Kifele irunk...
-            const uint8_t* src=(const uint8_t*)cmd->txBuf;
-            for(;leftByte; leftByte--)
-            {
-                *qspiMemPtr++ = *src++;
-            }
+            MyQSPI_memcpy((uint8_t*)qspiMemPtr,
+                          (const uint8_t *)cmd->txBuf,
+                          cmd->bufLen);
         } else
         {   //Olvasunk...
-            uint8_t* dst=(uint8_t*)cmd->rxBuf;
-            for(;leftByte; leftByte--)
-            {
-                *dst++ = *qspiMemPtr++;
-            }
+            MyQSPI_memcpy((uint8_t *)cmd->rxBuf,
+                          (uint8_t*)qspiMemPtr,
+                          cmd->bufLen);
         }
+
         __DSB();
         __ISB();
 
+        if (dev->disableCacheHandling==false)
+        {
+            MY_ENTER_CRITICAL();
+            if (cacheEnabled)
+            {   //Az adatmozgatas elott a D cache be volt kapcsolva. Visszakapcs
+                //cache vezerlo tiltasa
+                CMCC->CTRL.bit.CEN = 0;
+                while (CMCC->SR.bit.CSTS) {}
+                //D cache engedelyezese
+                CMCC->CFG.bit.DCDIS=0;
+                //cache vezerlo ujra engedelyezese
+                CMCC->CTRL.bit.CEN = 1;
+                while (CMCC->SR.bit.CSTS==0) {}
+            }
+            MY_ENTER_CRITICAL();
+        }
+
     } //if (cmd->inst_frame.bits.data_en)
 
+
     //transzfer lezarasa. (A driver ugy van beallitva, hogy a tranzakcio leza-
-    //rasat a LASTXFER bit-el jelezzuk
-    hw->CTRLA.bit.LASTXFER=1;
+    //rasat a LASTXFER bit-el jelezzuk.)
+    hw->CTRLA.reg=QSPI_CTRLA_LASTXFER | QSPI_CTRLA_ENABLE;
 
     //Varakozas az utasitas befejezesere
     while(hw->INTFLAG.bit.INSTREND==0);
