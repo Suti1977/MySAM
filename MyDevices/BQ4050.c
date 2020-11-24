@@ -191,6 +191,20 @@ status_t BQ4050_getDesignCapacity(BQ4050_t* dev, uint16_t *capacity_mAh)
     return BQ4050_readReg16(dev, BQ4050_DESIGN_CAPACITY_REG, capacity_mAh);
 }
 //------------------------------------------------------------------------------
+//Akkumulator jellemzok blokkos lekerdezese.
+//A lekerdezesnel kihasznaljuk, hogy a visszaadott jellmzok egymas utani cimen
+//helyezkednek el az eszkozben, igy kevesebb buszciklus elegendo a fontosabb
+//informaciok lekerdezesehez.
+//Megj: A lekerdezes elott ha meg nem volt a BMS ic uzemmodja beallitva arra,
+//      hogy a kapacitas adatokat mAh-ba adja vissza, akkor azt meg kell tenni,
+//      a BQ4050_setBatteryModeDefaults_mAh() fuggvennyel
+status_t BQ4050_getBatteryInfo(BQ4050_t* dev, BQ4050_batteryInfo_t* info)
+{
+    return BQ4050_readRegs(dev,
+                           BQ4050_TEMPERATURE_REG,
+                           (uint8_t*)info,
+                           sizeof(BQ4050_batteryInfo_t));
+}
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
