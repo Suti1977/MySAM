@@ -140,13 +140,19 @@ status_t BQ4050_getTemperature(BQ4050_t* dev, uint16_t *temperatureK)
 //Akkumulator pakk feszuktseg lekerdezese (mV-ban)
 status_t BQ4050_getVoltage_mV(BQ4050_t* dev, uint16_t *voltage_mV)
 {
-    return BQ4050_readReg16(dev, BQ4050_TEMPERATURE_REG, voltage_mV);
+    return BQ4050_readReg16(dev, BQ4050_VOLTAGE_REG, voltage_mV);
 }
 //------------------------------------------------------------------------------
 //Akkumulator pakk aramanak lekerdezese. (mA-ben)
 status_t BQ4050_getCurrent_mA(BQ4050_t* dev, int16_t *current_mA)
 {
     return BQ4050_readReg16(dev, BQ4050_CURRENT_REG, (uint16_t*)current_mA);
+}
+//------------------------------------------------------------------------------
+//Akkumulator pakk atlag aramanak lekerdezese. (mA-ben)
+status_t BQ4050_getAverageCurrent_mA(BQ4050_t* dev, int16_t *current_mA)
+{
+    return BQ4050_readReg16(dev, BQ4050_AVERAGE_CURRENT_REG, (uint16_t*)current_mA);
 }
 //------------------------------------------------------------------------------
 //Az elore lathato akkumulator kapacitast adja vissza %-ban
@@ -189,21 +195,6 @@ status_t BQ4050_getDesignCapacity(BQ4050_t* dev, uint16_t *capacity_mAh)
     }
 
     return BQ4050_readReg16(dev, BQ4050_DESIGN_CAPACITY_REG, capacity_mAh);
-}
-//------------------------------------------------------------------------------
-//Akkumulator jellemzok blokkos lekerdezese.
-//A lekerdezesnel kihasznaljuk, hogy a visszaadott jellmzok egymas utani cimen
-//helyezkednek el az eszkozben, igy kevesebb buszciklus elegendo a fontosabb
-//informaciok lekerdezesehez.
-//Megj: A lekerdezes elott ha meg nem volt a BMS ic uzemmodja beallitva arra,
-//      hogy a kapacitas adatokat mAh-ba adja vissza, akkor azt meg kell tenni,
-//      a BQ4050_setBatteryModeDefaults_mAh() fuggvennyel
-status_t BQ4050_getBatteryInfo(BQ4050_t* dev, BQ4050_batteryInfo_t* info)
-{
-    return BQ4050_readRegs(dev,
-                           BQ4050_TEMPERATURE_REG,
-                           (uint8_t*)info,
-                           sizeof(BQ4050_batteryInfo_t));
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
