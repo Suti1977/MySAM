@@ -263,6 +263,8 @@ status_t BQ25700_get_vsys_voltage(BQ25700_t* dev, int *voltage_mV);
 
 status_t BQ25700_get_vbat_voltage(BQ25700_t* dev, int *voltage_mV);
 
+status_t BQ25700_get_charger_status(BQ25700_t* dev, uint16_t *statusBits);
+
 status_t BQ25700_reset(BQ25700_t* dev);
 //------------------------------------------------------------------------------
 #endif //BQ25700_H_

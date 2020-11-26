@@ -127,5 +127,12 @@ static inline void MyEIC_disable(void)
 }
 
 //------------------------------------------------------------------------------
+//Interrupt handler letrehozasaban segito makro. Igy a bemeno parametere
+//szerinti EIC handlert generalja. pl: void EIC_xx_Handler(void)
+//EIC_n
+#define MyEIC_HANDLER_H1(n)    MY_EVALUATOR(EIC_, n)
+//EIC_n_Handler(void)
+#define MyEIC_HANDLER(n)  \
+    void MY_EVALUATOR(MyEIC_HANDLER_H1(n), _Handler(void) )
 //------------------------------------------------------------------------------
 #endif //MYEIC_H_

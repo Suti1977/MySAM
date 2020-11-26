@@ -620,6 +620,11 @@ error:
     return status;
 }
 //------------------------------------------------------------------------------
+status_t BQ25700_get_charger_status(BQ25700_t* dev, uint16_t *statusBits)
+{
+    return BQ25700_readReg16(dev, BQ25700_CHARGER_STATUS_REG, statusBits);
+}
+//------------------------------------------------------------------------------
 status_t BQ25700_reset(BQ25700_t* dev)
 {
     status_t status;
