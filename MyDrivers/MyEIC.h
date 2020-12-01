@@ -114,7 +114,7 @@ static inline void MyEIC_clearExtIntFlag(uint8_t channel)
 static inline void MyEIC_enable(void)
 {
     Eic* eic=EIC;
-    eic->CTRLA.bit.ENABLE=1; __DSB();
+    eic->CTRLA.bit.ENABLE=1; __DMB();
     while(eic->SYNCBUSY.reg);
 }
 //------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ static inline void MyEIC_enable(void)
 static inline void MyEIC_disable(void)
 {
     Eic* eic=EIC;
-    eic->CTRLA.bit.ENABLE=0; __DSB();
+    eic->CTRLA.bit.ENABLE=0; __DMB();
     while(eic->SYNCBUSY.reg);
 }
 

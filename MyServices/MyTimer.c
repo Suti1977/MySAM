@@ -24,15 +24,15 @@ void MyTimer_initManager(MyTimerManager_t* timerManager,
 
     Tc* hw=timerManager->tc.hw;
     //A hasznalt TC modul szoftveres resteje
-    hw->COUNT16.CTRLA.bit.ENABLE=0; __DSB();
+    hw->COUNT16.CTRLA.bit.ENABLE=0; __DMB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
-    hw->COUNT16.CTRLA.bit.SWRST=1; __DSB();
+    hw->COUNT16.CTRLA.bit.SWRST=1; __DMB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
     //TC konfiguralas...
     //Uzemmod kijelolese a TC periferian (16 bites uzemmodot hasznaluk)
-    hw->COUNT16.CTRLA.reg = TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val); __DSB();
+    hw->COUNT16.CTRLA.reg = TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val); __DMB();
     while(hw->COUNT16.SYNCBUSY.reg);
 
     hw->COUNT16.CTRLA.reg |=
@@ -63,13 +63,13 @@ void MyTimer_initManager(MyTimerManager_t* timerManager,
 static void MyTimer_interruptEnable(Tc* hw)
 {
     hw->COUNT16.INTENSET.reg=TC_INTENCLR_OVF;
-    __DSB();
+    __DMB();
 }
 //------------------------------------------------------------------------------
 static void MyTimer_interruptDisable(Tc* hw)
 {
     hw->COUNT16.INTENCLR.reg=TC_INTENCLR_OVF;
-    __DSB();
+    __DMB();
 }
 //------------------------------------------------------------------------------
 //A fociklusbol hivogatott timer task. Azok a callback rutinok, melyekhez

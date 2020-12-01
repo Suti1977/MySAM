@@ -84,7 +84,7 @@ void MyTCC_init(MyTCC_t* tcc, const MyTCC_Config_t* config)
     //modul resetelese...
     Tcc* hw=tcc->hw;
     hw->CTRLA.reg=TCC_CTRLA_SWRST;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
 }
 //------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ uint32_t MyTCC_getCounter(MyTCC_t* tcc)
 {
     Tcc* hw=tcc->hw;
     hw->CTRLBSET.reg=TCC_CTRLBSET_CMD_READSYNC;
-    __DSB();
+    __DMB();
     while(hw->SYNCBUSY.reg);
     return hw->COUNT.reg;
 }
