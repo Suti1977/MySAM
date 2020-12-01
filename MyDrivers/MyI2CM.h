@@ -42,7 +42,7 @@ typedef struct
 //
 // gclkfreq: A sercom Core orajelehez rendelt GCLK modul kimeneti frekvenciaja
 // baud:     Az I2C busz sebesseg
-// trise:    ride time ido [ns-ban]. 215-300 us kozott lehet!
+// trise:    rise time ido [ns-ban]. 215-300 us kozott lehet!
 
 #define MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise)                           \
                             (((gclkfreq - (baud * 10U)                       \

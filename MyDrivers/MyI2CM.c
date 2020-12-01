@@ -9,7 +9,7 @@
 #include <string.h>
 #include "compiler.h"
 #include "MyHelpers.h"
-
+#include "board.h"          //TODO: torolni!!!!!!!!!!!!!!
 #include <stdio.h>
 //Ha ennyi ido alatt sem sikerul egy I2C folyamatot vegrehajtani, akkor hibaval
 //kilep.    [TICK]
@@ -107,63 +107,6 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 //Stop feltetel generalasa a buszon
 static void MyI2CM_sendStop(SercomI2cm* hw)
 {
-    /*
-    __DMB();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-*/
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
     uint32_t tmp;
     while(hw->SYNCBUSY.reg !=0 );
@@ -174,66 +117,6 @@ static void MyI2CM_sendStop(SercomI2cm* hw)
     __DMB();
     //Varakozas a szinkronra.
     while(hw->SYNCBUSY.reg);
-/*
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
-    __DMB();
-    */
 
 }
 //------------------------------------------------------------------------------
@@ -433,7 +316,9 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 
         //Elso startfeltetel generalasa...
         //A start feltetel az iranytol fugg.
-        hw->ADDR.reg=i2cm->slaveAddress | i2cm->transferDir;
+        uint32_t regVal=(i2cm->slaveAddress | i2cm->transferDir);
+        while(hw->SYNCBUSY.reg);
+        hw->ADDR.reg=regVal;
         __DMB();
         while(hw->SYNCBUSY.reg);
 
@@ -564,12 +449,13 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 //[INTERRUPTBAN FUT]
 void MyI2CM_service(MyI2CM_t* i2cm)
 {
+MyGPIO_set(PIN_TEST_OUT1);
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
     volatile SERCOM_I2CM_STATUS_Type    status;
 
     //Statusz regiszter kiolvasasa. A tovabbiakban ezt hasznaljuk az elemzeshez
     status.reg=hw->STATUS.reg;
-
+MyGPIO_clr(PIN_TEST_OUT1);
     //..........................................................................
     if (hw->INTFLAG.bit.ERROR)
     {   //Valam hiba volt a buszon
