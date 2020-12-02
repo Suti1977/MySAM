@@ -13,6 +13,9 @@ void MyWDT_init(const MyWDT_config_t* cfg)
 {
     Wdt* hw=WDT;
 
+    //WDT elereshez busz orajel biztositasa
+    MCLK->APBAMASK.bit.WDT_=1;
+
     //A programozas elott a watchdogot ki kell kapcsolni
     MyWDT_disable();
 
@@ -55,7 +58,7 @@ void MyWDT_enable(void)
 {
     WDT->CTRLA.bit.ENABLE=1;
     __DMB();
-    while(WDT->SYNCBUSY.reg);
+    while(WDT->SYNCBUSY.reg);    
 }
 //------------------------------------------------------------------------------
 //Watchdog tiltasa.
@@ -64,7 +67,7 @@ void MyWDT_disable(void)
 {
     WDT->CTRLA.bit.ENABLE=0;
     __DMB();
-    while(WDT->SYNCBUSY.reg);
+    while(WDT->SYNCBUSY.reg);    
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
