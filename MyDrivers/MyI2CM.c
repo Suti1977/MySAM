@@ -9,7 +9,7 @@
 #include <string.h>
 #include "compiler.h"
 #include "MyHelpers.h"
-#include "board.h"          //TODO: torolni!!!!!!!!!!!!!!
+//#include "board.h"          //TODO: torolni!!!!!!!!!!!!!!
 #include <stdio.h>
 //Ha ennyi ido alatt sem sikerul egy I2C folyamatot vegrehajtani, akkor hibaval
 //kilep.    [TICK]
@@ -107,9 +107,9 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 //Stop feltetel generalasa a buszon
 static void MyI2CM_sendStop(SercomI2cm* hw)
 {
-    //for(int i=0; i<100; i++) __NOP();
+    for(int i=0; i<100; i++) __NOP();
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
-MyGPIO_set(PIN_TEST_OUT2);
+//MyGPIO_set(PIN_TEST_OUT2);
     uint32_t tmp;
     while(hw->SYNCBUSY.reg !=0 );
     tmp = hw->CTRLB.reg;
@@ -119,7 +119,7 @@ MyGPIO_set(PIN_TEST_OUT2);
     __DMB();
     //Varakozas a szinkronra.
     while(hw->SYNCBUSY.reg);
-MyGPIO_clr(PIN_TEST_OUT2);
+//MyGPIO_clr(PIN_TEST_OUT2);
 
 
 }
@@ -451,7 +451,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 //[INTERRUPTBAN FUT]
 void MyI2CM_service(MyI2CM_t* i2cm)
 {
-MyGPIO_set(PIN_TEST_OUT1);
+//MyGPIO_set(PIN_TEST_OUT1);
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
     volatile SERCOM_I2CM_STATUS_Type    status;
     //Statusz regiszter kiolvasasa. A tovabbiakban ezt hasznaljuk az elemzeshez
@@ -581,7 +581,7 @@ MyGPIO_set(PIN_TEST_OUT1);
         }
 
     } //if (Hw->INTFLAG.bit.SB)
-MyGPIO_clr(PIN_TEST_OUT1);
+//MyGPIO_clr(PIN_TEST_OUT1);
     return;
     //..........................................................................
 error:
@@ -637,7 +637,7 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         //A 7 bits slave cimet shifteljuk 1-el balra, mert a 0. bit az R/W bit
         //helye
         i2cm->slaveAddress= (uint8_t)(i2cDevice->slaveAddress << 1);
-MyGPIO_set(PIN_TEST_OUT6);
+//MyGPIO_set(PIN_TEST_OUT6);
         //Folyamat inditasa. (Jelezzuk parameterben, hogy ez az elso kuldendo
         //blokk)
         MyI2CM_startNextXferBlock(i2cm, true);
@@ -646,7 +646,7 @@ MyGPIO_set(PIN_TEST_OUT6);
         //Varakozas arra, hogy a folyamat befejezodjon...
         if (xSemaphoreTake(i2cm->semaphore, I2C_TRANSFER_TIMEOUT)==pdFALSE)
         {   //Hiba a buszon.
-MyGPIO_clr(PIN_TEST_OUT6);
+//MyGPIO_clr(PIN_TEST_OUT6);
             printf("I2C bus error.\n");
 
             //TODO: itt stopot generalni, vagy valahogy feloldani a hibat!      !!!!
@@ -655,7 +655,7 @@ MyGPIO_clr(PIN_TEST_OUT6);
         } else
         {
             status=i2cm->asyncStatus;
-MyGPIO_clr(PIN_TEST_OUT6);
+//MyGPIO_clr(PIN_TEST_OUT6);
         }
       #endif //USE_FREERTOS
         if (status==kMyI2CMStatus_ArbitationLost)
