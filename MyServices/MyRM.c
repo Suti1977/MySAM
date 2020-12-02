@@ -47,6 +47,9 @@ static void MyRM_signallingUsers(MyRM_t* rm,
 #define MyRM_NOTIFY__RESOURCE_USE               BIT(3)
 #define MyRM_NOTIFY__RESOURCE_UNUSE             BIT(4)
 
+
+#define MyRM_LOCK(mutex)    xSemaphoreTakeRecursive(mutex, portMAX_DELAY)
+#define MyRM_UNLOCK(mutex)  xSemaphoreGiveRecursive(mutex)
 //------------------------------------------------------------------------------
 //Eroforras management reset utani kezdeti inicializalasa
 void MyRM_init(const MyRM_config_t* cfg)
@@ -58,9 +61,9 @@ void MyRM_init(const MyRM_config_t* cfg)
 
     //Managerhez tartozo mutex letrehozasa
   #if configSUPPORT_STATIC_ALLOCATION
-    this->mutex=xSemaphoreCreateMutexStatic(&this->mutexBuffer);
+    this->mutex=xSemaphoreCreateRecursiveMutexStatic(&this->mutexBuffer);
   #else
-    this->mutex=xSemaphoreCreateMutex();
+    this->mutex=xSemaphoreCreateRecursiveMutex();
   #endif
 
 
@@ -74,6 +77,8 @@ void MyRM_init(const MyRM_config_t* cfg)
     {
         ASSERT(0);
     }
+
+
 }
 //------------------------------------------------------------------------------
 //Egyetlen eroforras allapotat es hasznaloit irja ki a konzolra
@@ -242,7 +247,7 @@ void MyRM_createResourceExt(resource_t* resource,
     resource->funcs=funcs;
     resource->funcsParam=funcsParam;
     resource->resourceName=(resourceName==NULL) ? "?" :resourceName;
-    resource->ext=ext;
+    resource->ext=ext;    
 
     //Az eroforrast hozzaadjuk a rendszerben levo eroforrasok listajahoz...
     MyRM_addResourceToManagedList(resource);
@@ -337,7 +342,7 @@ void MyRM_addDependency(resourceDep_t* dep,
 {
     MyRM_t* rm=&myRM;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     //Beallitjuk a leiroban a kerelmezo es a fuggoseget
     dep->requesterResource=(struct resource_t*) highLevel;
@@ -345,7 +350,7 @@ void MyRM_addDependency(resourceDep_t* dep,
     MyRM_addDependencyToResource(highLevel, dep);
     MyRM_addRequesterToResource (lowLevel,  dep);
 
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //A rendszerben levo eroforrasok listajahoz adja a hivatkozott eroforras kezelot.
@@ -353,7 +358,7 @@ static void MyRM_addResourceToManagedList(resource_t* resource)
 {
     MyRM_t* rm=&myRM;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     if (rm->resourceList.first==NULL)
     {   //Ez lesz az elso eleme a listanak. Lista kezdese
@@ -367,7 +372,7 @@ static void MyRM_addResourceToManagedList(resource_t* resource)
     resource->nextResource=NULL;
     rm->resourceList.last=resource;
 
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //A futo eroforrasok szamanak lekerdezese
@@ -385,10 +390,10 @@ void MyRM_register_allResourceStoppedFunc(MyRM_allResourceStoppedFunc_t* func,
                                           void* callbackData)
 {
     MyRM_t* rm=&myRM;
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
     rm->allResourceStoppedFunc=func;
     rm->callbackData=callbackData;
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //A futo/elinditott eroforrasok szamat noveli
@@ -414,9 +419,9 @@ static void MyRM_decrementRunningResourcesCnt(MyRM_t* rm)
         //folyamat leall.
         if (rm->allResourceStoppedFunc)
         {
-            xSemaphoreGive(rm->mutex);
+            MyRM_UNLOCK(rm->mutex);
             rm->allResourceStoppedFunc(rm->callbackData);
-            xSemaphoreTake(rm->mutex, portMAX_DELAY);
+            MyRM_LOCK(rm->mutex);
         }
     }
 }
@@ -501,9 +506,9 @@ void MyRM_resourceStatus(resource_t* resource,
 {
     MyRM_t* rm=&myRM;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
     MyRM_resourceStatusCore(rm, resource, resourceStatus, errorCode);
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_STATUS);
@@ -535,9 +540,9 @@ void MyRM_startResource(resource_t* resource)
 {
     MyRM_t* rm=&myRM;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
     MyRM_startResourceCore(rm, resource);
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_START_REQUEST);
@@ -547,9 +552,9 @@ void MyRM_stopResource(resource_t* resource)
 {
     MyRM_t* rm=&myRM;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
     MyRM_stopResourceCore(rm, resource);
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_STOP_REQUEST);
@@ -572,7 +577,7 @@ static void __attribute__((noreturn)) MyRM_task(void* taskParam)
         xTaskNotifyWait(0, 0xffffffff, &events, portMAX_DELAY);
 
 
-        xSemaphoreTake(rm->mutex, portMAX_DELAY);
+        MyRM_LOCK(rm->mutex);
 
         //Vegig a feldolgozando eroforrasok listajan...
         resource_t* resource=rm->processReqList.first;
@@ -587,7 +592,7 @@ static void __attribute__((noreturn)) MyRM_task(void* taskParam)
             //kovetkezo eroforrasra allas. (Mindig a lista elso eleme)
             resource=rm->processReqList.first;
         } //while(resource)
-        xSemaphoreGive(rm->mutex);
+        MyRM_UNLOCK(rm->mutex);
 
 
     } //while(1)
@@ -723,9 +728,9 @@ static inline void MyRM_depCntTest(MyRM_t* rm, resource_t* resource)
     //fuggvenye, akkor meghivjuk. Ez a mukodese alatt csak egyszer tortenik.
     if ((resource->inited==false) && (resource->funcs->init))
     {
-        xSemaphoreGive(rm->mutex);
+        MyRM_UNLOCK(rm->mutex);
         status=resource->funcs->init(resource->funcsParam);
-        xSemaphoreTake(rm->mutex, portMAX_DELAY);
+        MyRM_LOCK(rm->mutex);
         if (status)
         {
             MyRM_resourceStatusCore(rm, resource, RESOURCE_ERROR, status);
@@ -748,9 +753,9 @@ static inline void MyRM_depCntTest(MyRM_t* rm, resource_t* resource)
         //allapotat.
         //A start funkcio alatt a mutexeket feloldjuk
         //resource->started=true;
-        xSemaphoreGive(rm->mutex);
+        MyRM_UNLOCK(rm->mutex);
         status=resource->funcs->start(resource->funcsParam);
-        xSemaphoreTake(rm->mutex, portMAX_DELAY);
+        MyRM_LOCK(rm->mutex);
         if (status)
         {
             MyRM_resourceStatusCore(rm, resource, RESOURCE_ERROR, status);
@@ -993,9 +998,9 @@ stop_resource:
         //vissza a MyRM_resourceStatusCore() fuggvenyen keresztul
         //az eroforras allapotat.
         //A stop funkcio alatt a mutexeket feloldjuk
-        xSemaphoreGive(rm->mutex);
+        MyRM_UNLOCK(rm->mutex);
         status_t status=resource->funcs->stop(resource->funcsParam);
-        xSemaphoreTake(rm->mutex, portMAX_DELAY);
+        MyRM_LOCK(rm->mutex);
         //resource->started=false;
         if (status)
         {
@@ -1461,11 +1466,11 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                 //Hiba jelzese az usernek a statusz callbacken keresztul
                 if (user->statusFunc)
                 {
-                    //xSemaphoreGive(rm->mutex);
+                    //MyRM_UNLOCK(rm->mutex);
                     user->statusFunc(   RESOURCE_ERROR,
-                                        &resource->errorInfo,
+                                        resource->reportedError,
                                         user->callbackData);
-                    //xSemaphoreTake(rm->mutex, portMAX_DELAY);
+                    //MyRM_LOCK(rm->mutex);
                 }
             }
             continue;
@@ -1484,11 +1489,11 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                     //keresztul.
                     if (user->statusFunc)
                     {
-                        //xSemaphoreGive(rm->mutex);
+                        //MyRM_UNLOCK(rm->mutex);
                         user->statusFunc(RESOURCE_RUN,
-                                         &resource->errorInfo,
+                                         resource->reportedError,
                                          user->callbackData);
-                        //xSemaphoreTake(rm->mutex, portMAX_DELAY);
+                        //MyRM_LOCK(rm->mutex);
                     }
                 }
                 break;
@@ -1504,12 +1509,12 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                     //a statuszban atadasra.
                     if (user->statusFunc)
                     {
-                        //xSemaphoreGive(rm->mutex);
+                        //xMyRM_UNLOCK(rm->mutex);
                         user->statusFunc(resource->doneFlag ? RESOURCE_DONE
                                                             : RESOURCE_STOP,
-                                         &resource->errorInfo,
+                                         resource->reportedError,
                                          user->callbackData);
-                        //xSemaphoreTake(rm->mutex, portMAX_DELAY);
+                        //MyRM_LOCK(rm->mutex);
                     }
                 }
                 break;
@@ -1532,11 +1537,11 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                     //Jelezes az usernek a statusz callbacken keresztul
                     if (user->statusFunc)
                     {
-                        //xSemaphoreGive(rm->mutex);
+                        //MyRM_UNLOCK(rm->mutex);
                         user->statusFunc(RESOURCE_STOP,
-                                         &resource->errorInfo,
+                                         resource->reportedError,
                                          user->callbackData);
-                        //xSemaphoreTake(rm->mutex, portMAX_DELAY);
+                        //xMyRM_LOCK(rm->mutex);
                     }
                 }
 
@@ -1560,7 +1565,7 @@ void MyRM_addUser(resource_t* resource,
     MyRM_t* rm=&myRM;
 
     //A lista csak mutexelt allapotban bovitheto!
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     //Az user-hez ballitja az igenyelt eroforrast, akit kerelmez
     user->resource=resource;
@@ -1587,7 +1592,7 @@ void MyRM_addUser(resource_t* resource,
 
     //User nevenek megjegyzese (ez segiti a nyomkovetest)
     user->userName=(userName!=NULL) ? userName : "?";
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
@@ -1596,7 +1601,7 @@ void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
     //A lista csak mutexelt allapotban modosithato!
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     resourceUser_t* prev=(resourceUser_t*)user->userList.prev;
     resourceUser_t* next=(resourceUser_t*)user->userList.next;
@@ -1625,7 +1630,7 @@ void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
     user->userList.next=NULL;
     user->userList.prev=NULL;
 
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //Eroforras hasznalata.
@@ -1638,7 +1643,7 @@ void MyRM_useResource(resourceUser_t* user)
     resource_t* resource=user->resource;
 
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     #if MyRM_TRACE
     printf("MyRM_useResource() user: %s  state: %d\n", user->userName, user->state);
@@ -1658,7 +1663,7 @@ void MyRM_useResource(resourceUser_t* user)
             //Eroforrast inditjuk.
             MyRM_startResourceCore(rm, resource);
 
-            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+            //MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_START:
@@ -1675,7 +1680,7 @@ void MyRM_useResource(resourceUser_t* user)
             if (user->statusFunc)
             {
                 user->statusFunc(RESOURCE_ERROR,
-                                 &resource->errorInfo,
+                                 resource->reportedError,
                                  user->callbackData);
             }
 
@@ -1687,7 +1692,7 @@ void MyRM_useResource(resourceUser_t* user)
             break;
     }
 
-    xSemaphoreGive(rm->mutex);
+    MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
@@ -1702,7 +1707,7 @@ void MyRM_unuseResource(resourceUser_t* user)
     MyRM_t* rm=&myRM;
     resource_t* resource=user->resource;
 
-    xSemaphoreTake(rm->mutex, portMAX_DELAY);
+    MyRM_LOCK(rm->mutex);
 
     #if MyRM_TRACE
     printf("MyRM_unuseResource() user: %s  state: %d\n", user->userName, user->state);
@@ -1735,7 +1740,7 @@ void MyRM_unuseResource(resourceUser_t* user)
 
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
             //Az user mar le van allitva. Varunk annak befejezesere.
-            //kilepes, es varakozas tovabba  befejezesre...
+            //kilepes, es varakozas tovabb a befejezesre...
             break;
 
         case RESOURCEUSERSTATE_IDLE:
@@ -1750,7 +1755,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             if (user->statusFunc)
             {
                 user->statusFunc(RESOURCE_STOP,
-                                 &resource->errorInfo,
+                                 resource->reportedError,
                                  user->callbackData);
             }
             break;
@@ -1762,7 +1767,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             break;
     }
 
-    xSemaphoreGive(rm->mutex);    
+    MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

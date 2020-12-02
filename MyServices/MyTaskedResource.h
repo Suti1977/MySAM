@@ -35,8 +35,8 @@ typedef struct
     //leallitasi kerelem aktiv jelzes az eroforrasra
     bool resourceStopRequest;
     //Az applikacio jelezheti, hogy nem szabad az eroforrast leallitani.
-    //Ez akkor fontos, ha olyan folyamatot futtatunk, melynek indenkepen vegig
-    //kell tudi futnia.
+    //Ez akkor fontos, ha olyan folyamatot futtatunk, melynek mindenkepen vegig
+    //kell tudni futnia.
     bool prohibitStop;
 
 } taskedRsource_control_t;
