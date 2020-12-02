@@ -1547,6 +1547,30 @@ static void MyRM_signallingUsers(MyRM_t* rm,
 
                 break;
 
+            case RESOURCEUSERSTATE_ERROR:
+                //Az user meg hiba allapotot mutat.
+                //Ha az eroforrasrol mindenki lemondott, akkor az eroforrason
+                //megszunik a hiba. Az ossze usere, mely a hiba allapotban van
+                //meg, visszaterhet idle allapotba.
+                if (resource->state==RESOURCE_STATE_STOP)
+                {
+                    user->state=RESOURCEUSERSTATE_IDLE;
+
+                    #if MyRM_TRACE
+                    printf("___CLEAR_USER_ERROR__ %s\n", user->userName);
+                    #endif
+
+                    if (user->statusFunc)
+                    {
+                        //MyRM_UNLOCK(rm->mutex);
+                        user->statusFunc(RESOURCE_STOP,
+                                         resource->reportedError,
+                                         user->callbackData);
+                        //xMyRM_LOCK(rm->mutex);
+                    }
+                }
+
+                break;
             default:
                 break;
         } //switch(user->state)
