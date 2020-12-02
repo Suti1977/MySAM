@@ -39,6 +39,9 @@ static void MyRM_addToRequestersDepErrorList(MyRM_t* rm, resource_t* resource);
 static void MyRM_signallingUsers(MyRM_t* rm,
                                  resource_t* resource,
                                  bool continueWorking);
+static void MyRM_restartDo(MyRM_t* rm,
+                           resource_t* resource,
+                           resourceUser_t* user);
 
 //Manager taszkot ebreszteni kepes eventek definicioi
 #define MyRM_NOTIFY__RESOURCE_START_REQUEST     BIT(0)
@@ -1534,14 +1537,19 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                     //mokodeset.
                     user->state=RESOURCEUSERSTATE_IDLE;
 
-                    //Jelezes az usernek a statusz callbacken keresztul
-                    if (user->statusFunc)
+                    if (user->restartRequestFlag)
+                    {   //Az eroforrason elo van irva az ujrainditasi kerelem
+                        MyRM_restartDo(rm, resource, user);
+                    } else
                     {
-                        //MyRM_UNLOCK(rm->mutex);
-                        user->statusFunc(RESOURCE_STOP,
-                                         resource->reportedError,
-                                         user->callbackData);
-                        //xMyRM_LOCK(rm->mutex);
+                        if (user->statusFunc)
+                        {
+                            //MyRM_UNLOCK(rm->mutex);
+                            user->statusFunc(RESOURCE_STOP,
+                                             resource->reportedError,
+                                             user->callbackData);
+                            //xMyRM_LOCK(rm->mutex);
+                        }
                     }
                 }
 
@@ -1556,17 +1564,23 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                 {
                     user->state=RESOURCEUSERSTATE_IDLE;
 
-                    #if MyRM_TRACE
-                    printf("___CLEAR_USER_ERROR__ %s\n", user->userName);
-                    #endif
-
-                    if (user->statusFunc)
+                    if (user->restartRequestFlag)
+                    {   //Az eroforrason elo van irva az ujrainditasi kerelem
+                        MyRM_restartDo(rm, resource, user);
+                    } else
                     {
-                        //MyRM_UNLOCK(rm->mutex);
-                        user->statusFunc(RESOURCE_STOP,
-                                         resource->reportedError,
-                                         user->callbackData);
-                        //xMyRM_LOCK(rm->mutex);
+                        #if MyRM_TRACE
+                        printf("___CLEAR_USER_ERROR__ %s\n", user->userName);
+                        #endif
+
+                        if (user->statusFunc)
+                        {
+                            //MyRM_UNLOCK(rm->mutex);
+                            user->statusFunc(RESOURCE_STOP,
+                                             resource->reportedError,
+                                             user->callbackData);
+                            //xMyRM_LOCK(rm->mutex);
+                        }
                     }
                 }
 
@@ -1575,6 +1589,23 @@ static void MyRM_signallingUsers(MyRM_t* rm,
                 break;
         } //switch(user->state)
     } //while
+}
+//------------------------------------------------------------------------------
+//Az eroforras ujrainditasanak kezdete
+static void MyRM_restartDo(MyRM_t* rm,
+                           resource_t* resource,
+                           resourceUser_t* user)
+{
+    printf("___RESTART REQUEST___ %s\n", user->userName);
+
+    //keres torlese
+    user->restartRequestFlag=false;
+
+    //Az usert az eroforras inditasara allitja
+    user->state=RESOURCEUSERSTATE_WAITING_FOR_START;
+
+    //eroforrasra inditsi kerest ad.
+    MyRM_startResourceCore(rm, resource);
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1794,6 +1825,81 @@ void MyRM_unuseResource(resourceUser_t* user)
     MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
+//Eroforras ujrainditasi kerelme. Hibara futott eroforrasok eseten az eroforras
+//hibajanak megszunese utan ujrainditja azt.
+void MyRM_restartResource(resourceUser_t* user)
+{
+    MyRM_t* rm=&myRM;
+    resource_t* resource=user->resource;
+
+    MyRM_LOCK(rm->mutex);
+
+    #if MyRM_TRACE
+    printf("MyRM_restartResource() user: %s  state: %d\n", user->userName, user->state);
+    #endif
+
+    //Elso lepesben kezdemenyezzuk az eroforras leallitasat.
+
+    switch((int)user->state)
+    {
+
+        case RESOURCEUSERSTATE_RUN:
+        case RESOURCEUSERSTATE_WAITING_FOR_START:
+        case RESOURCEUSERSTATE_ERROR:
+            //Az eroforras el van inidtva vagy varunk annak elindulasara.
+            //Ez utobbi akkor lehet, ha inditasi folyamat kozben megis lemond
+            //az user az eroforrasrol,
+            //vagy az eroforras hibaja miatt az user hiba allapotban van.
+            //Ebbol kilepni, az eroforras leallitasaval lehet.
+
+            user->restartRequestFlag=true;
+
+            //Beallitjuk, hogy varunk annak leallasara
+            user->state=RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE;
+
+            //Eroforrast leallitjuk (legalabb is bejelezzuk, hogy egy user
+            //lemond rola, igy ha annak usageCnt szamlaloja 0-ra csokken, akkor
+            //az eroforras le fog allni, majd ha mindenki lemondott rola, akkor
+            //az ujrainditasi keres miatt az ujra fog indulni.)
+            MyRM_stopResourceCore(rm, resource);
+
+            //Jelzes a taszknak...
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
+            break;
+
+        case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
+            //Az user mar le van allitva. Varunk annak befejezesere.
+            //kilepes, es varakozas tovabb a befejezesre...
+
+            //User inditasi kerelme, mely majd a leallas utan fog ervenyre
+            //jutni.
+
+            user->restartRequestFlag=true;
+            break;
+
+        case RESOURCEUSERSTATE_IDLE:
+            //Az user mar le van allitva.
+            //User inditasi kerelme.
+
+            //Beallitjuk, hogy varunk annak inditasara.
+            user->state=RESOURCEUSERSTATE_WAITING_FOR_START;
+
+            //Eroforrast inditjuk.
+            MyRM_startResourceCore(rm, resource);
+
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+
+            break;
+
+
+        default:
+            //Ismeretlen allapot.
+            ASSERT(0);
+            break;
+    }
+
+    MyRM_UNLOCK(rm->mutex);
+}
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

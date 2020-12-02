@@ -347,6 +347,9 @@ typedef struct
     //A felhasznalo neve. (Ezt a debuggolashoz es listazashoz tudjuk hasznalni.)
     const char*             userName;
 
+    //Az ujrainditasi kerelmet jelzo flag.
+    bool                    restartRequestFlag;
+
     //Az eroforrast hasznalo userek lancolt listajahoz szukseges
     struct
     {
@@ -493,6 +496,10 @@ static inline void MyRM_configUser( resourceUser_t* user,
     user->statusFunc=statusFunc;
     user->callbackData=callbackData;
 }
+
+//Eroforras ujrainditasi kerelme. Hibara futott eroforrasok eseten az eroforras
+//hibajanak megszunese utan ujrainditja azt.
+void MyRM_restartResource(resourceUser_t* user);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYRM_H_
