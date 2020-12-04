@@ -150,6 +150,10 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         //de a start callbackben ez feluldefinialhato.
         control.waitTime=0;
 
+        #if MyTASKEDRESOURCE_TRACING
+        printf("MyTaskedResource STARTING... (%s)\n", this->cfg.name);
+        #endif
+
         //Eroforras indul...
         if (this->cfg.startFunc)
         {   //eroforrast indito funkcio meghivasa, mivel van ilyen beallitva
@@ -159,6 +163,10 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
                 goto error;
             }
         }
+
+        #if MyTASKEDRESOURCE_TRACING
+        printf("MyTaskedResource RUN. (%s)\n", this->cfg.name);
+        #endif
 
         //Az eroforras elindult. Reportoljuk az eroforras manager fele...
         MyRM_resourceStatus(resource, RESOURCE_RUN, status);
@@ -289,6 +297,10 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
 
 error:  //<--ide ugrunk hibak eseten
 
+        #if MyTASKEDRESOURCE_TRACING
+        printf("MyTaskedResource ERROR. (%s)\n", this->cfg.name);
+        #endif
+
         //hiba eseten meghivodo callback, ha van beregisztralva
         if (this->cfg.errorFunc)
         {
@@ -302,12 +314,21 @@ error:  //<--ide ugrunk hibak eseten
         //Hiba eseten a modult le kell allitani, tehat meg kell, hogy hivodjon
         //a STOP kerelme, hogy torlodni tudjon a hiba.
 
+        #if MyTASKEDRESOURCE_TRACING
+        printf("MyTaskedResource WAITING FOR STOP... (%s)\n", this->cfg.name);
+        #endif
         //Varakozas a stop jelzesre...
         control.events=MyRTOS_waitForNotifyEvents(MyTASKEDRESOURCE_EVENT__STOP_REQUEST,
                                             portMAX_DELAY);
 
+        #if MyTASKEDRESOURCE_TRACING
+        printf("MyTaskedResource STOP. (Clear error) (%s)\n", this->cfg.name);
+        #endif
+
         //Jelzes a manager fele, hogy a modul le lett allitva.
+        __NOP();
         MyRM_resourceStatus(resource, RESOURCE_STOP, kStatus_Success);
+        __NOP();
     } //while(1)
 
 }

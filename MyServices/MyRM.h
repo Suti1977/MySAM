@@ -292,6 +292,8 @@ typedef struct
     //jelentett magarol.
     bool haltedFlag;
 
+    bool debugFlag;
+
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
     //eroforrashoz letrehoztak taszkot.
     void* ext;
