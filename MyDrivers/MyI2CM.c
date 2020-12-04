@@ -93,10 +93,10 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     hw->STATUS.reg=SERCOM_I2CM_STATUS_BUSSTATE(1);
     while(hw->SYNCBUSY.reg);
 
-    //Minden interrupt engedelyezese a periferian...
-    hw->INTENSET.reg=   SERCOM_I2CM_INTENSET_ERROR |
-                        SERCOM_I2CM_INTENSET_MB |
-                        SERCOM_I2CM_INTENSET_SB;
+    //Minden interrupt tiltasa a periferian...
+    hw->INTENCLR.reg=   SERCOM_I2CM_INTENCLR_ERROR |
+                        SERCOM_I2CM_INTENCLR_MB |
+                        SERCOM_I2CM_INTENCLR_SB;
 
     //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
     //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
@@ -324,6 +324,12 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
         hw->ADDR.reg=regVal;
         __DMB();
         while(hw->SYNCBUSY.reg);
+
+        //Megszakitasok engedelyezese
+        hw->INTENSET.reg=   SERCOM_I2CM_INTENSET_ERROR |
+                            SERCOM_I2CM_INTENSET_MB |
+                            SERCOM_I2CM_INTENSET_SB;
+
 
         //VIGYAZAT! Ez utan feljohet IT azonnal, pl arbitacio vesztes miatt!
         //Folytatas majd az interrupt rutinban...
@@ -647,6 +653,13 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         if (xSemaphoreTake(i2cm->semaphore, I2C_TRANSFER_TIMEOUT)==pdFALSE)
         {   //Hiba a buszon.
 //MyGPIO_clr(PIN_TEST_OUT6);
+
+            //Minden interrupt tiltasa a periferian...
+            SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
+            hw->INTENCLR.reg=   SERCOM_I2CM_INTENCLR_ERROR |
+                                SERCOM_I2CM_INTENCLR_MB |
+                                SERCOM_I2CM_INTENCLR_SB;
+
             printf("I2C bus error.\n");
 
             //TODO: itt stopot generalni, vagy valahogy feloldani a hibat!      !!!!
@@ -654,6 +667,12 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
             status=kMyI2CMStatus_BusError;
         } else
         {
+            //Minden interrupt tiltasa a periferian...
+            SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
+            hw->INTENCLR.reg=   SERCOM_I2CM_INTENCLR_ERROR |
+                                SERCOM_I2CM_INTENCLR_MB |
+                                SERCOM_I2CM_INTENCLR_SB;
+
             status=i2cm->asyncStatus;
 //MyGPIO_clr(PIN_TEST_OUT6);
         }
