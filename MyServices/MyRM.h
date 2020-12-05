@@ -40,6 +40,15 @@ typedef enum
     //Az eroforras befejezte a mukodeset (kesobbi fejlesztesre var.)
     RESOURCE_DONE,
 } resourceStatus_t;
+
+//eroforrasok statuszahoz tartozo stringek. (Nyomkoveteshez)
+//FONTOS, HOGY A SORRENDJUK SZINKRONBAN LEGYEN AZ ENUMOKKAL!
+#define RESOURCE_STATUS_STRINGS \
+{   "STOP",                     \
+    "RUN",                      \
+    "ERROR",                    \
+    "DONE",                     \
+}
 //------------------------------------------------------------------------------
 //eroforras allapotat leiro enumok.
 typedef enum
@@ -134,9 +143,6 @@ typedef struct
 
     //Az eroforras altal hasznalt hibara futott eroforrasok listajanak kovetkezo
     //elemere mutat.
-    //Ha egy eroforras fuggosege hibara fut, akkor annak statusz fuggveny
-    //hivasaban a hibara futott eroforras regisztralja magat a listaban. Ez a
-    //leiro is becsatolasra kerul.    
     struct resourceDep_t* nextDepError;
     //true, ha mar a fuggosegi hiba listahoz van adva a leiro
     bool depErrorInTheList;
@@ -171,7 +177,7 @@ typedef struct
     //Ha a szamlalo 0-ra csokken, akkor az eroforras hasznalata leallithato.
     uint32_t        usageCnt;
 
-    //Az eroforrast igenylo eroforrasok lancolt listaja. (felso szinetk a faban)
+    //Az eroforrast igenylo eroforrasok lancolt listaja.(Felso szinetek a faban)
     struct
     {
         resourceDep_t*    first;
@@ -184,9 +190,6 @@ typedef struct
     //Ha erteke 0-ra csokken, akkor az eroforras mukodesehez tratozo egyeb
     //fuggosegek elindultak, es az eroforras is indithato.
     uint32_t        depCnt;
-    //true-val irjuk elo, hogy az eroforras ellenorizze a depCnt szamlalojat,
-    //es ha az 0, akkor inditsa el az eroforrast.
-    bool checkDepCntRequest;
 
     //Az eroforrashoz tartozo sajat fuggosegek lancolt listajanak eleje es vege.
     //Ebben sorakoznak az eroforras mukodesehez szukseges tovabbi fuggosegek.
@@ -291,6 +294,10 @@ typedef struct
     //Az eroforras hiba allapotban volt, es leallt, tehat STOP statuszt
     //jelentett magarol.
     bool haltedFlag;
+
+    //true jelzi, hogy az eroforras elindult. Az eroforras RUN statuszara all
+    //be.
+    bool runFlag;
 
     bool debugFlag;
 
