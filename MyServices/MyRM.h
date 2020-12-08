@@ -131,8 +131,24 @@ typedef enum
 // - Az alapfeltetelnek megadott (igenyelt) eroforrashoz tartozo listaban
 typedef struct
 {
-    //A fuggosegi leirohoz tartozo igenylo tipusat azonositja.
-    resourceRequesterType_t requesterType;
+    struct
+    {
+        //A fuggosegi leirohoz tartozo igenylo tipusat azonositja.
+        uint32_t    requesterType :1;
+
+        //true-val jelzi, ha egy inditasi kerelem fuggoben van, melyrol a
+        //fuggosegnek csak a leallasa utan szabad tudomast szereznie.
+        //Olyan esetekben tarolodik le ez a jelzes, amikor egy egy fuggoseg a
+        //leallitasi folyamata alatt kap ujabb haszanlati kerelmet.
+        uint32_t delayedStartRequest :1;
+
+        //Statusz kerese. Akkor erdekes, amikor egy olyan hasznalat/lemondas
+        //tortenik, ami nem okoz az eroforrasban allapot valtozast, igy abban
+        //az allapotvaltozaskor egyebkent lefuto statusz kuldesek nem jutnak el
+        //a kerelmezokhoz. A jelzes hatasara a kerelmezok a MyRM taszkjabol
+        //kapnak statusz informaciot.
+        uint32_t statusRequest :1;
+    } flags;
 
     //A leiro altal igenyelt eroforrasra mutat.
     struct resource_t*     requiredResource;
@@ -158,11 +174,6 @@ typedef struct
     //usert.
     resourceDependencyStatusFunc_t* depStatusFunc;
 
-    //true-val jelzi, ha egy inditasi kerelem fuggoben van, melyrol a
-    //fuggosegnek csak a leallasa utan szabad tudomast szereznie.
-    //Olyan esetekben tarolodik le ez a jelzes, amikor egy egy fuggoseg a
-    //leallitasi folyamata alatt kap ujabb haszanlati kerelmet.
-    bool delayedStartRequest;
 } resourceDep_t;
 //------------------------------------------------------------------------------
 //Az egyes eroforrasok manageleshez tartozo valtozok halmaza.
@@ -290,6 +301,14 @@ typedef struct
     //true jelzi, hogy az eroforras elindult. Az eroforras RUN statuszara all
     //be.
     uint16_t run :1;
+
+
+    //Statusz kerese. Akkor erdekes, amikor egy olyan hasznalat/lemondas
+    //tortenik, ami nem okoz az eroforrasban allapot valtozast, igy abban
+    //az allapotvaltozaskor egyebkent lefuto statusz kuldesek nem jutnak el
+    //a kerelmezokhoz. A jelzes hatasara a kerelmezok a MyRM taszkjabol
+    //kapnak statusz informaciot.
+    uint32_t statusRequest :1;
 
     //nyomkoveteshez hasznalt tetszoleges flag bit.
     uint16_t debug :1;
