@@ -39,6 +39,7 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
         user->statusFunc(resourceStatus, errorInfo, user->callbackData);
     }
 
+    if (errorInfo)  user->asyncStatus=errorInfo->errorCode;
 
     //Elagaz a statusz alapjan
     switch((int)resourceStatus)
@@ -105,6 +106,8 @@ status_t MySimpleResourceUser_use(simpleResourceUser_t* user)
     printf("MySimpleResourceUser_use() (%s)\n", user->user.userName);
     #endif
 
+    user->asyncStatus=kStatus_Success;
+
     //Eroforras hasznalatba vetele. A hivas utan a callbackben kapunk jelzest
     //az eroforras allapotarol.
     MyRM_useResource(&user->user);
@@ -119,9 +122,8 @@ status_t MySimpleResourceUser_use(simpleResourceUser_t* user)
                                             portMAX_DELAY);
 
     if (Events & SIMPLE_USER_EVENT__ERROR)
-    {   //Hiba volt az eroforras inditasakor
-        //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=user->user.resource->reportedError->errorCode;
+    {   //Hiba volt az eroforras inditasakor        
+        status=user->asyncStatus;
 
         //eroforras leallitasa, igy biztositva abban a hiba torleset
         MyRM_unuseResource(&user->user);
@@ -156,9 +158,8 @@ status_t MySimpleResourceUser_unuse(simpleResourceUser_t* user)
                                             portMAX_DELAY);
 
     if (events & SIMPLE_USER_EVENT__ERROR)
-    {   //Hiba volt az eroforras leallitasakor
-        //A hibakodot kiolvassuk az eroforrasbol, es avval terunk majd vissza.
-        status=user->user.resource->reportedError->errorCode;
+    {   //Hiba volt az eroforras leallitasakor        
+        status=user->asyncStatus;
 
         //eroforras leallitasa, igy biztositva abban a hiba torleset
         MyRM_unuseResource(&user->user);

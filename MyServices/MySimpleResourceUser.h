@@ -35,6 +35,9 @@ typedef struct
     //A funkcio meghivasakor atadott tetszoleges adat
     void*  callbackData;
 
+    //A hibakod
+    status_t asyncStatus;
+
 } simpleResourceUser_t;
 
 //Az eroforrashoz simpleUser kezelo hozzaadasa. A rutin letrehozza a

@@ -70,9 +70,9 @@ typedef enum
 //eroforrasok allapotahoz tartozo stringek.
 //FONTOS, HOGY A SORRENDJUK SZINKRONBAN LEGYEN AZ ENUMOKKAL!
 #define RESOURCE_STATE_STRINGS  \
-{   "STOP    ",                 \
+{   "STOP",                     \
     "STARTING",                 \
-    "RUN     ",                 \
+    "RUN",                      \
     "STOPPING",                 \
 }
 //------------------------------------------------------------------------------
@@ -114,6 +114,15 @@ typedef struct
     resourceStopFunc_t*             stop;
 } resourceFuncs_t;
 //------------------------------------------------------------------------------
+//Az eroforrast hasznalo user tipusa.
+typedef enum
+{
+    //eroforras
+    RESOURCE_REQUESTER_TYPE__RESOURCE,
+    //eroforarst hasznalo user
+    RESOURCE_REQUESTER_TYPE__USER,
+} resourceRequesterType_t;
+//------------------------------------------------------------------------------
 //Egy eroforras mas eroforrasoktol valo fuggoseget leiro struktura.
 //Ezekbol egy lancolt lista alakulhat ki, eroforrasonkent.
 //Minden eroforrashoz annyit kell letrehozni, amennyi fuggosege van.
@@ -122,6 +131,9 @@ typedef struct
 // - Az alapfeltetelnek megadott (igenyelt) eroforrashoz tartozo listaban
 typedef struct
 {
+    //A fuggosegi leirohoz tartozo igenylo tipusat azonositja.
+    resourceRequesterType_t requesterType;
+
     //A leiro altal igenyelt eroforrasra mutat.
     struct resource_t*     requiredResource;
     //Az eroforrashoz tartozo fuggosegi lancolt lista kezelesehez szukseges.
@@ -129,31 +141,28 @@ typedef struct
     //aktualis statuszarol.   
     struct resourceDep_t*  nextRequester;
 
-    //A leirot birtoklo eroforrasra mutat.
-    //Egy fuggosegben levo eroforras ez alapjan tudja, hogy melyik ignylo
-    //eroforrasnak kell majd jelezni a statuszaval.
-    struct resource_t*     requesterResource;
+    //A leirot birtoklo eroforrasra/userre mutato pointerek. A requesterType
+    //donti el.
+    union
+    {
+        struct resource_t*     requesterResource;
+        struct resourceUser_t* requesterUser;
+        void*                  requester;
+    };
+
     //A kerelmezo eroforras fuggosegi listaja
     struct resourceDep_t*  nextDependency;
 
-    //fuggoseg altal hazsnalt statsusz callback. A fuggoseg az egyes allapot
+    //fuggoseg altal hasznalt statsusz callback. A fuggoseg az egyes allapot
     //valtozasiairol ezen keresztul tajekoztatja az ot hasznalo eroforrast vagy
     //usert.
     resourceDependencyStatusFunc_t* depStatusFunc;
-    void*   callbackData;
 
     //true-val jelzi, ha egy inditasi kerelem fuggoben van, melyrol a
     //fuggosegnek csak a leallasa utan szabad tudomast szereznie.
     //Olyan esetekben tarolodik le ez a jelzes, amikor egy egy fuggoseg a
     //leallitasi folyamata alatt kap ujabb haszanlati kerelmet.
     bool delayedStartRequest;
-
-    ////Az eroforras altal hasznalt hibara futott eroforrasok listajanak kovetkezo
-    ////elemere mutat.
-    //struct resourceDep_t* nextDepError;
-    ////true, ha mar a fuggosegi hiba listahoz van adva a leiro
-    //bool depErrorInTheList;
-
 } resourceDep_t;
 //------------------------------------------------------------------------------
 //Az egyes eroforrasok manageleshez tartozo valtozok halmaza.
@@ -387,34 +396,6 @@ typedef struct
     //} userList;
 
 } resourceUser_t;
-//------------------------------------------------------------------------------
-typedef enum
-{
-    //eroforras
-    RESOURCENODE_TYPE_RESOURCE,
-    //eroforarst hasznalo user
-    RESOURCENODE_TYPE_USER,
-} resourceNodeType_t;
-//------------------------------------------------------------------------------
-//eroforras/user leiro struktura. Eroforars faban az egyes csomopontok/fegpontok
-//leiroi
-typedef struct
-{
-    //Csomopont/vegpont tipusa. Az unio-ban levo tartalom ennek megfeleloen
-    //ertelmezendo.
-    resourceNodeType_t  type;
-    //Node neve (eroforars/user neve) segiti a kilistazast, es a nyomkovetest.
-    const char* name;
-    //Az eroforras managerben az eroforrasok/userek lancolt listajahoz szukseges
-    //mutato. Segitsegevel lehet kilistazni a letrehozott nodokat
-    struct resource_t* nextNode;
-    union
-    {
-        resource_t  resource;
-        resourceUser_t  user;
-    };
-
-} resourceNode_t;
 //------------------------------------------------------------------------------
 //MyRM valtozoi
 typedef struct
