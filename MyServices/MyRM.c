@@ -23,22 +23,31 @@ static inline void MyRM_addRequesterToResource(resource_t* resource,
                                                resourceDep_t* dep);
 static inline void MyRM_addDependencyToResource(resource_t* resource,
                                                 resourceDep_t* dep);
+static void MyRM_sendStatus(resource_t* resource,
+                            resourceStatus_t resourceStatus);
+static void MyRM_dependencyStatusCB(struct resourceDep_t *dep,
+                                    resourceStatus_t status,
+                                    resourceErrorInfo_t* errorInfo);
 static inline void MyRM_sendNotify(MyRM_t* rm, uint32_t eventBits);
 static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource);
-static inline void MyRM_startRequest(MyRM_t* rm, resource_t* resource);
-static inline void MyRM_stopRequest(MyRM_t* rm,
-                                    resource_t* resource);
-static void MyRM_startResourceCore(MyRM_t* rm, resource_t* resource);
-static void MyRM_stopResourceCore(MyRM_t* rm, resource_t* resource);
+//static inline void MyRM_startRequest(MyRM_t* rm, resource_t* resource);
+//static inline void MyRM_stopRequest(MyRM_t* rm,
+//                                    resource_t* resource);
+//static void MyRM_startResourceCore(MyRM_t* rm, resource_t* resource);
+//static void MyRM_stopResourceCore(MyRM_t* rm, resource_t* resource);
+static void MyRM_startDependency(resourceDep_t* dep);
+static void MyRM_stopDependency(resourceDep_t* dep);
 static void MyRM_resourceStatusCore(resource_t* resource,
                                     resourceStatus_t resourceStatus,
                                     status_t errorCode);
-static void MyRM_addToRequestersDepErrorList(MyRM_t* rm, resource_t* resource);
 static void MyRM_signallingUsers(MyRM_t* rm,
                                  resource_t* resource);
 static void MyRM_restartDo(MyRM_t* rm,
                            resource_t* resource,
                            resourceUser_t* user);
+static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
+                                       resourceStatus_t status,
+                                       resourceErrorInfo_t* errorInfo);
 
 //Manager taszkot ebreszteni kepes eventek definicioi
 #define MyRM_NOTIFY__RESOURCE_START_REQUEST     BIT(0)
@@ -53,6 +62,7 @@ static void MyRM_restartDo(MyRM_t* rm,
 
 static const char* MyRM_resourceStateStrings[]=RESOURCE_STATE_STRINGS;
 static const char* MyRM_resourceStatusStrings[]=RESOURCE_STATUS_STRINGS;
+static const char* MyRM_resourceUserStateStrings[]=RESOURCE_USER_STATE_STRINGS;
 //------------------------------------------------------------------------------
 //Eroforras management reset utani kezdeti inicializalasa
 void MyRM_init(const MyRM_config_t* cfg)
@@ -123,7 +133,7 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
 
     if (printDeps)
     {
-        printf("                   startReqCnt: %d  stopReqCnt: %d  errorFlag: %d\n", (int)resource->startReqCnt, (int)resource->stopReqCnt,  (int)resource->errorFlag);
+        printf("                   errorFlag: %d\n", (int)resource->errorFlag);
         printf("                   runningFlag: %d  haltReq: %d  :haltedFlag: %d\n", (int)resource->runningFlag, (int)resource->haltReq, (int)resource->haltedFlag);
 
         if (resource->reportedError)
@@ -180,29 +190,29 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
             dep=(resourceDep_t*)dep->nextDependency;
         }
 
-        if (resource->userList.first !=NULL)
-        {   //Van az eroforrasnak hasznaloja
-
-            printf("\n              Users: ");
-
-            //felhasznalok kilistazasa
-            resourceUser_t* user=(resourceUser_t*)resource->userList.first;
-            while(user)
-            {
-                const char* userName= user->userName;
-                if (userName!=NULL)
-                {
-                    printf("%s", userName);
-                } else
-                {
-                    printf("???");
-                }
-                //allapot kiirasa
-                printf("(%d)  ",(int)user->state);
-                //Kovetkezo elemre lepunk a listaban
-                user=(resourceUser_t*)user->userList.next;
-            }
-        }
+        //if (resource->userList.first !=NULL)
+        //{   //Van az eroforrasnak hasznaloja
+        //
+        //    printf("\n              Users: ");
+        //
+        //    //felhasznalok kilistazasa
+        //    resourceUser_t* user=(resourceUser_t*)resource->userList.first;
+        //    while(user)
+        //    {
+        //        const char* userName= user->userName;
+        //        if (userName!=NULL)
+        //        {
+        //            printf("%s", userName);
+        //        } else
+        //        {
+        //            printf("???");
+        //        }
+        //        //allapot kiirasa
+        //        printf("(%d)  ",(int)user->state);
+        //        //Kovetkezo elemre lepunk a listaban
+        //        user=(resourceUser_t*)user->userList.next;
+        //    }
+        //}
 
         printf("\n");
     }
@@ -301,14 +311,13 @@ static inline void MyRM_addRequesterToResource(resource_t* resource,
     resource->requesterList.last=dep;
 }
 //------------------------------------------------------------------------------
-//Eroforrashoz tartozo fuggoseg beallitasa. Ebben adhato meg, hogy az
-//eroforras melyik masik eroforrasoktol fugg.
+//Eroforrashoz tartozo fuggoseg hozzaadasa.
 static inline void MyRM_addDependencyToResource(resource_t* resource,
                                                 resourceDep_t* dep)
 {
     //A leiroban beallitjuk az eroforrast, akihez tartozik, akinek a fuggoseget
     //leirjuk.
-    dep->requesterResource=(struct resource_t*) resource;
+    dep->requesterResource=(struct resource_t*) resource;                       //<-----------void?
 
     //Az eroforras lancolt listajahoz adjuk a fuggosegi leirot...
     if (resource->dependencyList.first==NULL)
@@ -347,6 +356,9 @@ void MyRM_addDependency(resourceDep_t* dep,
     dep->requiredResource =(struct resource_t*) lowLevel;
     MyRM_addDependencyToResource(highLevel, dep);
     MyRM_addRequesterToResource (lowLevel,  dep);
+    //Beallitja a fuggoseg altal hivando statsusz fuggvenyt, melyen keresztul a
+    //fuggoseg jelezheti a kerelmezo szamara az allapotvaltozasait
+    dep->depStatusFunc=MyRM_dependencyStatusCB;
 
     MyRM_UNLOCK(rm->mutex);
 }
@@ -514,6 +526,7 @@ void MyRM_resourceStatus(resource_t* resource,
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_STATUS);
 }
 //------------------------------------------------------------------------------
+#if 0
 static void MyRM_startResourceCore(MyRM_t* rm, resource_t* resource)
 {
     #if MyRM_TRACE
@@ -557,13 +570,14 @@ static void MyRM_stopResourceCore(MyRM_t* rm, resource_t* resource)
     //Eroforras feldolgozasanak eloirasa...
     MyRM_addResourceToProcessReqList(rm, resource);
 }
+#endif
 //------------------------------------------------------------------------------
 void MyRM_startResource(resource_t* resource)
 {
     MyRM_t* rm=&myRM;
 
     MyRM_LOCK(rm->mutex);
-    MyRM_startResourceCore(rm, resource);
+    //MyRM_startResourceCore(rm, resource);
     MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
@@ -575,7 +589,7 @@ void MyRM_stopResource(resource_t* resource)
     MyRM_t* rm=&myRM;
 
     MyRM_LOCK(rm->mutex);
-    MyRM_stopResourceCore(rm, resource);
+    //MyRM_stopResourceCore(rm, resource);
     MyRM_UNLOCK(rm->mutex);
 
     //Jelzes a taszknak...
@@ -650,98 +664,7 @@ if (resource->debugFlag)
     } //while(1)
 }
 //------------------------------------------------------------------------------
-//Egy eroforras fuggosegi hibaja eseten hivodo fuggveny
-//[MyRM_task-bol hivva]
-static inline void MyRM_depError(MyRM_t* rm,
-                                 resource_t* resource,
-                                 resource_t* faultyDependency)
-{
-    #if MyRM_TRACE
-    printf("  DEPENDENCY ERROR!   %s(%d) ---> %s(%d)\n",
-           faultyDependency->resourceName,
-           faultyDependency->state,
-           resource->resourceName,
-           resource->state);
-    #endif
 
-    //Annak ellenorzese, hogy az eroforras mar kapott-e valamely
-    //fuggosegetol, vagy akar sajat magatol hibat. Ezt onnan tudni, hogy a
-    //reportedError pointere NULL vagy nem. Ha nem NULL, akkor mar egy
-    //korabbi hiba miatt az eroforras hibara lett futtatva.
-    if (resource->reportedError)
-    {   //Az eroforras mar hiba allapotban van.
-        return;
-    }
-
-    switch((int)resource->state)
-    {
-        case RESOURCE_STOP:
-            //Az eroforras nem mukodik. Nem foglalkozik a fuggoseg hibajaval.
-            return;
-        case RESOURCE_STATE_STARTING:
-        case RESOURCE_STATE_RUN:
-        case RESOURCE_STATE_STOPPING:
-            break;
-        default:
-            ASSERT(0);
-            return;
-    }
-
-    //Az eroforras maga is hibara fut. A hibat atveszi a fuggosegetol.
-    resource->reportedError=faultyDependency->reportedError;
-
-    //Itt elvileg mindenkepen kell, hogy hibat mutasson a reportedError!
-    ASSERT(resource->reportedError);
-
-    //Hiba statusz generalasa
-    //(Itt nem adunk at hibakodot, mivel azt mar beallitottuk az elobb)
-    MyRM_resourceStatusCore(resource, RESOURCE_ERROR, 0);
-}
-//------------------------------------------------------------------------------
-//Akkor hivodik, ha egy eroforras fuggosege elindult
-//[MyRM_task-bol hivva]
-static  void MyRM_dependenyStarted(MyRM_t* rm, resource_t* resource)
-{
-    #if MyRM_TRACE
-    printf("[%s]   MyRM_dependenyStarted\n", resource->resourceName);
-    #endif
-
-    //A fuggosegek szamanak csokkentese...
-
-    if (resource->depCnt==0)
-    {   //A fuggoseg szamlalo elkeveredett.
-        ASSERT(0);
-        while(1);
-    }
-    resource->depCnt--;
-
-    if (resource->state==RESOURCE_STATE_STARTING)
-    {   //Az eroforras inditasra var...
-
-        resource->checkStartStopReq=true;
-        MyRM_addResourceToProcessReqList(rm, resource);
-    }
-}
-//------------------------------------------------------------------------------
-//Akkor hivodik, ha egy eroforras fuggosege le lesz allitva
-//[MyRM_task-bol hivva]
-static  void MyRM_dependenyStop(MyRM_t* rm, resource_t* resource)
-{
-    (void) rm;
-
-    #if MyRM_TRACE
-    printf("[%s]   MyRM_dependenyStop\n", resource->resourceName);
-    #endif
-
-    //A fuggosegek szamanak novelese
-    if (resource->depCnt>=resource->depCount)
-    {   //A fuggoseg szamlalo elkeveredett.        
-        ASSERT(0);
-        while(1);
-    }
-
-    resource->depCnt++;
-}
 //------------------------------------------------------------------------------
 //Annak ellenorzese, hogy az eroforarst el kell-e inditani, vagy le kell-e
 //allitani. Hiba eseten ebben oldjuk meg a hiba miatti leallst is.
@@ -768,7 +691,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
     }
 
 
-    //Elagazas az eroforars aktualis allapota szerint...
+    //Elagazas az eroforras aktualis allapota szerint...
     switch((int)resource->state)
     {   //..................................................................
         case RESOURCE_STATE_STARTING:
@@ -790,7 +713,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                 //Eroforras initek...
                 //resource->doneFlag=false;
-                resource->reportedError=NULL;
+                //resource->reportedError=NULL;
 
                 //Ha az eroforras meg nincs inicializalva, es van beregisztralva
                 //init() fuggvenye, akkor meghivjuk. Ez az eroforras elete alatt
@@ -863,22 +786,9 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                     resource->runningFlag=true;
 
                     //Minden hasznalojaban jelzi, hogy a fuggoseguk elindult.
-                    //Ezt ugy teszi, hogy meghivja azok dependencyStart()
-                    //funkciojukat. Abban azok csokkentik a depCnt szamla-
-                    //lojukat, es ha az 0-ra csokkent, akkor elinditjak sajat
-                    //folyamataikat.
-                    resourceDep_t* requester=resource->requesterList.first;
-                    while(requester)
-                    {
-                        resource_t* reqRes=
-                                    (resource_t*)requester->requesterResource;
-                        MyRM_dependenyStarted(rm, reqRes);
-                        requester=(resourceDep_t*)requester->nextRequester;
-                    }
-
-                    //minden userenek jelzi, hogy az eroforras elindult
+                    //dependecyStatus() callbackek vegighivasa
                     //[RUN]
-                    resource->signallingUsers=true;
+                    MyRM_sendStatus(resource, RESOURCE_RUN);
 
                     //ujra kerjuk a kiertekelest, igy az a RUN agban ellen-
                     //orizheti, hogy az inditasi folyamat kozben nem mondtak-e
@@ -909,11 +819,8 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //es usereknek a hibat...
                 //Az eroforras hasznaloi enenk hatasara szinten hiba allapotot
                 //vesznek, fel, mely hatasara azok is elkezdik a leallst.
-                MyRM_addToRequestersDepErrorList(rm, resource);
-
-                //Jelzes az userek fele is, hogy az eroforrasuk hibara futott...
                 //[ERROR]
-                resource->signallingUsers=true;
+                MyRM_sendStatus(resource, RESOURCE_ERROR);
 
                 //Ugrik az eroforrast leallito reszre. (igy egyszerubb)
                 goto stop_resource;
@@ -963,17 +870,41 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 resourceDep_t* dep=resource->dependencyList.first;
                 while(dep)
                 {
-                    resource_t* depRes=(resource_t*) dep->requiredResource;
-                    MyRM_stopResourceCore(rm, depRes);
+                    MyRM_stopDependency(dep);
 
                     //lancolt list akovetkezo elemere allas.
                     dep=(resourceDep_t*)dep->nextDependency;
                 }
 
-                //minden userenek jelzi, hogy az eroforras leallt, vagy vegzett
+                //Minden userenek jelzi, hogy az eroforras leallt, vagy vegzett.
+                //Itt csak az userek kaphatnak jelzest, melyek nincsnenek
+                //kesleltetve...
                 //[STOP/DONE]
-                resource->signallingUsers=true;
+                MyRM_sendStatus(resource, resource->doneFlag ?  RESOURCE_DONE
+                                                             :  RESOURCE_STOP);
+                resource->doneFlag=false;
 
+
+                //A jelzes kiadasa utan vegig kell majd nezni az eroforras
+                //hasznaloit, es ha van, kesleltetett inidtasi kerelem, akkor
+                //azokat ervenyre juttatni.
+                //Vegighalad az eroforrss osszes hasznalojan...
+                dep=resource->requesterList.first;
+                while(dep)
+                {
+                    if (dep->delayedStartRequest)
+                    {   //a vizsgalt kerelmezo varta az eroforars leallasat.
+
+                        //A jelzes torlesre kerul.
+                        dep->delayedStartRequest=false;
+
+                        //Noveljuk a hasznalati szamlalot.
+                        resource->usageCnt++;
+                    }
+
+                    //lancolt list akovetkezo elemere allas.
+                    dep=(resourceDep_t*)dep->nextRequester;
+                }
             } //(resource->haltReq) else
             break;
         }
@@ -1004,8 +935,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 resourceDep_t* dep=resource->dependencyList.first;
                 while(dep)
                 {
-                    resource_t* depRes=(resource_t*) dep->requiredResource;
-                    MyRM_startResourceCore(rm, depRes);
+                    MyRM_startDependency(dep);
 
                     //lancolt list akovetkezo elemere allas.
                     dep=(resourceDep_t*)dep->nextDependency;
@@ -1036,7 +966,7 @@ stop_resource:
                 //Itt a kod egszerusitese miatt, goto-val ide ugrik, ha hiba
                 //miatt is le kell allitani az eroforrast...
 
-                if (resource->runningFlag)
+                if (resource->runningFlag)                                      //?????????????????????
                 {   //Az eroforras fut. Korabban ezt mar jelezte a kerelmezoi
                     //fele.
 
@@ -1045,15 +975,8 @@ stop_resource:
                     //Minden hasznalojaban jelzi, hogy a fuggoseg leall.
                     //Ezt ugy teszi, hogy meghivja azok dependencyStop()
                     //funkciojukat. Abban azok novelik a depCnt szamlalojukat
-
-                    resourceDep_t* requester=resource->requesterList.first;
-                    while(requester)
-                    {
-                        resource_t* reqRes=
-                                    (resource_t*)requester->requesterResource;
-                        MyRM_dependenyStop(rm, reqRes);
-                        requester=(resourceDep_t*)requester->nextRequester;
-                    }
+                    //[STOPPING]
+                    MyRM_sendStatus(resource, RESOURCE_STOPPING);
                 }
 
                 //Ha van az eroforrasnak stop funkcioja, akkor azt meghivja, ha
@@ -1104,34 +1027,6 @@ stop_resource:
 //Eroforras allapotainak kezelese
 static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
 {        
-    //Annak ellenorzese, hogy valamely fuggosegeben eloallt-e (ujabb) hiba.
-    //A hibas fuggosegeket jelzi az eroforras szamara.
-    while(resource->depErrorList.first)
-    {
-        resourceDep_t* dep=resource->depErrorList.first;
-        //A soron kovetkezo hibara futott eroforrasra mutat.
-        resource_t* faultyDependency= (resource_t*)dep->requiredResource;
-        //A feldologozott eroforras kovetkezo  hibas fuggosegere allas.
-        //A feldolgozasra varo listaelem torlodik a listabol.
-        resource->depErrorList.first=(resourceDep_t*)(dep->nextDepError);
-        dep->nextDepError=NULL;
-        dep->depErrorInTheList=false;
-
-        MyRM_depError(rm, resource, faultyDependency);
-    } //while(dep)
-
-
-    if (resource->stopReqCnt)
-    {   //Van fuggoben lemondasi kerelem az eroforrasra. Valaki(k) lemond annak
-        //hasznalatarol
-        MyRM_stopRequest(rm, resource);
-    } else
-    if (resource->startReqCnt)
-    {   //Van fuggoben inditasi kerelem az eroforrasra. Valaki(k) igenybe
-        //akarja(k) venni.
-       MyRM_startRequest(rm, resource);
-    }
-
     //Kell ellenorizni az eroforras leallitasra, vagy inditasra?
     //Amig iylen jellegu kereseket allit be, akar statusz, akar a kiertekelo
     //logika (MyRM_checkStartStop), addig a kiertekelest ujra le kell futtatni.
@@ -1142,24 +1037,270 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
 
         MyRM_checkStartStop(rm, resource);
     } //while
+}
+//------------------------------------------------------------------------------
+//Az eroforrast hasznalok fele statusz kuldese az eroforras allapotarol
+static void MyRM_sendStatus(resource_t* resource,
+                            resourceStatus_t resourceStatus)
+{
+    //Vegighalad az eroforrss osszes hasznalojan...
+    resourceDep_t* dep=resource->requesterList.first;
+    while(dep)
+    {
 
+        if (dep->depStatusFunc)
+        {   //Tartozik hozza beregisztralt statusz callback.
+            //(Megj: eroforars fele jelzesnel a MyRM_dependencyStatusCB()
+            // fuggveny hivodik meg.
+            // User eseten pedig a MyRM_user_resourceStatusCB() hivodik meg.)
 
-    if (resource->signallingUsers)
-    {   //Az eroforrast hasznalo userek fele elo van irva a jelzes
-        //kuldes, az eroforras allapotarol.
+            dep->depStatusFunc((struct resourceDep_t*)dep,
+                               resourceStatus,
+                               resource->reportedError);
+        }
 
-        //Jelzesi kerelem torlese
-        resource->signallingUsers=false;
-
-        MyRM_signallingUsers(rm, resource);
-
-        //Egyszer lefuto eroforarsok eseten a kesz jelzes torlese.
-        resource->doneFlag=false;
+        //lancolt list akovetkezo elemere allas.
+        dep=(resourceDep_t*)dep->nextRequester;
     }
+}
+//------------------------------------------------------------------------------
+//Egy eroforras fuggosegi hibaja eseten hivodo fuggveny
+//[MyRM_dependencyStatusCB - hivja]
+static inline void MyRM_dependencyError(MyRM_t* rm,
+                                        resource_t* resource,
+                                        resource_t* faultyDependency)
+{
+    #if MyRM_TRACE
+    printf("  DEPENDENCY ERROR!   %s(%d) ---> %s(%d)\n",
+           faultyDependency->resourceName,
+           faultyDependency->state,
+           resource->resourceName,
+           resource->state);
+    #endif
+
+    //Annak ellenorzese, hogy az eroforras mar kapott-e valamely
+    //fuggosegetol, vagy akar sajat magatol hibat. Ezt onnan tudni, hogy a
+    //reportedError pointere NULL vagy nem. Ha nem NULL, akkor mar egy
+    //korabbi hiba miatt az eroforras hibara lett futtatva.
+    if (resource->reportedError)
+    {   //Az eroforras mar hiba allapotban van.
+        return;
+    }
+
+    switch((int)resource->state)
+    {
+        case RESOURCE_STOP:
+            //Az eroforras nem mukodik. Nem foglalkozik a fuggoseg hibajaval.
+            return;
+        case RESOURCE_STATE_STARTING:
+        case RESOURCE_STATE_RUN:
+        case RESOURCE_STATE_STOPPING:
+            break;
+        default:
+            ASSERT(0);
+            return;
+    }
+
+    //Az eroforras maga is hibara fut. A hibat atveszi a fuggosegetol.
+    resource->reportedError=faultyDependency->reportedError;
+
+    //Itt elvileg mindenkepen kell, hogy hibat mutasson a reportedError!
+    ASSERT(resource->reportedError);
+
+    //Hiba statusz generalasa
+    //(Itt nem adunk at hibakodot, mivel azt mar beallitottuk az elobb)
+    MyRM_resourceStatusCore(resource, RESOURCE_ERROR, 0);
+
+    //eloirjuk az eroforras kiertekeleset...
+    MyRM_addResourceToProcessReqList(rm, resource);
+}
+//------------------------------------------------------------------------------
+//Akkor hivodik, ha egy eroforras fuggosege elindult
+//[MyRM_dependencyStatusCB - hivja]
+static inline void MyRM_dependenyStarted(MyRM_t* rm, resource_t* resource)
+{
+    #if MyRM_TRACE
+    printf("[%s]   MyRM_dependenyStarted\n", resource->resourceName);
+    #endif
+
+    //A fuggosegek szamanak csokkentese...
+
+    if (resource->depCnt==0)
+    {   //A fuggoseg szamlalo elkeveredett.
+        ASSERT(0);
+        while(1);
+    }
+    resource->depCnt--;
+
+    if (resource->state==RESOURCE_STATE_STARTING)
+    {   //Az eroforras inditasra var...
+
+        resource->checkStartStopReq=true;
+        MyRM_addResourceToProcessReqList(rm, resource);
+    }
+}
+//------------------------------------------------------------------------------
+//Akkor hivodik, ha egy eroforras fuggosege le lesz allitva
+//[MyRM_dependencyStatusCB - hivja]
+static inline void MyRM_dependenyStop(MyRM_t* rm, resource_t* resource)
+{
+    (void) rm;
+
+    #if MyRM_TRACE
+    printf("[%s]   MyRM_dependenyStop\n", resource->resourceName);
+    #endif
+
+    //A fuggosegek szamanak novelese
+    if (resource->depCnt>=resource->depCount)
+    {   //A fuggoseg szamlalo elkeveredett.
+        ASSERT(0);
+        while(1);
+    }
+
+    resource->depCnt++;
+}
+//------------------------------------------------------------------------------
+//Az egyes fuggosegek ezen keresztul jeleznek az oket igenylo magasabb szinten
+//levo eroforrasok fele. Vagy forditva, egy eroforras fuggosege ezen keresztul
+//jelzi az allapotat.
+static void MyRM_dependencyStatusCB(struct resourceDep_t* dep,
+                                    resourceStatus_t status,
+                                    resourceErrorInfo_t* errorInfo)
+{
+    (void) errorInfo;
+    //A magasabb szinten levo hasznalo
+    resource_t* requester= (resource_t*) ((resourceDep_t*) dep)->requesterResource;
+    //A jelzest ado fuggoseg
+    resource_t* dependency=(resource_t*) ((resourceDep_t*) dep)->requiredResource;
+
+    #if MyRM_TRACE
+    printf("MyRM_dependencyStatusCB()  %s --[%s]--> %s\n",
+           dependency->resourceName,
+           MyRM_resourceStatusStrings[status],
+           requester->resourceName);
+    #endif
+
+    //elagazas a fuggoseg statusza alapjan...
+    switch(status)
+    {
+        case RESOURCE_STOP:
+            //Az fuggoseg leallt
+            break;
+
+        case RESOURCE_RUN:
+            //A fuggoseg elindult.
+            MyRM_dependenyStarted(&myRM, dependency);
+            break;
+
+        case RESOURCE_STOPPING:
+            //A fuggoseg megkezdte a leallasat.
+            MyRM_dependenyStop(&myRM, dependency);
+            break;
+
+        case RESOURCE_DONE:
+            //Azeroforars befejezte a mukodeset. (egyszer lefuto esetekben)
+            break;
+
+        case RESOURCE_ERROR:
+            //A fuggoseg mukodese/initje hibara futott.
+
+            //Azok az igenybevevok, melyek fuggosege hiba maitt all le, es
+            //az inditasi kerelmuket a leallasi folyamat alatt jeleztek,
+            //nem kaphatnak hiba jelzest. Azok varjak, hogy a fuggoseguk
+            //elobb lealljon, majd a keresuk ervenyre jutasa utan ujrainduljon.
+            if (((resourceDep_t*) dep)->delayedStartRequest==true)
+            {   //nem juthat ervenyre
+
+            } else
+            {   //A hasznalo hiba allapotba allitasa...
+                //(Megj: a kiertekelesi igenyt a hivot rutin allitja be.)
+                MyRM_dependencyError(&myRM, requester, dependency);
+            }
+            break;
+    }
+}
+//------------------------------------------------------------------------------
+//Fuggoseg inditasi kerelme (dependencia leiro alapjan.)
+static void MyRM_startDependency(resourceDep_t* dep)
+{
+    //A magasabb szinten levo eroforras, mely igenyli az eroforrast
+    resource_t* requester= (resource_t*) ((resourceDep_t*) dep)->requesterResource;
+    //Az inditando fuggoseg/eroforras
+    resource_t* dependency=(resource_t*) ((resourceDep_t*) dep)->requiredResource;
+
+    #if MyRM_TRACE
+    printf("MyRM_startDependency()  %s ----> %s\n",
+           requester == NULL ? "(user)" : requester->resourceName,
+           dependency->resourceName);
+    #endif
+
+
+    if ((requester) && (requester->state==RESOURCE_STATE_STOPPING))
+    {   //Az eroforras leallasi folyamatban van. Ezt a kerest csak az utan
+        //lehet ervenyre juttatni, miutan az igenyelt eroforras leallt.
+        //A kerelmet eltaroljuk.
+        dep->delayedStartRequest=true;
+
+        //Az inditando eroforras a leallasa utan vegignezi majd az igenyloi
+        //dependencia leiroit, es ha talal bennuk kesleltetett kerest, akkor
+        //azokat ervenyre juttatja.
+
+        //nem tesz semmit...
+    } else
+    {   //Az eroforrast igenybe vesszuk...
+
+        if (dependency->usageCnt==0)
+        {   //Az eroforrasnak ez lett az elso hasznaloja.
+            //Ki kell ertekelni az allapotokat..
+            dependency->checkStartStopReq=true;
+        }
+
+        //Noveljuk a hasznaloinak szamat.
+        dependency->usageCnt++;
+
+        //eloirjuk az eroforras kiertekeleset...
+        MyRM_addResourceToProcessReqList(&myRM, dependency);
+    }
+}
+//------------------------------------------------------------------------------
+//Fuggoseg leallitasi kerelme (dependencia leiro alapjan.)
+static void MyRM_stopDependency(resourceDep_t* dep)
+{
+    //A magasabb szinten levo eroforras, mely lemond az eroforrasrol
+    resource_t* requester= (resource_t*) ((resourceDep_t*) dep)->requesterResource;
+    //A lemondott fuggoseg/eroforras
+    resource_t* dependency=(resource_t*) ((resourceDep_t*) dep)->requiredResource;
+
+    #if MyRM_TRACE
+    printf("MyRM_stopDependency()  %s ----> %s\n",
+           requester == NULL ? "" : requester->resourceName,
+           dependency->resourceName);
+    #endif
+
+    //Az eroforarst hasznalok szamanak cskkenetese
+    if (dependency->usageCnt==0)
+    {   //Az eroforras kezelesben hiba van. Nem mondhatnanak le tobben,
+        //mint amennyien korabban igenybe vettek!
+        ASSERT(0);
+        return;
+    }
+    dependency->usageCnt--;
+
+
+    if (dependency->usageCnt==0)
+    {   //Elfogyott minden hasznalo.
+        //Ki kell ertekelni az allapotokat
+        dependency->checkStartStopReq=true;
+
+        //eloirjuk az eroforras kiertekeleset...
+        MyRM_addResourceToProcessReqList(&myRM, dependency);
+    }
+
 }
 //------------------------------------------------------------------------------
 //Inditasi kerelmek kezelese
 //[MyRM_task-bol hivva]
+#if 0
 static inline void MyRM_startRequest(MyRM_t* rm, resource_t* resource)
 {
     (void) rm;
@@ -1340,6 +1481,7 @@ static inline void MyRM_stopRequest(MyRM_t* rm,
     //kezdeni az eroforras leallitasat a checkStartStop() resz STARTING agaban.
     */
 }
+#endif
 //------------------------------------------------------------------------------
 //Az egyes eroforrasok ezen keresztul jelzik a manager fele az allapotvaltozasa-
 //ikat.
@@ -1488,48 +1630,13 @@ static void MyRM_resourceStatusCore(resource_t* resource,
             resource->checkStartStopReq=true;
             break;            
         //......................................................................
-
+        default:
+            //ismeretlen, vagy nem kezelt allapottal hivtak meg a statuszt!
+            ASSERT(0);
     } //switch
 }
 //------------------------------------------------------------------------------
-//Egy eroforrast hasznalo magasabb szinten levo eroforrasok hibalistajhoz adja
-//az eroforrast.
-static void MyRM_addToRequestersDepErrorList(MyRM_t* rm, resource_t* resource)
-{
-    //Vegighalad az eroforrast hasznalok lancolt listajan...
-    resourceDep_t* requesterDep=resource->requesterList.first;
-    for(; requesterDep; requesterDep=(resourceDep_t*) requesterDep->nextRequester)
-    {
-        if (requesterDep->depErrorInTheList)
-        {   //A hibazo eroforras mar hozza van adva a listahoz. Megegyszer nem
-            //teszi
-            continue;
-        }
-
-        //A kovetkezo, a hibas eroforrast hasznalo eroforras
-        resource_t* requester=(resource_t*)requesterDep->requesterResource;
-
-        //A hibazo eroforras hozzaadasa az ot hasznalo hibalistajahoz
-        requesterDep->nextDepError=NULL;
-        if (requester->depErrorList.first==NULL)
-        {   //A soron levo hasznalonak meg ures a hibalistaja. Ez lesz az
-            //elso fuggosegi leiro a sorban.
-            requester->depErrorList.first=requesterDep;
-        } else
-        {   //A lista mar nem ures. A vegere tesszuk.
-            requester->depErrorList.last->nextDepError=
-                                    (struct resourceDep_t*)requesterDep;
-        }
-        //A most hozzaadot fuggosegi kapcsolat lesz az utolso a sorban
-        requester->depErrorList.last=requesterDep;
-
-        //A bejegyzett eroforrasokon le kell futtatni a hibakezelest!
-        //(Onnan lehet tudni, egy eroforras eseten, hogy valamelyik
-        //eroforrasa hibat jelez, hogy a depErrorList.first nem NULL)
-        MyRM_addResourceToProcessReqList(rm, requester);                
-    }
-}
-//------------------------------------------------------------------------------
+#if 0
 //Az eroforrast hasznalo userek fele az eroforras allapotanak jelzese.
 static void MyRM_signallingUsers(MyRM_t* rm,
                                  resource_t* resource)
@@ -1666,37 +1773,31 @@ static void MyRM_restartDo(MyRM_t* rm,
     //eroforrasra inditsi kerest ad.
     MyRM_startResourceCore(rm, resource);
 }
+#endif
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
-//A hasznalok lancolt listajahoz adja az User-t.
 void MyRM_addUser(resource_t* resource,
                   resourceUser_t* user,
                   const char* userName)
 {
     MyRM_t* rm=&myRM;
 
+    //user leiro kezdeti nullazasa
+    memset(user, 0, sizeof(resourceUser_t));
+
     //A lista csak mutexelt allapotban bovitheto!
     MyRM_LOCK(rm->mutex);
 
-    //Az user-hez ballitja az igenyelt eroforrast, akit kerelmez
-    user->resource=resource;
-
-    if (resource->userList.first==NULL)
-    {   //Meg nincs beregisztralva hasznalo. Ez lesz az elso.
-        resource->userList.first=(struct resourceUser_t*) user;
-        user->userList.prev=NULL;
-    } else
-    {   //Mar van a listanak eleme. Az utolso utan fuzzuk.
-        ((resourceUser_t*)resource->userList.last)->userList.next=
-                                                (struct resourceUser_t*)user;
-    }
-    //A sort lezarjuk. Ez lesz az utolso.
-    user->userList.next=NULL;
-    resource->userList.last=(struct resourceUser_t*)user;
-
+    //dependencia leiro letrehozasa az elerni kivant eroforrashoz....
+    user->dependency.requesterResource=(struct resource_t*) NULL;
+    user->dependency.requiredResource =(struct resource_t*) resource;
+    //Beallitja az eroforars altal hivando statusz fuggvenyt, melyen keresztul
+    //az eroforras jelezheti az user szamara az allapotvaltozasait
+    user->dependency.depStatusFunc=MyRM_user_resourceStatusCB;
+    MyRM_addRequesterToResource (resource,  &user->dependency);
 
     //Az eroforras a hozzaadas utan keszenleti allapotot mutat. Amig nincs
     //konkret inditasi kerelem az eroforrasram addig ezt mutatja.
@@ -1710,39 +1811,14 @@ void MyRM_addUser(resource_t* resource,
 }
 //------------------------------------------------------------------------------
 //Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
-//A hasznalok lancolt listajabol kivesszuk az elemet
+//TODO: implementalni!
 void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
     //A lista csak mutexelt allapotban modosithato!
     MyRM_LOCK(rm->mutex);
 
-    resourceUser_t* prev=(resourceUser_t*)user->userList.prev;
-    resourceUser_t* next=(resourceUser_t*)user->userList.next;
-
-
-    if ((prev) && (next))
-    {   //lista kozbeni elem. All elotet es utana is elem a listaban
-        prev->userList.next=(struct resourceUser_t*)next;
-        next->userList.prev=(struct resourceUser_t*)prev;
-    } else
-    if (next)
-    {   //Ez a lista elso eleme, es van meg utana elem.
-        //A kovetkezo elem lesz az elso.
-        resource->userList.first=(struct resourceUser_t*) next;
-        next->userList.prev=NULL;
-    } else if (prev)
-    {   //Ez a lista utolso eleme, es van meg elote elem.
-        prev->userList.next=NULL;
-        resource->userList.last=(struct resourceUser_t*)prev;
-    } else
-    {   //Ez volt a lista egyetlen eleme
-        resource->userList.last=NULL;
-        resource->userList.first=NULL;
-    }
-
-    user->userList.next=NULL;
-    user->userList.prev=NULL;
+    //TODO: implementalni
 
     MyRM_UNLOCK(rm->mutex);
 }
@@ -1750,17 +1826,16 @@ void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
 //Eroforras hasznalata.
 //Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
 //beregisztralt callbacken keresztul jelzi, annak sikeresseget, vagy hibajat.
-//Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
 void MyRM_useResource(resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
-    resource_t* resource=user->resource;
-
 
     MyRM_LOCK(rm->mutex);
 
     #if MyRM_TRACE
-    printf("MyRM_useResource() user: %s  state: %d\n", user->userName, user->state);
+    printf("MyRM_useResource() user:%s   state:%s\n",
+           user->userName,
+           MyRM_resourceUserStateStrings[user->state]);
     #endif
 
     switch((int)user->state)
@@ -1774,10 +1849,12 @@ void MyRM_useResource(resourceUser_t* user)
             //Beallitjuk, hogy varunk annak inditasara.
             user->state=RESOURCEUSERSTATE_WAITING_FOR_START;
 
-            //Eroforrast inditjuk.
-            MyRM_startResourceCore(rm, resource);
+            //Eroforrast inditjuk az userhez letrehozott fuggosegen keresztul
+            MyRM_startDependency(&user->dependency);
 
-            //MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+            //Jelzes a taszknak...
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_START:
@@ -1793,7 +1870,10 @@ void MyRM_useResource(resourceUser_t* user)
             //Generalunk az applikacio fele jelzest, hogy az eroforars hibas.
             if (user->statusFunc)
             {
-                user->statusFunc(RESOURCE_ERROR,
+                resource_t* resource=
+                            ((resource_t*)user->dependency.requiredResource);
+
+                user->statusFunc(RESOURCE_ERROR,                                
                                  resource->reportedError,
                                  user->callbackData);
             }
@@ -1806,10 +1886,7 @@ void MyRM_useResource(resourceUser_t* user)
             break;
     }
 
-    MyRM_UNLOCK(rm->mutex);
-
-    //Jelzes a taszknak...
-    MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+    MyRM_UNLOCK(rm->mutex);    
 }
 //------------------------------------------------------------------------------
 //Eroforrasrol lemondas.
@@ -1819,12 +1896,13 @@ void MyRM_useResource(resourceUser_t* user)
 void MyRM_unuseResource(resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
-    resource_t* resource=user->resource;
 
     MyRM_LOCK(rm->mutex);
 
     #if MyRM_TRACE
-    printf("MyRM_unuseResource() user: %s  state: %d\n", user->userName, user->state);
+    printf("MyRM_unuseResource() user:%s   state:%s\n",
+           user->userName,
+           MyRM_resourceUserStateStrings[user->state]);
     #endif
 
     switch((int)user->state)
@@ -1845,11 +1923,12 @@ void MyRM_unuseResource(resourceUser_t* user)
 
             //Eroforrast leallitjuk (legalabb is bejelezzuk, hogy egy user
             //lemond rola, igy ha annak usageCnt szamlaloja 0-ra csokken, akkor
-            //az eroforras le fog allni.)
-            MyRM_stopResourceCore(rm, resource);
+            //az eroforras le fog allni.)       
+            MyRM_stopDependency(&user->dependency);
 
             //Jelzes a taszknak...
-            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+
             break;
 
         case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
@@ -1868,7 +1947,10 @@ void MyRM_unuseResource(resourceUser_t* user)
             //leallasra varakozast triggereli.
             if (user->statusFunc)
             {
-                user->statusFunc(RESOURCE_STOP,
+                resource_t* resource=
+                            ((resource_t*)user->dependency.requiredResource);
+
+                user->statusFunc(RESOURCE_ERROR,
                                  resource->reportedError,
                                  user->callbackData);
             }
@@ -1889,12 +1971,13 @@ void MyRM_unuseResource(resourceUser_t* user)
 void MyRM_restartResource(resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
-    resource_t* resource=user->resource;
 
     MyRM_LOCK(rm->mutex);
 
     #if MyRM_TRACE
-    printf("MyRM_restartResource() user: %s  state: %d\n", user->userName, user->state);
+    printf("MyRM_restartResource() user:%s   state:%s\n",
+           user->userName,
+           MyRM_resourceUserStateStrings[user->state]);
     #endif
 
     //Elso lepesben kezdemenyezzuk az eroforras leallitasat.
@@ -1920,7 +2003,7 @@ void MyRM_restartResource(resourceUser_t* user)
             //lemond rola, igy ha annak usageCnt szamlaloja 0-ra csokken, akkor
             //az eroforras le fog allni, majd ha mindenki lemondott rola, akkor
             //az ujrainditasi keres miatt az ujra fog indulni.)
-            MyRM_stopResourceCore(rm, resource);
+            MyRM_stopDependency(&user->dependency);
 
             //Jelzes a taszknak...
             MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
@@ -1943,11 +2026,11 @@ void MyRM_restartResource(resourceUser_t* user)
             //Beallitjuk, hogy varunk annak inditasara.
             user->state=RESOURCEUSERSTATE_WAITING_FOR_START;
 
-            //Eroforrast inditjuk.
-            MyRM_startResourceCore(rm, resource);
+            //Eroforrast inditjuk az userhez letrehozott fuggosegen keresztul
+            MyRM_startDependency(&user->dependency);
 
+            //Jelzes a taszknak...
             MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
-
             break;
 
 
@@ -1958,6 +2041,166 @@ void MyRM_restartResource(resourceUser_t* user)
     }
 
     MyRM_UNLOCK(rm->mutex);
+}
+//------------------------------------------------------------------------------
+//Az userekhez tartozo callback, melyet az altaluk hasznalt eroforras hiv az
+//alalpotvaltozasuk szerint...
+static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
+                                       resourceStatus_t status,
+                                       resourceErrorInfo_t* errorInfo)
+{
+    (void) errorInfo;
+    //A magasabb szinten levo hasznalo
+    resource_t* requester= (resource_t*) ((resourceDep_t*) dep)->requesterResource;
+    //A jelzest ado fuggoseg
+    resource_t* dependency=(resource_t*) ((resourceDep_t*) dep)->requiredResource;
+
+    #if MyRM_TRACE
+    printf("MyRM_user_resourceStatusCB()  %s --[%s]--> %s\n",
+           dependency->resourceName,
+           MyRM_resourceStatusStrings[status],
+           requester->resourceName);
+    #endif
+
+    //elagazas a fuggoseg statusza alapjan...
+    switch(status)
+    {
+        case RESOURCE_STOP:
+            //Az eroforras leallt
+            break;
+
+        case RESOURCE_RUN:
+            //Az eroforars elindult.
+            break;
+
+        case RESOURCE_STOPPING:
+            //Az eroforars megkezdte a leallasat.
+            break;
+
+        case RESOURCE_DONE:
+            //Azeroforars befejezte a mukodeset. (egyszer lefuto esetekben)
+            break;
+
+        case RESOURCE_ERROR:
+            //Az eroforars mukodese/initje hibara futott.
+
+            ////Azok az igenybevevok, melyek fuggosege hiba maitt all le, es
+            ////az inditasi kerelmuket a leallasi folyamat alatt jeleztek,
+            ////nem kaphatnak hiba jelzest. Azok varjak, hogy a fuggoseguk
+            ////elobb lealljon, majd a keresuk ervenyre jutasa utan ujrainduljon.
+            //if (((resourceDep_t*) dep)->delayedStartRequest==true)
+            //{   //nem juthat ervenyre
+            //
+            //} else
+            //{   //A hasznalo hiba allapotba allitasa...
+            //    //(Megj: a kiertekelesi igenyt a hivot rutin allitja be.)
+            //    MyRM_dependencyError(&myRM, requester, dependency);
+            //}
+            break;
+    }
+
+
+
+    if (user->state==RESOURCEUSERSTATE_IDLE)
+    {   //Amig nincs hasznalatban az user reszerol az eroforras, addig
+        //nem kaphat jelzest.
+        //Ilyen az, amig nincs elinditva az eroforras, vagy ebbe az
+        //allapotba kerul, ha a hasznalt eroforras leallt.
+        continue;
+    }
+
+
+
+    if ((resource->state==RESOURCE_STATE_STOPPING) &&
+        (resource->errorFlag))
+    {   //Hiba van az eroforrasal. Az eppen a kenyszeritett leallitasi
+        //allapotban van, vagy mar le is allt.
+
+        //Ha az user meg nincs hiba allapotban, akkor atadjuk neki a
+        //hibat.
+        if (user->state != RESOURCEUSERSTATE_ERROR)
+        {
+            //Az user hibas allapotot vesz fel.
+            user->state = RESOURCEUSERSTATE_ERROR;
+
+            //Hiba jelzese az usernek a statusz callbacken keresztul
+            if (user->statusFunc)
+            {
+                //MyRM_UNLOCK(rm->mutex);
+                user->statusFunc(   RESOURCE_ERROR,
+                                    resource->reportedError,
+                                    user->callbackData);
+                //MyRM_LOCK(rm->mutex);
+            }
+        }
+        continue;
+    }
+
+
+    //Elagazas az user aktualis allapta szerint...
+    switch(user->state)
+    {   //..................................................................
+        case RESOURCEUSERSTATE_WAITING_FOR_START:
+            //Az user varakozik az inditasi jelzesre
+
+            if (resource->state==RESOURCE_STATE_RUN)
+            {   //...es az eroforras most elindult jelzest kapott.
+
+                user->state=RESOURCEUSERSTATE_RUN;
+                //Jelezes az usernek, a callback fuggvenyen
+                //keresztul.
+                if (user->statusFunc)
+                {
+                    //MyRM_UNLOCK(rm->mutex);
+                    user->statusFunc(RESOURCE_RUN,
+                                     resource->reportedError,
+                                     user->callbackData);
+                    //MyRM_LOCK(rm->mutex);
+                }
+            }
+            break;
+        //..................................................................
+        case RESOURCEUSERSTATE_RUN:
+            //Az user meg fut, vagy
+        case RESOURCEUSERSTATE_ERROR:
+            //Az eroforras hiba allapotban van. varja a hiba torleset
+        case RESOURCEUSERSTATE_WAITING_FOR_STOP_OR_DONE:
+            //Az user varakozik az eroforras leallt vagy vegzett
+            //jelzesre. Ez utobbi eseten is STOP allapotba megy az
+            //eroforras.
+
+            if ( (resource->state==RESOURCE_STATE_STOP) ||
+                 (resource->state==RESOURCE_STATE_RUN) )
+            {   //Az eroforras leallt, vagy tovabb mukodik, mert
+                //egy vagy tobb masik eroforrasnak szuksege van ra.
+                //Ez utobbi esetben a leallast varo user fele
+                //jelezheto a leallt allapot. Igy az befejezheti a
+                //mokodeset.
+                user->state=RESOURCEUSERSTATE_IDLE;
+
+                if (user->restartRequestFlag)
+                {   //Az eroforrason elo van irva az ujrainditasi kerelem
+                    MyRM_restartDo(rm, resource, user);
+                } else
+                {
+                    if (user->statusFunc)
+                    {
+                        //xMyRM_UNLOCK(rm->mutex);
+                        user->statusFunc(resource->doneFlag ? RESOURCE_DONE
+                                                            : RESOURCE_STOP,
+                                         resource->reportedError,
+                                         user->callbackData);
+                        //MyRM_LOCK(rm->mutex);
+                    }
+                }
+            }
+
+            break;
+        //..................................................................
+        default:
+            //ismeretelen user allapot!
+            ASSERT(1); while(1);
+    } //switch(user->state)
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

@@ -91,7 +91,8 @@ void MySimpleResourceUser_add(resource_t* resource,
 //Fontos! Elotte az eroforras hasznalatot le kell mondani!
 void MySimpleResourceUser_remove(simpleResourceUser_t* user)
 {
-    MyRM_removeUser(user->user.resource, &user->user);
+    //MyRM_removeUser(user->user.resource, &user->user);
+    //TODO: megoldani
 }
 //------------------------------------------------------------------------------
 //Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,

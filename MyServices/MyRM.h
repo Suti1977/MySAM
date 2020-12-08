@@ -31,14 +31,16 @@ typedef struct
 typedef enum
 {
     //Az eroforras le lett allitva/befejezte a mukodest. A tovabbiakban nem
-    //hasznalhato. (initkor is ezt az allapotot vezsi fel.)
+    //hasznalhato. (initkor is ezt az allapotot veszi fel.)
     RESOURCE_STOP=0,
-    //Eroforras elindult, mukodik, a resdszer szamara hasznalhato
+    //Eroforras elindult, mukodik, a rendszer szamara hasznalhato
     RESOURCE_RUN,
-    //Az eroforras mukodese/initje hibara futott
-    RESOURCE_ERROR,    
-    //Az eroforras befejezte a mukodeset (kesobbi fejlesztesre var.)
+    //Az eroforras megkezdte a leallasat
+    RESOURCE_STOPPING,
+    //Az eroforras befejezte a mukodeset
     RESOURCE_DONE,
+    //Az eroforras mukodese/initje hibara futott
+    RESOURCE_ERROR,
 } resourceStatus_t;
 
 //eroforrasok statuszahoz tartozo stringek. (Nyomkoveteshez)
@@ -46,8 +48,9 @@ typedef enum
 #define RESOURCE_STATUS_STRINGS \
 {   "STOP",                     \
     "RUN",                      \
-    "ERROR",                    \
+    "STOPPING",                 \
     "DONE",                     \
+    "ERROR",                    \
 }
 //------------------------------------------------------------------------------
 //eroforras allapotat leiro enumok.
@@ -94,17 +97,11 @@ typedef status_t resourceStartFunc_t(void* param);
 //Eroforrast leallito callback
 typedef status_t resourceStopFunc_t(void* param);
 
-
-//Eroforras mukodese kozben keletkezo hiba hatasara hivott callback
-//ignoreError true-ba allitasa eseten a hibat nem jelzi tovabb.
-//typedef void resourceErrorFunc_t(resourceErrorInfo_t* info,
-//                                 bool* ignoreError,
-//                                 void* param);
-
-//Az eroforars valamelyik fuggosegenek hibaja eseten hivodo callback.
-//typedef void resourceDependencyErrorFunc_t(resourceErrorInfo_t* info,
-//                                           bool* ignoreError,
-//                                           void* param);
+//Eroforrasok/userek fele adott statusz callback tipus definicioja
+struct resourceDep_t;
+typedef void resourceDependencyStatusFunc_t(struct resourceDep_t* dep,
+                                            resourceStatus_t status,
+                                            resourceErrorInfo_t* errorInfo);
 //------------------------------------------------------------------------------
 //Eroforrasokhoz tartozo callbackek
 typedef struct
@@ -127,11 +124,9 @@ typedef struct
 {
     //A leiro altal igenyelt eroforrasra mutat.
     struct resource_t*     requiredResource;
-
     //Az eroforrashoz tartozo fuggosegi lancolt lista kezelesehez szukseges.
-    //Ezen halad vegig az igenyelt eroforras, es jelez vissza a kerelmezonek az
-    //aktualis statuszarol.
-    //Ha mindket pointer NULL, akkor ez a fuggoseg nem jatszik.
+    //Ezen halad vegig az igenyelt eroforras, es jelez vissza a kerelmezoknek az
+    //aktualis statuszarol.   
     struct resourceDep_t*  nextRequester;
 
     //A leirot birtoklo eroforrasra mutat.
@@ -141,11 +136,23 @@ typedef struct
     //A kerelmezo eroforras fuggosegi listaja
     struct resourceDep_t*  nextDependency;
 
-    //Az eroforras altal hasznalt hibara futott eroforrasok listajanak kovetkezo
-    //elemere mutat.
-    struct resourceDep_t* nextDepError;
-    //true, ha mar a fuggosegi hiba listahoz van adva a leiro
-    bool depErrorInTheList;
+    //fuggoseg altal hazsnalt statsusz callback. A fuggoseg az egyes allapot
+    //valtozasiairol ezen keresztul tajekoztatja az ot hasznalo eroforrast vagy
+    //usert.
+    resourceDependencyStatusFunc_t* depStatusFunc;
+    void*   callbackData;
+
+    //true-val jelzi, ha egy inditasi kerelem fuggoben van, melyrol a
+    //fuggosegnek csak a leallasa utan szabad tudomast szereznie.
+    //Olyan esetekben tarolodik le ez a jelzes, amikor egy egy fuggoseg a
+    //leallitasi folyamata alatt kap ujabb haszanlati kerelmet.
+    bool delayedStartRequest;
+
+    ////Az eroforras altal hasznalt hibara futott eroforrasok listajanak kovetkezo
+    ////elemere mutat.
+    //struct resourceDep_t* nextDepError;
+    ////true, ha mar a fuggosegi hiba listahoz van adva a leiro
+    //bool depErrorInTheList;
 
 } resourceDep_t;
 //------------------------------------------------------------------------------
@@ -199,18 +206,18 @@ typedef struct
         resourceDep_t*    last;
     } dependencyList;
 
-    //Az eroforrast hasznalok lancolt listajanak elso es utolso eleme
-    struct
-    {
-        struct resourceUser_t*   first;
-        struct resourceUser_t*   last;        
-    } userList;
+    ////Az eroforrast hasznalok lancolt listajanak elso es utolso eleme
+    //struct
+    //{
+    //    struct resourceUser_t*   first;
+    //    struct resourceUser_t*   last;
+    //} userList;
 
 
     //Fuggoben levo inditasi kerelmek. Az eroforras hasznalatbavetele noveli.
-    uint32_t startReqCnt;
+    //uint32_t startReqCnt;
     //Az eroforrasrol torteno lemondasok szama.
-    uint32_t stopReqCnt;
+    //uint32_t stopReqCnt;
 
     //A kiertekelesre varo eroforrasok lancolt listaja.
     //A taszkban azokkal az eroforrasokkal kell foglalkozni, melyek hozza
@@ -227,11 +234,11 @@ typedef struct
     //Ha egy fuggosege hibara fut, akkor annak statusz fuggveny hivasaban a
     //hibara futott eroforras regisztralja magat a listaban, mely listat a
     //manager taszkjaban dolgozunk fel. A feldolgozott lista elem torlodik.
-    struct
-    {
-        resourceDep_t* first;
-        resourceDep_t* last;
-    } depErrorList;
+    //struct
+    //{
+    //    resourceDep_t* first;
+    //    resourceDep_t* last;
+    //} depErrorList;
 
     //Az eroforras utolso hibakodja, melyet kapott egy statusz callbackben
     //status_t lastErrorCode;
@@ -275,7 +282,7 @@ typedef struct
     bool checkStartStopReq;
 
     //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
-    bool signallingUsers;
+    //bool signallingUsers;
 
     //true-val jelzi, hogy az eroforras inicializalva van. Annak az elso
     //inditasnal lefutott az init() callbackje.
@@ -331,13 +338,26 @@ typedef enum
     //Az eroforras hibara futott
     RESOURCEUSERSTATE_ERROR,
 } resourceUserState_t;
+
+//userek allapotahoz tartozo stringek.
+//FONTOS, HOGY A SORRENDJUK SZINKRONBAN LEGYEN AZ ENUMOKKAL!
+#define RESOURCE_USER_STATE_STRINGS \
+{   "IDLE",                         \
+    "WF START",                     \
+    "RUN",                          \
+    "WF STOP/DONE",                 \
+    "ERROR",                        \
+}
 //------------------------------------------------------------------------------
 //Az eroforrast hasznalo (birtoklo) folyamatokhoz tartozik egy-egy ilyen leiro.
 //Ezen keresztul tortenik az egyes eroforrasok kerelme az applikacio felol.
 typedef struct
 {
     //A hasznalni kivant eroforrasra mutat
-    resource_t* resource;
+    //resource_t* resource;
+
+    //A hasznalni kivant eroforras eleresehez dependencia leiro.
+    resourceDep_t dependency;
 
     //Az eroforrast hasznalo user allapota.
     resourceUserState_t    state;
@@ -350,7 +370,7 @@ typedef struct
     //peldaul a kerelmezo, hogy a kert eroforras elindult, es hasznalhatja, vagy
     //hibara futott.
     //generalResourceUser_t eseten ezt nem allitgatjuk be kulon!
-    resourceStatusFunc_t*     statusFunc;
+    resourceStatusFunc_t*   statusFunc;
     void*                   callbackData;
 
     //A felhasznalo neve. (Ezt a debuggolashoz es listazashoz tudjuk hasznalni.)
@@ -360,13 +380,41 @@ typedef struct
     bool                    restartRequestFlag;
 
     //Az eroforrast hasznalo userek lancolt listajahoz szukseges
-    struct
-    {
-        struct resourceUser_t*     next;
-        struct resourceUser_t*     prev;
-    } userList;
+    //struct
+    //{
+    //    struct resourceUser_t*     next;
+    //    struct resourceUser_t*     prev;
+    //} userList;
 
 } resourceUser_t;
+//------------------------------------------------------------------------------
+typedef enum
+{
+    //eroforras
+    RESOURCENODE_TYPE_RESOURCE,
+    //eroforarst hasznalo user
+    RESOURCENODE_TYPE_USER,
+} resourceNodeType_t;
+//------------------------------------------------------------------------------
+//eroforras/user leiro struktura. Eroforars faban az egyes csomopontok/fegpontok
+//leiroi
+typedef struct
+{
+    //Csomopont/vegpont tipusa. Az unio-ban levo tartalom ennek megfeleloen
+    //ertelmezendo.
+    resourceNodeType_t  type;
+    //Node neve (eroforars/user neve) segiti a kilistazast, es a nyomkovetest.
+    const char* name;
+    //Az eroforras managerben az eroforrasok/userek lancolt listajahoz szukseges
+    //mutato. Segitsegevel lehet kilistazni a letrehozott nodokat
+    struct resource_t* nextNode;
+    union
+    {
+        resource_t  resource;
+        resourceUser_t  user;
+    };
+
+} resourceNode_t;
 //------------------------------------------------------------------------------
 //MyRM valtozoi
 typedef struct
@@ -475,12 +523,11 @@ void MyRM_stopResource(resource_t* resource);
 
 //------------------------------------------------------------------------------
 //Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
-//A hasznalok lancolt listajahoz adja az User-t.
 void MyRM_addUser(resource_t* resource,
                    resourceUser_t* user,
                    const char* userName);
 //Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
-//A hasznalok lancolt listajabol kivesszuk az elemet
+//TODO: implementalni!
 void MyRM_removeUser(resource_t* resource, resourceUser_t* user);
 
 //Eroforras hasznalata.
