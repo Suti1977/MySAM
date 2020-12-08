@@ -88,7 +88,7 @@ void MyRM_init(const MyRM_config_t* cfg)
 static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
 {    
     //Eroforras nevenek kiirasa. Ha nem ismert, akkor ??? kerul kiirasra
-    printf("%12s", resource->resourceName ? resource->resourceName : "???");
+    printf("%-12s", resource->resourceName ? resource->resourceName : "???");
 
     //Eroforras allapotanak kiirasa
     if (resource->state>ARRAY_SIZE(MyRM_resourceStateStrings))
@@ -96,7 +96,7 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
         printf("  [???]");
     } else
     {
-        printf("  [%8s]", MyRM_resourceStateStrings[resource->state]);
+        printf("  [%-8s]", MyRM_resourceStateStrings[resource->state]);
     }
 
     if (resource->reportedError==NULL)
@@ -117,7 +117,7 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
                                             (int)resource->depCount,
                                             (int)resource->depCnt,
                                             (int)resource->usageCnt,
-                                            (int)resource->started,
+                                            (int)resource->flags.started,
                                             (int)resource->errorInfo.errorCode);
 
     printf("\n");
@@ -127,10 +127,10 @@ static void MyRM_printResourceInfo(resource_t* resource, bool printDeps)
     {
 
         printf("                           errorFlag: %d runningFlag: %d  haltReq: %d  :haltedFlag: %d\n",
-               (int)resource->errorFlag,
-               (int)resource->runningFlag,
-               (int)resource->haltReq,
-               (int)resource->haltedFlag);
+               (int)resource->flags.error,
+               (int)resource->flags.running,
+               (int)resource->flags.haltReq,
+               (int)resource->flags.halted);
 
         if (resource->reportedError)
         {
@@ -520,13 +520,17 @@ static inline void MyRM_sendNotify(MyRM_t* rm, uint32_t eventBits)
 //------------------------------------------------------------------------------
 static void MyRM_dumpResourceValues(resource_t* resource)
 {
-    printf("::: %12s  [%8s]::   errorFlag: %d  haltReq:%d  haltedFlag:%d  runFlag:%d  usageCnt:%2d  depCnt:%2d :::\n",
+    printf("::: %12s  [%-8s]::   started:%x runningFlag:%x inited:%x errorFlag:%x doneFlag:%x haltReq:%x haltedFlag:%x runFlag:%x usageCnt:%2d  depCnt:%2d :::\n",
            resource->resourceName,
            MyRM_resourceStateStrings[resource->state],
-           resource->errorFlag,
-           resource->haltReq,
-           resource->haltedFlag,
-           resource->runFlag,
+           resource->flags.started,
+           resource->flags.running,
+           resource->flags.inited,
+           resource->flags.error,
+           resource->flags.done,
+           resource->flags.haltReq,
+           resource->flags.halted,
+           resource->flags.run,
            resource->usageCnt,
            resource->depCnt
           );
@@ -556,7 +560,7 @@ static void __attribute__((noreturn)) MyRM_task(void* taskParam)
             printf("---------------------------------------------------------------------------------\n");
             MyRM_dumpResourceValues(resource);
             #endif
-if (resource->debugFlag)
+if (resource->flags.debug)
 {
     __NOP();
     __NOP();
@@ -585,7 +589,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 {
     status_t status;
 
-    if (resource->doneFlag)
+    if (resource->flags.done)
     {   //Egy egyszer lefuto eroforras elkeszult.
         if (resource->state!=RESOURCE_STATE_STOPPING)
         {   //Az eroforrasnak ilyenkor STOPPING allapotot kell mutatnia!
@@ -609,7 +613,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
         case RESOURCE_STATE_STARTING:
         {
             //Az eroforras most indul...
-            if (resource->started==false)
+            if (resource->flags.started==false)
             {   //Az eroforras meg nincs elinditva. Varjuk, hogy az inditashoz
                 //szukseges feltetelek teljesuljenek. Varjuk, hogy az osszes
                 //fuggosege elinduljon...
@@ -630,7 +634,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //Ha az eroforras meg nincs inicializalva, es van beregisztralva
                 //init() fuggvenye, akkor meghivjuk. Ez az eroforras elete alatt
                 //csak egyszer tortenik.
-                if ((resource->inited==false) && (resource->funcs->init))
+                if ((resource->flags.inited==false) && (resource->funcs->init))
                 {
                     MyRM_UNLOCK(rm->mutex);
                     status=resource->funcs->init(resource->funcsParam);
@@ -644,9 +648,9 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                     }
                 }
                 //Jelezzuk az eroforras sikeres initjet.
-                resource->inited=true;
+                resource->flags.inited=true;
                 //Jelzesre kerul, hogy az eroforras el van inditva.
-                resource->started=true;
+                resource->flags.started=true;
 
                 //Ha van az eroforrasnak start funkcioja, akkor azt meghivja, ha
                 //nincs, akkor ugy vesszuk, hogy az eroforras elindult.
@@ -686,16 +690,16 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
             {   //Az eroforras mar megkapta az inditasi jelzest. Varjuk, hogy
                 //jelezze, hogy elindult...
 
-                if (resource->runFlag)
+                if (resource->flags.run)
                 {   //Az eroforras elindult. (Az eroforras a mukodik jelzest a
                     //status fuggveny hivasavak alitotta be.)
 
                     //jelzes torolheto.
-                    resource->runFlag=0;
+                    resource->flags.run=0;
 
                     //jelzes, hogy az eroforras elindult.
                     resource->state=RESOURCE_STATE_RUN;
-                    resource->runningFlag=true;
+                    resource->flags.running=true;
 
                     //Minden hasznalojaban jelzi, hogy a fuggoseguk elindult.
                     //dependecyStatus() callbackek vegighivasa
@@ -706,7 +710,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                     //orizheti, hogy az inditasi folyamat kozben nem mondtak-e
                     //le megis az eroforrasrol, mert ha igen, akkor el kell
                     //inditani annak leallitasat.
-                    resource->checkStartStopReq=true;
+                    resource->flags.checkStartStopReq=true;
                 } else
                 {   //Az eroforras meg nincs elinditva. Varakozunk tovabb...
 
@@ -720,12 +724,12 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
         {
             //Az eroforras all le, vagy hiba miatt le kell allitani, vagy varjuk
             //a leallasi folyamatainak lezarasat...
-            if (resource->haltReq)
+            if (resource->flags.haltReq)
             {   //Hiba miatt az eroforrast le kell allitani. Ezt a jelzest a
                 //status fuggevenyben allitottak be.
 
                 //leallitasi kerelem torlese...
-                resource->haltReq=false;
+                resource->flags.haltReq=false;
 
                 //Jelezzuk az ot hasznalo magasabb szinten levo eroforrasoknal
                 //es usereknek a hibat...
@@ -745,28 +749,28 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                     break;
                 }
 
-                if (resource->haltedFlag==false)
+                if (resource->flags.halted==false)
                 {   //Az eroforras meg nem zarta le a belso folyamatait.
                     //varunk tovabb....
                     break;
                 }
-                resource->haltedFlag=false;
+                resource->flags.halted=false;
 
                 //Az eroforras leallt, es mar senki sem hasznalja.
 
-                if (resource->errorFlag)
+                if (resource->flags.error)
                 {   //Az eroforras hiba allapotban volt. Torolheto a hiba.
                     #if MyRM_TRACE
                     printf("MyRM: Resource error cleared.  %s\n",
                            resource->resourceName);
                     #endif
-                    resource->errorFlag=false;
+                    resource->flags.error=false;
                     //A riportolt hiba is torlesre kerul.
                     resource->reportedError=NULL;
                 }
 
                 //Elinditottsag jelzesenek torlese.
-                resource->started=false;
+                resource->flags.started=false;
 
                 //Az eroforras felveszi a leallitott allapotot
                 resource->state=RESOURCE_STATE_STOP;
@@ -795,9 +799,10 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //Itt csak az userek kaphatnak jelzest, melyek nincsnenek
                 //kesleltetve...
                 //[STOP/DONE]
-                MyRM_sendStatus(resource, resource->doneFlag ?  RESOURCE_DONE
-                                                             :  RESOURCE_STOP);
-                resource->doneFlag=false;
+                MyRM_sendStatus(resource,
+                                resource->flags.done ?  RESOURCE_DONE
+                                                         :  RESOURCE_STOP);
+                resource->flags.done=false;
 
 
                 //A jelzes kiadasa utan vegig kell majd nezni az eroforras
@@ -823,7 +828,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                 if (resource->usageCnt)
                 {   //Vannak ujra hasznaloi. Ki kell ertekelni ezt az eroforrast
-                    resource->checkStartStopReq=true;
+                    resource->flags.checkStartStopReq=true;
                 }
             } //(resource->haltReq) else
             break;
@@ -867,7 +872,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //orizheti, hogy az inditasi feltetelek teljesultek-e,
                 //az osszes fuggosege el van-e inditva, ha egyaltalan van
                 //fuggosege.
-                resource->checkStartStopReq=true;
+                resource->flags.checkStartStopReq=true;
             }
             break;
         }
@@ -888,11 +893,11 @@ stop_resource:
                 //Itt a kod egszerusitese miatt, goto-val ide ugrik, ha hiba
                 //miatt is le kell allitani az eroforrast...
 
-                if (resource->runningFlag)                                      //?????????????????????
+                if (resource->flags.running)                                      //?????????????????????
                 {   //Az eroforras fut. Korabban ezt mar jelezte a kerelmezoi
                     //fele.
 
-                    resource->runningFlag=false;
+                    resource->flags.running=false;
 
                     //Minden hasznalojaban jelzi, hogy a fuggoseg leall.
                     //Ezt ugy teszi, hogy meghivja azok dependencyStop()
@@ -903,7 +908,7 @@ stop_resource:
 
                 //Ha van az eroforrasnak stop funkcioja, akkor azt meghivja, ha
                 //nincs, akkor ugy vesszuk, hogy az eroforras leallt.
-                if ((resource->funcs->stop) && (resource->started))
+                if ((resource->funcs->stop) && (resource->flags.started))
                 {   //Leallito callback meghivasa.
 
                     //A hivott callbackban hivodhat a MyRM_resourceStatus()
@@ -952,10 +957,10 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
     //Kell ellenorizni az eroforras leallitasra, vagy inditasra?
     //Amig iylen jellegu kereseket allit be, akar statusz, akar a kiertekelo
     //logika (MyRM_checkStartStop), addig a kiertekelest ujra le kell futtatni.
-    while(resource->checkStartStopReq)
+    while(resource->flags.checkStartStopReq)
     {
         //Ellenorzesi kerelem torlese.
-        resource->checkStartStopReq=false;
+        resource->flags.checkStartStopReq=false;
 
         MyRM_checkStartStop(rm, resource);
     } //while
@@ -1057,7 +1062,7 @@ static inline void MyRM_dependenyStarted(MyRM_t* rm, resource_t* resource)
     if (resource->state==RESOURCE_STATE_STARTING)
     {   //Az eroforras inditasra var...
 
-        resource->checkStartStopReq=true;
+        resource->flags.checkStartStopReq=true;
         MyRM_addResourceToProcessReqList(rm, resource);
     }
 }
@@ -1189,7 +1194,7 @@ static void MyRM_startDependency(resourceDep_t* dep)
         if (dependency->usageCnt==0)
         {   //Az eroforrasnak ez lett az elso hasznaloja.
             //Ki kell ertekelni az allapotokat..
-            dependency->checkStartStopReq=true;
+            dependency->flags.checkStartStopReq=true;
         }
 
         //Noveljuk a hasznaloinak szamat.
@@ -1235,7 +1240,7 @@ static void MyRM_stopDependency(resourceDep_t* dep)
     if (dependency->usageCnt==0)
     {   //Elfogyott minden hasznalo.
         //Ki kell ertekelni az allapotokat
-        dependency->checkStartStopReq=true;
+        dependency->flags.checkStartStopReq=true;
 
         //eloirjuk az eroforras kiertekeleset...
         MyRM_addResourceToProcessReqList(&myRM, dependency);
@@ -1271,7 +1276,7 @@ static void MyRM_resourceStatusCore(resource_t* resource,
         case RESOURCE_RUN:
             //Az eroforras azt jelzi, hogy elindult
 
-            if (resource->errorFlag)
+            if (resource->flags.error)
             {   //Ha a folyamat akkor jelzi, hogy elindult, amikor a manager az
                 //eroforrast mar hibara allitotta.
                 //Ez konnyen lehet, mert peldaul egy taszkban futo inditasi fo-
@@ -1291,8 +1296,8 @@ static void MyRM_resourceStatusCore(resource_t* resource,
             //A ckeckStartStop() reszben "STARTING" agban befejezodik az
             //inditasi folyamat a szal alatt. A STARTING agban erre var a
             //folyamat.
-            resource->runFlag=true;
-            resource->checkStartStopReq=true;
+            resource->flags.run=true;
+            resource->flags.checkStartStopReq=true;
             break;
         //......................................................................
         case RESOURCE_STOP:
@@ -1315,11 +1320,11 @@ static void MyRM_resourceStatusCore(resource_t* resource,
             //}
 
             //Jelzes, hogy az eroforras befejezte a mukodeset
-            resource->haltedFlag=true;
+            resource->flags.halted=true;
 
             //A ckeckStartStop() reszben "STARTING" agban befejezodik az
             //inditasi folyamat a szal alatt.
-            resource->checkStartStopReq=true;
+            resource->flags.checkStartStopReq=true;
             break;
         //......................................................................
         case RESOURCE_DONE:
@@ -1331,12 +1336,12 @@ static void MyRM_resourceStatusCore(resource_t* resource,
                 ASSERT(0); while(1);
             }
             //Jelzes, hogy kesz a folyamat
-            resource->doneFlag=true;
+            resource->flags.done=true;
             //Az allapot atmegy STOPPING-ba, amig a szalban be nem allitja ra a
             //stop-ot.
             resource->state=RESOURCE_STATE_STOPPING;
             //Le kell futtatni a start/stop igeny ellenorzot
-            resource->checkStartStopReq=true;            
+            resource->flags.checkStartStopReq=true;
             break;
         //......................................................................
         case RESOURCE_ERROR:
@@ -1356,13 +1361,13 @@ static void MyRM_resourceStatusCore(resource_t* resource,
                     while(1);
             } //switch(resource->state)
 
-            if (resource->errorFlag==true)
+            if (resource->flags.error==true)
             {   //Az eroforras mar hibara van futtatva. Meg egy hibat nem fogad.
                 break;
             }
 
             //Hibas allapot beallitasa
-            resource->errorFlag=true;
+            resource->flags.error=true;
 
             //Hiba informacios struktura feltoltese, melyet majd kesobb az
             //eroforarst hasznalo masik eroforarsok, vagy userek fele
@@ -1387,10 +1392,10 @@ static void MyRM_resourceStatusCore(resource_t* resource,
             resource->state=RESOURCE_STATE_STOPPING;
 
             //leallitasi kerelem.
-            resource->haltReq=true;
+            resource->flags.haltReq=true;
 
             //ki kell ertekelni az uj szituaciot
-            resource->checkStartStopReq=true;
+            resource->flags.checkStartStopReq=true;
             break;            
         //......................................................................
         default:
@@ -1444,6 +1449,8 @@ void MyRM_addUser(resource_t* resource,
 void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
+    (void) resource;
+    (void) user;
     //A lista csak mutexelt allapotban modosithato!
     MyRM_LOCK(rm->mutex);
 
@@ -1831,7 +1838,7 @@ void MyRM_startResource(resource_t* resource)
         if (resource->usageCnt==0)
         {   //Az eroforrasnak ez lett az elso hasznaloja.
             //Ki kell ertekelni az allapotokat..
-            resource->checkStartStopReq=true;
+            resource->flags.checkStartStopReq=true;
         }
 
         //Noveljuk a hasznaloinak szamat.
@@ -1864,7 +1871,7 @@ void MyRM_stopResource(resource_t* resource)
     if (resource->usageCnt==0)
     {   //Elfogyott minden hasznalo.
         //Ki kell ertekelni az allapotokat
-        resource->checkStartStopReq=true;
+        resource->flags.checkStartStopReq=true;
 
         //eloirjuk az eroforras kiertekeleset...
         MyRM_addResourceToProcessReqList(&myRM, resource);

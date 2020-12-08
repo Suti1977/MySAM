@@ -245,50 +245,55 @@ typedef struct
     //  kerult hibara, es annak a hibajat mutatja.
     resourceErrorInfo_t* reportedError;
 
+    struct
+    {
+    //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
+    //vagy le kell-e valami miatt allitani az eroforarst.
+    uint16_t checkStartStopReq :1;
+
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
     //fuggvenye. Ha nincs start fuggveny definialva, akkor ez a flag nem kerul
     //beallitasra.
     //Ez akkor erdekes, ha egy eroforras STARTING allapotban van, de meg var
     //valamelyik fuggosegere, igy annak addig nem hivodik meg a start()
     //fuggvenye. A flag segitsegevel tudhato, hogy az eroforras belso mecha-
-    //nizmusai meg nem allnak keszen a hibakezeles fogadasara.
-    bool    started;
+    //nizmusai meg nem allnak keszen a hibakezeles fogadasara.    
+    uint16_t started :1;
 
     //true, ha az eroforras fut, es kiadta az igenyloi fele a jelzest, hogy
     //elindult. Csak akkor hivhatjuk meg a kerelmezoinek a dependencyStop()
     //fuggvenyet, ha ez true.
-    bool runningFlag;
+    uint16_t running :1;
 
-    //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
-    //vagy le kell-e valami miatt allitani az eroforarst.
-    bool checkStartStopReq;
 
     //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
     //bool signallingUsers;
 
     //true-val jelzi, hogy az eroforras inicializalva van. Annak az elso
     //inditasnal lefutott az init() callbackje.
-    bool inited;
+    uint16_t inited :1;
 
     //true-val jelzi, ha hibas allapotban van
-    bool errorFlag;
+    uint16_t error :1;
 
     //true-val jelzi, hogy az eroforars vegzett a feladataval. Ez az egyszer
     //lefuto feladatokat elvegzo eroforarsoknal hasznaljuk. (kesobbi fejlesztes)
-    bool doneFlag;
+    uint16_t done :1;
 
     //az eroforars kenyszeritett leallitasanak kerelmet jelzo flag
-    bool haltReq;
+    uint16_t haltReq :1;
 
     //Az eroforras hiba allapotban volt, es leallt, tehat STOP statuszt
     //jelentett magarol.
-    bool haltedFlag;
+    uint16_t halted :1;
 
     //true jelzi, hogy az eroforras elindult. Az eroforras RUN statuszara all
     //be.
-    bool runFlag;
+    uint16_t run :1;
 
-    bool debugFlag;
+    //nyomkoveteshez hasznalt tetszoleges flag bit.
+    uint16_t debug :1;
+    } flags;
 
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
     //eroforrashoz letrehoztak taszkot.
