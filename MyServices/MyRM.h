@@ -215,19 +215,6 @@ typedef struct
         resourceDep_t*    last;
     } dependencyList;
 
-    ////Az eroforrast hasznalok lancolt listajanak elso es utolso eleme
-    //struct
-    //{
-    //    struct resourceUser_t*   first;
-    //    struct resourceUser_t*   last;
-    //} userList;
-
-
-    //Fuggoben levo inditasi kerelmek. Az eroforras hasznalatbavetele noveli.
-    //uint32_t startReqCnt;
-    //Az eroforrasrol torteno lemondasok szama.
-    //uint32_t stopReqCnt;
-
     //A kiertekelesre varo eroforrasok lancolt listaja.
     //A taszkban azokkal az eroforrasokkal kell foglalkozni, melyek hozza
     //vannak adva a listahoz.
@@ -237,20 +224,6 @@ typedef struct
         struct resource_t* prev;
         bool inTheList;
     } processReqList;
-
-
-    //Az eroforras altal hasznalt hibara futott eroforrasok listaja.
-    //Ha egy fuggosege hibara fut, akkor annak statusz fuggveny hivasaban a
-    //hibara futott eroforras regisztralja magat a listaban, mely listat a
-    //manager taszkjaban dolgozunk fel. A feldolgozott lista elem torlodik.
-    //struct
-    //{
-    //    resourceDep_t* first;
-    //    resourceDep_t* last;
-    //} depErrorList;
-
-    //Az eroforras utolso hibakodja, melyet kapott egy statusz callbackben
-    //status_t lastErrorCode;
 
     //Hiba informacios blokk, melyen keresztul kesobb az eroforrast hasznalo
     //masik  eroforrasok, vagy userek fele riportolhatja a hibat.
@@ -362,9 +335,6 @@ typedef enum
 //Ezen keresztul tortenik az egyes eroforrasok kerelme az applikacio felol.
 typedef struct
 {
-    //A hasznalni kivant eroforrasra mutat
-    //resource_t* resource;
-
     //A hasznalni kivant eroforras eleresehez dependencia leiro.
     resourceDep_t dependency;
 
@@ -387,13 +357,6 @@ typedef struct
 
     //Az ujrainditasi kerelmet jelzo flag.
     bool                    restartRequestFlag;
-
-    //Az eroforrast hasznalo userek lancolt listajahoz szukseges
-    //struct
-    //{
-    //    struct resourceUser_t*     next;
-    //    struct resourceUser_t*     prev;
-    //} userList;
 
 } resourceUser_t;
 //------------------------------------------------------------------------------

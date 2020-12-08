@@ -820,6 +820,11 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                     //lancolt list akovetkezo elemere allas.
                     dep=(resourceDep_t*)dep->nextRequester;
                 }
+
+                if (resource->usageCnt)
+                {   //Vannak ujra hasznaloi. Ki kell ertekelni ezt az eroforrast
+                    resource->checkStartStopReq=true;
+                }
             } //(resource->haltReq) else
             break;
         }
@@ -1112,12 +1117,12 @@ static void MyRM_dependencyStatusCB(struct resourceDep_t* dep,
 
         case RESOURCE_RUN:
             //A fuggoseg elindult.
-            MyRM_dependenyStarted(&myRM, dependency);
+            MyRM_dependenyStarted(&myRM, requester);
             break;
 
         case RESOURCE_STOPPING:
             //A fuggoseg megkezdte a leallasat.
-            MyRM_dependenyStop(&myRM, dependency);
+            MyRM_dependenyStop(&myRM, requester);
             break;
 
         case RESOURCE_DONE:
@@ -1405,7 +1410,7 @@ void MyRM_addUser(resource_t* resource,
     MyRM_t* rm=&myRM;
 
     //user leiro kezdeti nullazasa
-    memset(user, 0, sizeof(resourceUser_t));
+    //memset(user, 0, sizeof(resourceUser_t));
 
     //A lista csak mutexelt allapotban bovitheto!
     MyRM_LOCK(rm->mutex);
@@ -1426,6 +1431,8 @@ void MyRM_addUser(resource_t* resource,
     //(Ebbe ter vissza, ha az eroforrast mar nem hasznaljuk, es az eroforras le
     //is allt.)
     user->state=RESOURCEUSERSTATE_IDLE;
+
+    user->restartRequestFlag=false;
 
     //User nevenek megjegyzese (ez segiti a nyomkovetest)
     user->userName=(userName!=NULL) ? userName : "?";
@@ -1572,7 +1579,7 @@ void MyRM_unuseResource(resourceUser_t* user)
                 resource_t* resource=
                             ((resource_t*)user->dependency.requiredResource);
 
-                user->statusFunc(RESOURCE_ERROR,
+                user->statusFunc(RESOURCE_STOP,
                                  resource->reportedError,
                                  user->callbackData);
             }
