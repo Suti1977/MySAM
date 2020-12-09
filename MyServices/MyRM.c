@@ -225,34 +225,20 @@ void MyRM_printUsages(bool printDeps)
     xTaskResumeAll();
 }
 //------------------------------------------------------------------------------
-//Egyedi eroforras letrehozasa, bovitmeny megadasaval
+//Eroforras letrehozasa.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
-void MyRM_createResourceExt(resource_t* resource,
-                          const resourceFuncs_t* funcs,
-                          void* funcsParam,
-                          const char* resourceName,
-                          void* ext)
+void MyRM_createResource(resource_t* resource, const resource_config_t* cfg)
 {
     memset(resource, 0, sizeof(resource_t));
 
     resource->state=RESOURCE_STATE_STOP;
-    resource->funcs=funcs;
-    resource->funcsParam=funcsParam;
-    resource->resourceName=(resourceName==NULL) ? "?" :resourceName;
-    resource->ext=ext;    
+    memcpy(&resource->funcs, &cfg->funcs, sizeof(resourceFuncs_t));
+    resource->funcsParam=cfg->callbackData;
+    resource->resourceName=(cfg->name==NULL) ? "???" :cfg->name;
+    resource->ext=cfg->ext;
 
     //Az eroforrast hozzaadjuk a rendszerben levo eroforrasok listajahoz...
     MyRM_addResourceToManagedList(resource);
-}
-//------------------------------------------------------------------------------
-//Eroforras letrehozasa.
-//Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
-void MyRM_createResource(resource_t* resource,
-                          const resourceFuncs_t* funcs,
-                          void* funcsParam,
-                          const char* resourceName)
-{
-    MyRM_createResourceExt(resource, funcs, funcsParam, resourceName, NULL);
 }
 //------------------------------------------------------------------------------
 //Eroforras leirojanak lekerdezese az eroforras neve alapjan.
@@ -640,10 +626,10 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //Ha az eroforras meg nincs inicializalva, es van beregisztralva
                 //init() fuggvenye, akkor meghivjuk. Ez az eroforras elete alatt
                 //csak egyszer tortenik.
-                if ((resource->flags.inited==false) && (resource->funcs->init))
+                if ((resource->flags.inited==false) && (resource->funcs.init))
                 {
                     MyRM_UNLOCK(rm->mutex);
-                    status=resource->funcs->init(resource->funcsParam);
+                    status=resource->funcs.init(resource->funcsParam);
                     MyRM_LOCK(rm->mutex);
                     if (status)
                     {
@@ -660,7 +646,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                 //Ha van az eroforrasnak start funkcioja, akkor azt meghivja, ha
                 //nincs, akkor ugy vesszuk, hogy az eroforras elindult.
-                if (resource->funcs->start)
+                if (resource->funcs.start)
                 {   //Indito callback meghivasa.
 
                     //A hivott callbackban hivodhat a MyRM_resourceStatus()
@@ -673,7 +659,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                     //A start funkcio alatt a mutexeket feloldjuk
                     MyRM_UNLOCK(rm->mutex);
-                    status=resource->funcs->start(resource->funcsParam);
+                    status=resource->funcs.start(resource->funcsParam);
                     MyRM_LOCK(rm->mutex);
                     if (status)
                     {
@@ -914,7 +900,7 @@ stop_resource:
 
                 //Ha van az eroforrasnak stop funkcioja, akkor azt meghivja, ha
                 //nincs, akkor ugy vesszuk, hogy az eroforras leallt.
-                if ((resource->funcs->stop) && (resource->flags.started))
+                if ((resource->funcs.stop) && (resource->flags.started))
                 {   //Leallito callback meghivasa.
 
                     //A hivott callbackban hivodhat a MyRM_resourceStatus()
@@ -926,7 +912,7 @@ stop_resource:
 
                     //A stop funkcio alatt a mutexeket feloldjuk
                     MyRM_UNLOCK(rm->mutex);
-                    status_t status=resource->funcs->stop(resource->funcsParam);
+                    status_t status=resource->funcs.stop(resource->funcsParam);
                     MyRM_LOCK(rm->mutex);
                     //resource->started=false;
                     if (status)

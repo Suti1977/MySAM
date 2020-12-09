@@ -20,22 +20,19 @@ void MyTaskedResource_create(resource_t* resource,
     //Konfiguracio masolasa
     memcpy(&this->cfg, cfg, sizeof(taskedResource_config_t));
 
-    //Eroforras letrehozasa...    
-    static const resourceFuncs_t resourceFuncs=
-    {
-        .init =MyTaskedResource_resource_init,
-        .start=MyTaskedResource_resource_start,
-        .stop =MyTaskedResource_resource_stop,
-    };
-
     //Eroforras letrehozasa.
     //Az "ext" mezojeben beallitasra kerul a taszkos mukodeshez szukseges
     //bovitett adatok (tehat amit most hozunk letre)
-    MyRM_createResourceExt(resource,
-                            &resourceFuncs,
-                            this,
-                            this->cfg.name,
-                            this);
+    resource_config_t resourceCfg=
+    {
+        .name=this->cfg.name,
+        .funcs.init =MyTaskedResource_resource_init,
+        .funcs.start=MyTaskedResource_resource_start,
+        .funcs.stop =MyTaskedResource_resource_stop,
+        .callbackData=this,
+        .ext=this,
+    };
+    MyRM_createResource(resource, &resourceCfg);
 
    //Eroforrast futtato taszk letrehozasa
    if (xTaskCreate(MyTaskedResource_task,

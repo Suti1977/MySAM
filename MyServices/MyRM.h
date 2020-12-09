@@ -193,7 +193,7 @@ typedef struct
 
     //Eroforrashoz tartozo callbackek halmaza
     //Ezeken keresztul initeli, inditja, allitja le a hozza tartozo eroforrasokat
-    const resourceFuncs_t*   funcs;
+    resourceFuncs_t    funcs;
     //A callbackekhez atadott tetszoleges adattartalom
     void*           funcsParam;
 
@@ -442,20 +442,23 @@ uint32_t MyRM_getRunningResourcesCount(void);
 //Minden eroforras sikeres leallitasakor hivodo callback funkcio beregisztralasa
 void MyRM_register_allResourceStoppedFunc(MyRM_allResourceStoppedFunc_t* func,
                                           void* callbackData);
+
+//Eroforras letrehozasanal hasznalt konfiguracios struktura
+typedef struct
+{
+    //Az eroforras neve. Nyomkoveteshez.
+    const char* name;
+    //Az eroforrast vezerlo callback fuggvenyek
+    const resourceFuncs_t funcs;
+    //A funkciohivasoknak atadott tetszoleges adattartalom.
+    void* callbackData;
+    //Az eroforras bovitmenyere mutato tetszoleges pointer.
+    void* ext;
+} resource_config_t;
+
 //Eroforras letrehozasa.
 //Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra!
-void MyRM_createResource( resource_t* resource,
-                          const resourceFuncs_t* funcs,
-                          void* funcsParam,
-                          const char* resourceName);
-
-//Egyedi eroforras letrehozasa, bovitmeny megadasaval
-//Csak egyszer hivodhat meg reset utan, minden egyes managelt eroforrasra.
-void MyRM_createResourceExt(resource_t* resource,
-                          const resourceFuncs_t* funcs,
-                          void* funcsParam,
-                          const char* resourceName,
-                          void* ext);
+void MyRM_createResource(resource_t* resource, const resource_config_t* cfg);
 
 //Eroforras leirojanak lekerdezese az eroforras neve alapjan.
 //NULL-t ad vissza, ha az eroforras nem talalhato.
