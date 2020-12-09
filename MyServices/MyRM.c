@@ -520,7 +520,7 @@ static inline void MyRM_sendNotify(MyRM_t* rm, uint32_t eventBits)
 //------------------------------------------------------------------------------
 static void MyRM_dumpResourceValues(resource_t* resource)
 {
-    printf("::: %12s  [%-8s]::   started:%x runningFlag:%x inited:%x errorFlag:%x doneFlag:%x haltReq:%x haltedFlag:%x runFlag:%x usageCnt:%2d  depCnt:%2d :::\n",
+    printf("::: %12s  [%-8s]:: {started:%x running:%x inited:%x error:%x done:%x haltReq:%x halted:%x run:%x} usageCnt:%2d  depCnt:%2d :::\n",
            resource->resourceName,
            MyRM_resourceStateStrings[resource->state],
            resource->flags.started,
@@ -585,6 +585,8 @@ if (resource->flags.debug)
 //Annak ellenorzese, hogy az eroforarst el kell-e inditani, vagy le kell-e
 //allitani. Hiba eseten ebben oldjuk meg a hiba miatti leallst is.
 //[MyRM_task-bol hivva]
+//#pragma GCC push_options
+//#pragma GCC optimize ("-O0")
 static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 {
     status_t status;
@@ -707,8 +709,8 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                     //Minden hasznalojaban jelzi, hogy a fuggoseguk elindult.
                     //dependecyStatus() callbackek vegighivasa
-                    //[RUN]
-                    MyRM_sendStatus(resource, RESOURCE_RUN);
+                    //[STARTED]
+                    MyRM_sendStatus(resource, RESOURCE_STARTED);
 
                     //ujra kerjuk a kiertekelest, igy az a RUN agban ellen-
                     //orizheti, hogy az inditasi folyamat kozben nem mondtak-e
@@ -980,6 +982,10 @@ stop_resource:
                 else
                     resourceStatus=RESOURCE_STOPPING;
                 break;
+            default:
+                //Ez az allapot elvileg nem lehetne.
+                ASSERT(0);
+                break;
         }
 
         //Vegighalad az eroforrss osszes hasznalojan...
@@ -1011,6 +1017,7 @@ stop_resource:
         }
     }
 }
+//#pragma GCC pop_options
 //------------------------------------------------------------------------------
 //Eroforras allapotainak kezelese
 static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
@@ -1112,7 +1119,10 @@ static inline void MyRM_dependencyError(MyRM_t* rm,
 static inline void MyRM_dependenyStarted(MyRM_t* rm, resource_t* resource)
 {
     #if MyRM_TRACE
-    printf("[%s]   MyRM_dependenyStarted\n", resource->resourceName);
+    printf("MyRM_dependenyStarted  --->%s  [%s]\n",
+           resource->resourceName,
+           MyRM_resourceStateStrings[resource->state]
+           );
     #endif
 
     //A fuggosegek szamanak csokkentese...
@@ -1185,9 +1195,19 @@ static void MyRM_dependencyStatusCB(struct resourceDep_t* dep,
             //Az fuggoseg leallt
             break;
 
-        case RESOURCE_RUN:
+        case RESOURCE_STARTED:
             //A fuggoseg elindult.
             MyRM_dependenyStarted(&myRM, requester);
+            break;
+
+        case RESOURCE_RUN:
+            //A fuggoseg fut.
+            if (requester->state==RESOURCE_STATE_STARTING)
+            {   //A kerelmezo eroforras inditasra var...
+                //Le kell futtatni a fuggosegej vizsgalatat.
+                requester->flags.checkStartStopReq=true;
+                MyRM_addResourceToProcessReqList(&myRM, requester);
+            }
             break;
 
         case RESOURCE_STOPPING:
@@ -1196,7 +1216,7 @@ static void MyRM_dependencyStatusCB(struct resourceDep_t* dep,
             break;
 
         case RESOURCE_DONE:
-            //Azeroforars befejezte a mukodeset. (egyszer lefuto esetekben)
+            //Azeroforars befejezte a mukodeset. (egyszer lefuto esetekben)            
             break;
 
         case RESOURCE_ERROR:
@@ -1267,10 +1287,12 @@ static void MyRM_startDependency(resourceDep_t* dep)
         //stopping: nem fut le, mert az elozo feltetel ezt kiejti
         //starting: el fog indulni. ->majd a taszkbol kap jelzest
         //run: ezt az esetet kezelni kellene, mert a taszkban erre nem
-        //     tortenik semmi.
+        //     tortenik semmi.        
         if ((dependency->state==RESOURCE_STATE_RUN) && (dependency->usageCnt>1))
         {   //Eloirjuk, hogy a taszkbol kapjon jelzest
-            printf("Status request! \n");
+            #if MyRM_TRACE
+            printf("S t a t u s  r e q u e s t! %s\n", requesterName);
+            #endif
             dep->flags.statusRequest=1;
             dependency->flags.statusRequest=1;
             dependency->flags.checkStartStopReq=1;
@@ -1830,7 +1852,7 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
         case RESOURCEUSERSTATE_WAITING_FOR_START:
             //Az user varakozik az inditasi jelzesre
 
-            if (status==RESOURCE_RUN)
+            if ((status==RESOURCE_RUN) || (status==RESOURCE_STARTED))
             {   //...es az eroforras most elindult jelzest kapott.
 
                 user->state=RESOURCEUSERSTATE_RUN;
@@ -1858,6 +1880,7 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
 
             if ( (status==RESOURCE_STOP) ||
                  (status==RESOURCE_DONE) ||
+                 (status==RESOURCE_STARTED) ||
                  (status==RESOURCE_RUN) )
             {   //Az eroforras leallt, vagy tovabb mukodik, mert
                 //egy vagy tobb masik eroforrasnak szuksege van ra.

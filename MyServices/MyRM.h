@@ -33,7 +33,9 @@ typedef enum
     //Az eroforras le lett allitva/befejezte a mukodest. A tovabbiakban nem
     //hasznalhato. (initkor is ezt az allapotot veszi fel.)
     RESOURCE_STOP=0,
-    //Eroforras elindult, mukodik, a rendszer szamara hasznalhato
+    //Az eroforras elindult.
+    RESOURCE_STARTED,
+    //Eroforras mukodik, a rendszer szamara hasznalhato
     RESOURCE_RUN,
     //Az eroforras megkezdte a leallasat
     RESOURCE_STOPPING,
@@ -47,6 +49,7 @@ typedef enum
 //FONTOS, HOGY A SORRENDJUK SZINKRONBAN LEGYEN AZ ENUMOKKAL!
 #define RESOURCE_STATUS_STRINGS \
 {   "STOP",                     \
+    "STARTED",                  \
     "RUN",                      \
     "STOPPING",                 \
     "DONE",                     \
