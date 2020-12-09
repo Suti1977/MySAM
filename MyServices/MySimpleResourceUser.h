@@ -40,16 +40,27 @@ typedef struct
 
 } simpleResourceUser_t;
 
-//Az eroforrashoz simpleUser kezelo hozzaadasa. A rutin letrehozza a
+//simpleResourceUser letrehozasahoz hasznalt konfiguracios struktura
+typedef  struct
+{
+    //Az usernek adhato nev, mely segiti a nyomkovetest.
+    const char* name;
+    //Az user altal hasznalt eroforras
+    resource_t* resource;
+    //Az user allapotvaltozasaira meghivodo callback funkcio
+    resourceStatusFunc_t* statusFunc;
+    //A callback szamara atadott tetszoleges adat
+    void* callbackData;
+} simpleResourceUser_config_t;
+
+//Az eroforrashoz simpleUser kezelo letrehozasa. A rutin letrehozza a
 //szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
 //regisztraciot.
-void MySimpleResourceUser_add(resource_t* resource,
-                              simpleResourceUser_t* user,
-                              const char* userName);
+void MySimpleResourceUser_create(simpleResourceUser_t* user,
+                                 const simpleResourceUser_config_t* cfg);
 
 //Torli az usert a eroforras hasznaloi kozul.
-//Fontos! Elotte a eroforras hasznalatot le kell mondani!
-void MySimpleResourceUser_remove(simpleResourceUser_t* user);
+void MySimpleResourceUser_delete(simpleResourceUser_t* user);
 
 //Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
 //vagy hibara nem fut az inditasi folyamatban valami miatt.
@@ -60,14 +71,14 @@ status_t MySimpleResourceUser_use(simpleResourceUser_t* user);
 status_t MySimpleResourceUser_unuse(simpleResourceUser_t* user);
 
 
-//Userhez statusz funkcio beallitsasa
-static inline
-void MySimpleResourceUser_setStatusFunc(simpleResourceUser_t* user,
-                                        simplelResourceUserStatusFunc_t* func,
-                                        void*  callbackData)
-{
-    user->statusFunc=func;
-    user->callbackData=callbackData;
-}
+////Userhez statusz funkcio beallitsasa
+//static inline
+//void MySimpleResourceUser_setStatusFunc(simpleResourceUser_t* user,
+//                                        simplelResourceUserStatusFunc_t* func,
+//                                        void*  callbackData)
+//{
+//    user->statusFunc=func;
+//    user->callbackData=callbackData;
+//}
 //------------------------------------------------------------------------------
 #endif //MYSIMPLERESOURCEUSER_H_

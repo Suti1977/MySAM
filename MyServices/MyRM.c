@@ -1513,29 +1513,27 @@ static void MyRM_resourceStatusCore(resource_t* resource,
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-//Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
-void MyRM_addUser(resource_t* resource,
-                  resourceUser_t* user,
-                  const char* userName)
+//Az eroforras hasznalatat legetove tevo user letrehozasa
+void MyRM_createUser(resourceUser_t* user, const resourceUser_config_t* cfg)
 {
     MyRM_t* rm=&myRM;
 
     //user leiro kezdeti nullazasa
-    //memset(user, 0, sizeof(resourceUser_t));
+    memset(user, 0, sizeof(resourceUser_t));
 
     //A lista csak mutexelt allapotban bovitheto!
     MyRM_LOCK(rm->mutex);
 
     //dependencia leiro letrehozasa az elerni kivant eroforrashoz....
     user->dependency.requesterResource=(struct resource_t*) NULL;
-    user->dependency.requiredResource =(struct resource_t*) resource;
+    user->dependency.requiredResource =(struct resource_t*) cfg->resource;
     //Jelezzuk a dependenciaban, hogy egy user a birtokosa.
     user->dependency.flags.requesterType=RESOURCE_REQUESTER_TYPE__USER;
     user->dependency.requesterUser=(struct resourceUser_t*)user;
     //Beallitja az eroforars altal hivando statusz fuggvenyt, melyen keresztul
     //az eroforras jelezheti az user szamara az allapotvaltozasait
     user->dependency.depStatusFunc=MyRM_user_resourceStatusCB;
-    MyRM_addRequesterToResource (resource,  &user->dependency);
+    MyRM_addRequesterToResource (cfg->resource,  &user->dependency);
 
     //Az eroforras a hozzaadas utan keszenleti allapotot mutat. Amig nincs
     //konkret inditasi kerelem az eroforrasram addig ezt mutatja.
@@ -1546,16 +1544,19 @@ void MyRM_addUser(resource_t* resource,
     user->restartRequestFlag=false;
 
     //User nevenek megjegyzese (ez segiti a nyomkovetest)
-    user->userName=(userName!=NULL) ? userName : "?";
+    user->userName=(cfg->name!=NULL) ? cfg->name : "?";
+
+    //Az user allapotvaltozasakor hivhato statusz callback
+    user->statusFunc=cfg->statusFunc;
+    user->callbackData=cfg->callbackData;
+
     MyRM_UNLOCK(rm->mutex);
 }
 //------------------------------------------------------------------------------
-//Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
-//TODO: implementalni!
-void MyRM_removeUser(resource_t* resource, resourceUser_t* user)
+//Egy eroforrashoz korabban hozzaadott USER megszuntetese
+void MyRM_deleteUser(resourceUser_t* user)
 {
     MyRM_t* rm=&myRM;
-    (void) resource;
     (void) user;
     //A lista csak mutexelt allapotban modosithato!
     MyRM_LOCK(rm->mutex);

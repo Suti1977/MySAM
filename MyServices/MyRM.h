@@ -493,13 +493,24 @@ void MyRM_startResource(resource_t* resource);
 void MyRM_stopResource(resource_t* resource);
 
 //------------------------------------------------------------------------------
-//Az eroforrashoz az applikacio felol hivhato USER hozzaadasa.
-void MyRM_addUser(resource_t* resource,
-                   resourceUser_t* user,
-                   const char* userName);
-//Egy eroforrashoz korabban hozzaadott USER kiregisztralasa.
-//TODO: implementalni!
-void MyRM_removeUser(resource_t* resource, resourceUser_t* user);
+//User letrehozasahoz hasznalt konfiguracios struktura
+typedef  struct
+{
+    //Az usernek adhato nev, mely segiti a nyomkovetest.
+    const char* name;
+    //Az user altal hasznalt eroforras
+    resource_t* resource;
+    //Az user allapotvaltozasaira meghivodo callback funkcio
+    resourceStatusFunc_t* statusFunc;
+    //A callback szamara atadott tetszoleges adat
+    void* callbackData;
+} resourceUser_config_t;
+//------------------------------------------------------------------------------
+//Az eroforras hasznalatat legetove tevo user letrehozasa
+void MyRM_createUser(resourceUser_t* user, const resourceUser_config_t* cfg);
+
+//Egy eroforrashoz korabban hozzaadott USER megszuntetese
+void MyRM_deleteUser(resourceUser_t* user);
 
 //Eroforras hasznalata.
 //Hatasara a kert eroforras ha meg nins elinditva, elindul, majd az user-hez
@@ -511,18 +522,6 @@ void MyRM_useResource(resourceUser_t* user);
 //Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
 void MyRM_unuseResource(resourceUser_t* user);
-
-//Az resourceUser_t struktura beallitasat segito rutin.
-//user: a hasznalati leirora mutat
-//statusFunc: A hasznalt eroforras allapotat visszajelzo callback rutin
-//callbackData: A callbackban visszaadott tetszolseges valtozo
-static inline void MyRM_configUser( resourceUser_t* user,
-                                    resourceStatusFunc_t* statusFunc,
-                                    void* callbackData)
-{
-    user->statusFunc=statusFunc;
-    user->callbackData=callbackData;
-}
 
 //Eroforras ujrainditasi kerelme. Hibara futott eroforrasok eseten az eroforras
 //hibajanak megszunese utan ujrainditja azt.

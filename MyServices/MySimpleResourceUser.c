@@ -67,13 +67,14 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
     }
 }
 //------------------------------------------------------------------------------
-//Az eroforrashoz simpleUser kezelo hozzaadasa. A rutin letrehozza a
+//Az eroforrashoz simpleUser kezelo letrehozasa. A rutin letrehozza a
 //szukseges szinkronizacios objektumokat, majd megoldja az eroforrashoz valo
 //regisztraciot.
-void MySimpleResourceUser_add(resource_t* resource,
-                          simpleResourceUser_t* user,
-                          const char* userName)
+void MySimpleResourceUser_create(simpleResourceUser_t* user,
+                                 const simpleResourceUser_config_t* cfg)
 {
+    memset(user, 0, sizeof(simpleResourceUser_t));
+
     //Esemenyflag mezo letrehozasa, melyekre az alkalmazas taszkja varhat.
   #if configSUPPORT_STATIC_ALLOCATION
     user->events=xEventGroupCreateStatic(&user->eventsBuff);
@@ -81,19 +82,33 @@ void MySimpleResourceUser_add(resource_t* resource,
     user->events=xEventGroupCreate();
   #endif
 
-    //Az usrekehez tartozo kozos allapot callback lesz beallitva
-    MyRM_configUser(&user->user, MySimpleResourceUser_statusCB, user);
+    //Az alkalmazas fele torteno allapot kozleshez callback beregisztralasa
+    user->statusFunc=cfg->statusFunc;
+    user->callbackData=cfg->callbackData;
 
-    //A kiejlolt eroforrashoz user hozzaadasa
-    MyRM_addUser(resource, &user->user, userName);
+    resourceUser_config_t userCfg=
+    {
+        .name=cfg->name,
+        .resource=cfg->resource,
+        .statusFunc=MySimpleResourceUser_statusCB,
+        .callbackData=user
+    };
+
+    //A kijelolt eroforrashoz aszinkron user letrehozasa
+    MyRM_createUser(&user->user, &userCfg);
 }
 //------------------------------------------------------------------------------
 //Torli az usert az eroforras hasznaloi kozul.
 //Fontos! Elotte az eroforras hasznalatot le kell mondani!
-void MySimpleResourceUser_remove(simpleResourceUser_t* user)
+void MySimpleResourceUser_delete(simpleResourceUser_t* user)
 {
-    //MyRM_removeUser(user->user.resource, &user->user);
-    //TODO: megoldani
+    MyRM_deleteUser(&user->user);
+
+    #if configSUPPORT_STATIC_ALLOCATION
+      //
+    #else
+      vEventGroupDelete(user->events);
+    #endif
 }
 //------------------------------------------------------------------------------
 //Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
