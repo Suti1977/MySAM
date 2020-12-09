@@ -743,7 +743,7 @@ error:
         return;
     }
 
-    //Valaszban beallitjuk az atadott regiszter menynisegnek megfelelo
+    //Valaszban beallitjuk az atadott regiszter mennyisegnek megfelelo
     //byte szamot.
     resp->byteCount= (uint8_t) quantityOfRegisters * 2;
 

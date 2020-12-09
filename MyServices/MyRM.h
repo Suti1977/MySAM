@@ -122,7 +122,7 @@ typedef enum
 {
     //eroforras
     RESOURCE_REQUESTER_TYPE__RESOURCE,
-    //eroforarst hasznalo user
+    //eroforrast hasznalo user
     RESOURCE_REQUESTER_TYPE__USER,
 } resourceRequesterType_t;
 //------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ typedef struct
     struct
     {
     //true-val jelezzuk, hogy ellenorizze az eroforras, hogy el kell-e inditani,
-    //vagy le kell-e valami miatt allitani az eroforarst.
+    //vagy le kell-e valami miatt allitani az eroforrast.
     uint16_t checkStartStopReq :1;
 
     //True, ha az eroforras el lett inditva. Annak meghivasra kerult az indito
@@ -280,7 +280,7 @@ typedef struct
     uint16_t running :1;
 
 
-    //true, ha az eroforarst hasznalo userek fele jelezni kell az uj allapotot.
+    //true, ha az eroforrast hasznalo userek fele jelezni kell az uj allapotot.
     //bool signallingUsers;
 
     //true-val jelzi, hogy az eroforras inicializalva van. Annak az elso
@@ -290,11 +290,11 @@ typedef struct
     //true-val jelzi, ha hibas allapotban van
     uint16_t error :1;
 
-    //true-val jelzi, hogy az eroforars vegzett a feladataval. Ez az egyszer
-    //lefuto feladatokat elvegzo eroforarsoknal hasznaljuk. (kesobbi fejlesztes)
+    //true-val jelzi, hogy az eroforras vegzett a feladataval. Ez az egyszer
+    //lefuto feladatokat elvegzo eroforrasoknal hasznaljuk. (kesobbi fejlesztes)
     uint16_t done :1;
 
-    //az eroforars kenyszeritett leallitasanak kerelmet jelzo flag
+    //az eroforras kenyszeritett leallitasanak kerelmet jelzo flag
     uint16_t haltReq :1;
 
     //Az eroforras hiba allapotban volt, es leallt, tehat STOP statuszt
@@ -304,7 +304,6 @@ typedef struct
     //true jelzi, hogy az eroforras elindult. Az eroforras RUN statuszara all
     //be.
     uint16_t run :1;
-
 
     //Statusz kerese. Akkor erdekes, amikor egy olyan hasznalat/lemondas
     //tortenik, ami nem okoz az eroforrasban allapot valtozast, igy abban
@@ -367,10 +366,6 @@ typedef struct
 
     //Az eroforrast hasznalo user allapota.
     resourceUserState_t    state;
-
-    //true, ha a hozza tartozo eroforrasrol valo lemondaskor az eroforrasnak meg
-    //tovabb kell mukodni, mivel mas userek vagy eroforrasok meg hasznaljak.
-    //bool resourceContinuesWork;
 
     //Az eroforras allapotvaltozasa eseten feljovo callback. Ez alapjan tudja
     //peldaul a kerelmezo, hogy a kert eroforras elindult, es hasznalhatja, vagy
@@ -521,7 +516,7 @@ void MyRM_deleteUser(resourceUser_t* user);
 //Az atadott user struktura bekerul az eroforrast hasznalok lancolt listajaba.
 void MyRM_useResource(resourceUser_t* user);
 //Eroforrasrol lemondas.
-//Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
+//Ha az eroforras mar senki sem hasznalja, akkor az le lesz allitva.
 //Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
 void MyRM_unuseResource(resourceUser_t* user);

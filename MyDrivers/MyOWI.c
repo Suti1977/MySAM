@@ -73,7 +73,7 @@ void MyOWI_driverInit(MyOWI_Driver_t* driver,
 }
 //------------------------------------------------------------------------------
 //Wire letrehozasa, a megadott konfiguracio alapjan.
-//A fuggveny hivasat meg kell, hoyg elozze a MyOWI_driverInit() !
+//A fuggveny hivasat meg kell, hogy elozze a MyOWI_driverInit() !
 void MyOWI_createWire(MyOWI_Wire_t* wire,
                            MyOWI_Driver_t* driver,
                            const MyOWI_WireConfig_t* cfg)
@@ -439,7 +439,7 @@ static void MyOWI_mState_byteReaded(MyOWI_Driver_t* driver)
     //Beolvasott byte az rxShiftReg-ben talalhato. Letaroljuk...
     *driver->rxPtr++ = driver->rxShiftReg;
 
-    //Hatralevo byteok szamanak csokekntese. Van meg hatra olvasni valo?
+    //Hatralevo byteok szamanak csokkentese. Van meg hatra olvasni valo?
     if (--driver->rxCnt)
     {   //meg nem vegeztunk az olvasassal. Uj byte olvasas kezdemenyezese
         MyOWI_readByte(driver);

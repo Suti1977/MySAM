@@ -89,7 +89,7 @@ status_t MyFIFO_getByteFromIsr(MyFIFO_t* fifo, uint8_t* data)
 
     //Szabad helyek szama no
     fifo->freeBytes++;
-    //A bufferben levo byteok szama csokekn
+    //A bufferben levo byteok szama csokken
     fifo->bytesInBuffer--;
 
     return kStatus_Success;

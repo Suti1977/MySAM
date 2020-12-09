@@ -58,7 +58,7 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
             xEventGroupSetBits(user->events, SIMPLE_USER_EVENT__DONE);
             break;
         case RESOURCE_ERROR:
-            //Az eroforars hibara futott.
+            //Az eroforras hibara futott.
             xEventGroupSetBits(user->events, SIMPLE_USER_EVENT__ERROR);
             break;
         default:

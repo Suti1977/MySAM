@@ -216,7 +216,7 @@ typedef struct
 } MySWI_Driver_t;
 //------------------------------------------------------------------------------
 //Tranzakcios leiro.
-//A leirot a MySWI_transaction() fuffvenynek kell atadni.
+//A leirot a MySWI_transaction() fuggvenynek kell atadni.
 typedef struct
 {
     //Az elso kuldendo adatcsomag (opcode, mem address, ...) Kotelezo!
@@ -244,7 +244,7 @@ void MySWI_driverInit(MySWI_Driver_t* this,
                            const MySWI_DriverConfig_t* cfg);
 
 //Wire letrehozasa, a megadott konfiguracio alapjan
-//A fuggveny hivasat meg kell, hoyg elozze a MySWI_driverInit() !
+//A fuggveny hivasat meg kell, hogy elozze a MySWI_driverInit() !
 void MySWI_createWire(MySWI_Wire_t* wire,
                            MySWI_Driver_t* driver,
                            const MySWI_WireConfig_t* cfg);

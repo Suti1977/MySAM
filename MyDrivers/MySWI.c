@@ -74,7 +74,7 @@ void MySWI_driverInit(MySWI_Driver_t* driver,
 }
 //------------------------------------------------------------------------------
 //Wire letrehozasa, a megadott konfiguracio alapjan.
-//A fuggveny hivasat meg kell, hoyg elozze a MySWI_driverInit() !
+//A fuggveny hivasat meg kell, hogy elozze a MySWI_driverInit() !
 void MySWI_createWire(MySWI_Wire_t* wire,
                            MySWI_Driver_t* driver,
                            const MySWI_WireConfig_t* cfg)
@@ -347,7 +347,7 @@ static void MySWI_wState_writeBit_releaseWire(MySWI_Driver_t* driver)
         //A protokol szerint itt az ACK bit kovetkezik, melyet az eszkoztol
         //be kell olvasni. Ezt most megtesszuk. A bit olvasasa zarja a byte
         //kiirast, es a vezerles vissza jut a fo allapotgepre.
-        //A beolvasott ACK malyd az rxShiftReg 0. bitjen lesz elerheto.
+        //A beolvasott ACK majd az rxShiftReg 0. bitjen lesz elerheto.
 
         //bitCnt marad 0-an, igy az olvaso rutin tudni fogja, hogy csak egy
         //bitet kell olvasni.
@@ -366,7 +366,7 @@ static void MySWI_wState_writeBit_releaseWire(MySWI_Driver_t* driver)
 static void MySWI_mState_resetAndDiscovery(MySWI_Driver_t* driver)
 {
     //A reset es felderites majd a felderiteskor kapott discovery bit
-    //ellenorzesevel kell, hoyg folytatodjon.
+    //ellenorzesevel kell, hogy folytatodjon.
     driver->returnFunc=
             (MySWI_stateFunc_t*)MySWI_mState_checkDiscoveryBit;
 
@@ -495,7 +495,7 @@ static void MySWI_mState_byteReaded(MySWI_Driver_t* driver)
     //Beolvasott byte az rxShiftReg-ben talalhato. Letaroljuk...
     *driver->rxPtr++ = driver->rxShiftReg;
 
-    //Hatralevo byteok szamanak csokekntese. Van meg hatra olvasni valo?
+    //Hatralevo byteok szamanak csokkentese. Van meg hatra olvasni valo?
     if (--driver->rxCnt)
     {   //meg nem vegeztunk az olvasassal. Uj byte olvasas kezdemenyezese
         MySWI_readByte(driver);

@@ -170,12 +170,12 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
     SercomSpi* hw=&spim->sercom.hw->SPI;
 
 
-    //Soron kovetkezo block beallitasa, mely tartalmaz valos adatmenyniseget...
+    //Soron kovetkezo block beallitasa, mely tartalmaz valos adatmennyiseget...
     const MySPIM_xfer_t* xferBlock=spim->xferBlock;
 
     while(spim->leftXferBlockCount)
     {
-        //A soron kovekezo blokk tartalmaz kiirando menyniseget. kilephetunk
+        //A soron kovekezo blokk tartalmaz kiirando mennyiseget. kilephetunk
         if (xferBlock->length) break;
 
         //Csokkentjuk a hatralevo

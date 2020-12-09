@@ -48,7 +48,7 @@
 #define MODBUS_EXCEPTION_GATEWAY_PATH               0x0A
 #define MODBUS_EXCEPTION_GATEWAY_TARGET             0x0B
 
-//Egyszerre maximum enyni regisztert lehet kiolvasni. (A keretbe ennyi fer el.)
+//Egyszerre maximum ennyi regisztert lehet kiolvasni. (A keretbe ennyi fer el.)
 #define MODBUS_MAX_READABLE_REGISTZER               125
 //------------------------------------------------------------------------------
 #pragma pack(1)
@@ -291,7 +291,7 @@ typedef struct
     //Bemeneti rx fifo konfiguracioja
     MyFIFO_Config_t rxFifoCfg;
 
-    //Ha enyni ideig nem erkezik ujabb karakter, akkor veszi ugy, hogy egy
+    //Ha ennyi ideig nem erkezik ujabb karakter, akkor veszi ugy, hogy egy
     //teljes frame beerkezett. [ms]
     uint32_t rxTimeout;
 
@@ -352,7 +352,7 @@ typedef struct
     //uint8_t txBuffer[MAX_MODBUS_FRAME_LENGTH];
     MyModbus_Buffer_t txFrame;
 
-    //Ha enyni ideig nem erkezik ujabb karakter, akkor veszi ugy, hogy egy
+    //Ha ennyi ideig nem erkezik ujabb karakter, akkor veszi ugy, hogy egy
     //teljes frame beerkezett.
     uint32_t rxTimeout;
 

@@ -43,7 +43,7 @@ enum
 //Reset feltetelnel alacsonyba huzas, majd magasban tartas ideje [us]
 #define MyOWI_RESET_LOW_TIME                  500
 #define MyOWI_RESET_HIGH_TIME                 500
-//A presence jelet enyni ido mulva olvassa be, miutan elengedte a reset utan
+//A presence jelet ennyi ido mulva olvassa be, miutan elengedte a reset utan
 //a vonalat. [us]
 #define MyOWI_PRESENCE_SAMPLING_TIME          100
 //------------------------------------------------------------------------------
@@ -211,7 +211,7 @@ typedef struct
 } MyOWI_Driver_t;
 //------------------------------------------------------------------------------
 //Tranzakcios leiro.
-//A leirot a MyOWI_transaction() fuffvenynek kell atadni.
+//A leirot a MyOWI_transaction() fuggvenynek kell atadni.
 typedef struct
 {
     //Az elso kuldendo adatcsomag (opcode, mem address, ...) Kotelezo!
@@ -235,7 +235,7 @@ void MyOWI_driverInit(MyOWI_Driver_t* this,
                            const MyOWI_DriverConfig_t* cfg);
 
 //Wire letrehozasa, a megadott konfiguracio alapjan
-//A fuggveny hivasat meg kell, hoyg elozze a MyOWI_driverInit() !
+//A fuggveny hivasat meg kell, hogy elozze a MyOWI_driverInit() !
 void MyOWI_createWire(MyOWI_Wire_t* wire,
                            MyOWI_Driver_t* driver,
                            const MyOWI_WireConfig_t* cfg);

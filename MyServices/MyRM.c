@@ -387,7 +387,7 @@ static void MyRM_incrementRunningResourcesCnt(MyRM_t* rm)
 //A futo/elinditott eroforrasok szamat csokkenti, ha egy eroforras leallt.
 static void MyRM_decrementRunningResourcesCnt(MyRM_t* rm)
 {
-    //Nem is fut mar elvileg eroforras, megis csokekntik a  futok szamat. Ez hiba.
+    //Nem is fut mar elvileg eroforras, megis csokkentik a  futok szamat. Ez hiba.
     //valahol vagy tobbszor csokkentettuk a szamlalot, vagy nem lett novelve.
     ASSERT(rm->runningResourceCount);
 
@@ -568,7 +568,7 @@ if (resource->flags.debug)
     } //while(1)
 }
 //------------------------------------------------------------------------------
-//Annak ellenorzese, hogy az eroforarst el kell-e inditani, vagy le kell-e
+//Annak ellenorzese, hogy az eroforrast el kell-e inditani, vagy le kell-e
 //allitani. Hiba eseten ebben oldjuk meg a hiba miatti leallst is.
 //[MyRM_task-bol hivva]
 //#pragma GCC push_options
@@ -617,7 +617,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 }
 
                 //Az eroforrasnak mar nincsenek inditasra varo fuggosegei
-                //Az eroforars indithato.
+                //Az eroforras indithato.
 
                 //Eroforras initek...
                 //resource->doneFlag=false;
@@ -805,7 +805,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 while(dep)
                 {
                     if (dep->flags.delayedStartRequest)
-                    {   //a vizsgalt kerelmezo varta az eroforars leallasat.
+                    {   //a vizsgalt kerelmezo varta az eroforras leallasat.
 
                         //A jelzes torlesre kerul.
                         dep->flags.delayedStartRequest=false;
@@ -876,8 +876,8 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
             {   //Az eroforrasnak meg vannak hasznaloi. Mukodik tovabb...
                 //...
             } else
-            {   //Az eroforars eddig mukodott, de most mar nincsnek hasznaloi.
-                //Az eroforarst le kell allitani.
+            {   //Az eroforras eddig mukodott, de most mar nincsnek hasznaloi.
+                //Az eroforrast le kell allitani.
                 resource->state=RESOURCE_STATE_STOPPING;
 
 stop_resource:
@@ -1202,7 +1202,7 @@ static void MyRM_dependencyStatusCB(struct resourceDep_t* dep,
             break;
 
         case RESOURCE_DONE:
-            //Azeroforars befejezte a mukodeset. (egyszer lefuto esetekben)            
+            //Azeroforras befejezte a mukodeset. (egyszer lefuto esetekben)
             break;
 
         case RESOURCE_ERROR:
@@ -1319,7 +1319,7 @@ static void MyRM_stopDependency(resourceDep_t* dep)
                dependency->resourceName);
     #endif
 
-    //Az eroforarst hasznalok szamanak cskkenetese
+    //Az eroforrast hasznalok szamanak cskkenetese
     if (dependency->usageCnt==0)
     {   //Az eroforras kezelesben hiba van. Nem mondhatnanak le tobben,
         //mint amennyien korabban igenybe vettek!
@@ -1462,9 +1462,9 @@ static void MyRM_resourceStatusCore(resource_t* resource,
             resource->flags.error=true;
 
             //Hiba informacios struktura feltoltese, melyet majd kesobb az
-            //eroforarst hasznalo masik eroforarsok, vagy userek fele
+            //eroforrast hasznalo masik eroforrasok, vagy userek fele
             //tovabb adhatunk...
-            //Reportoljuk, hogy melyik eroforarssal van a hiba
+            //Reportoljuk, hogy melyik eroforrassal van a hiba
             resource->errorInfo.resource=(struct resource_t*)resource;
             //informaljuk, hogy mi a hibakod
             resource->errorInfo.errorCode=errorCode;
@@ -1516,7 +1516,7 @@ void MyRM_createUser(resourceUser_t* user, const resourceUser_config_t* cfg)
     //Jelezzuk a dependenciaban, hogy egy user a birtokosa.
     user->dependency.flags.requesterType=RESOURCE_REQUESTER_TYPE__USER;
     user->dependency.requesterUser=(struct resourceUser_t*)user;
-    //Beallitja az eroforars altal hivando statusz fuggvenyt, melyen keresztul
+    //Beallitja az eroforras altal hivando statusz fuggvenyt, melyen keresztul
     //az eroforras jelezheti az user szamara az allapotvaltozasait
     user->dependency.depStatusFunc=MyRM_user_resourceStatusCB;
     MyRM_addRequesterToResource (cfg->resource,  &user->dependency);
@@ -1596,7 +1596,7 @@ void MyRM_useResource(resourceUser_t* user)
         case RESOURCEUSERSTATE_ERROR:
             //Az eroforras hibas allapotban van. Abbol csak ugy lehet kilepni,
             //ha elobb leallitjak az eroforrast.
-            //Generalunk az applikacio fele jelzest, hogy az eroforars hibas.
+            //Generalunk az applikacio fele jelzest, hogy az eroforras hibas.
             if (user->statusFunc)
             {
                 resource_t* resource=
@@ -1619,7 +1619,7 @@ void MyRM_useResource(resourceUser_t* user)
 }
 //------------------------------------------------------------------------------
 //Eroforrasrol lemondas.
-//Ha az eroforras mar senki sem hasznalja, akkor az le lessz allitva.
+//Ha az eroforras mar senki sem hasznalja, akkor az le lesz allitva.
 //Az user-hez beregisztralt callbacken keresztul majd vissza fog jelezni, ha az
 //eroforras mukodese befejezodott.
 void MyRM_unuseResource(resourceUser_t* user)
@@ -1773,7 +1773,7 @@ void MyRM_restartResource(resourceUser_t* user)
 }
 //------------------------------------------------------------------------------
 //Az userekhez tartozo callback, melyet az altaluk hasznalt eroforras hiv az
-//alalpotvaltozasuk szerint...
+//allapotvaltozasuk szerint...
 static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
                                        resourceStatus_t status,
                                        resourceErrorInfo_t* errorInfo)
@@ -1953,7 +1953,7 @@ void MyRM_stopResource(resource_t* resource)
 
     MyRM_LOCK(rm->mutex);
 
-    //Az eroforarst hasznalok szamanak cskkenetese
+    //Az eroforrast hasznalok szamanak cskkenetese
     if (resource->usageCnt==0)
     {   //Az eroforras kezelesben hiba van. Nem mondhatnanak le tobben,
         //mint amennyien korabban igenybe vettek!
