@@ -604,6 +604,10 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
         //A hasznalati szamlalo nullazasaval elerjuk, hogy a STOPPING allapotbol
         //automatikusan a STOP allapotba vigye az eroforras allapotat.
         resource->usageCnt=0;
+
+        //Jelzes, hogy az eroforras leallt. Igy a STOPPING allapotban le tud
+        //futni a befejezes.
+        resource->flags.halted=true;
     }
 
 
