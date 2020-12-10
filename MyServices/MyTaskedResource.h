@@ -20,11 +20,18 @@ typedef struct
 {
     //A taszknak kuldott eventek
     EventBits_t events;
+
+    //true, ha a loop azert fut, mert az applikacio altal megadott idozites
+    //letelt.
+    bool timed;
+
     //A ciklusnak erre az esemenyre kell varnia. Ezt a loop-ban, vagy a Starting
     //funkciokban is modosithatja az applikacio
     EventBits_t waitedEvents;
+
     //A varakozasi ido tick-ben
     uint32_t waitTime;
+
     //Feladat kesz jelzes. Azoknal az eroforrasoknal, melyek elinditasa utan
     //azok mukodese egy ido utan befejezodik, ott ezen a flagen keresztul tudja
     //jelezni azt a start vagy loop callbackban futtatott kod.
@@ -49,6 +56,9 @@ typedef struct
     //kuld.
     //Az applikacio a loop-bol kilepve jelezheti, ha elindult az eroforras.
     bool run;
+
+    //Az aktualis tick ido. CSAK A LOOP callbackben hasznalhato!!!!
+    uint64_t time;
 
 } taskedRsource_control_t;
 //------------------------------------------------------------------------------

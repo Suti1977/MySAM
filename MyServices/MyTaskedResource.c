@@ -219,8 +219,10 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
             //olyan esemeny sem, amit az applikacio var, akkor addig nem lephet
             //ki. Ez alol egyetleb feltetel, ha leallitasi kerelem van, es az
             //applikacio azt engedi.
-            uint64_t enterTime=MyRTOS_getTick();
+            control.time=MyRTOS_getTick();
+            uint64_t enterTime=control.time;
             uint32_t wt=control.waitTime;
+            control.timed=false;
             while(1)
             {
                 //Esemenyre, vagy timeoutra varas...
@@ -242,18 +244,34 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
                     }
                 }
 
-                //kilepes, ha letet a megszabott ido, vagy jott legalabb egy
-                //olyan event, amire varunk
-                if ((control.events==0) ||
-                    (control.events & control.waitedEvents)) break;
+                control.time=MyRTOS_getTick();
 
-                //<--ha ide jut, akkor varakozni kell meg
+                //kilepes, ha letet a megszabott ido, vagy jott legalabb egy
+                //olyan event, amire varunk...
+
+                if (control.events==0)
+                {   //letelt a varakozasi ido
+                    control.timed=true;
+                    break;
+                }
+
+                if (control.events & control.waitedEvents)
+                {   //vart eventet kapott. nem var tovabb.
+                    break;
+                }
+
+                //<--ha ide jut, akkor varakozni kell meg eventre/idore
 
                 //kiszamoljuk, hogy mennyit kell meg varni...
-                uint64_t elapTime= MyRTOS_getTick() - enterTime;
-                if (elapTime>=control.waitTime) break;
+                uint64_t elapTime= control.time - enterTime;
+                if (elapTime>=control.waitTime)
+                {   //Az applikacio altal megadott ido letelt.
+                    control.timed=true;
+                    break;
+                }
                 wt=(uint32_t)(control.waitTime - elapTime);
-            }
+
+            } //idozito/eventre varo while
 
 
             if ((control.resourceStopRequest) && (control.prohibitStop==0))
