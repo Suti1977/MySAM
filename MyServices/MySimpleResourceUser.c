@@ -6,7 +6,7 @@
 #include "MySimpleResourceUser.h"
 #include <string.h>
 
-#define MySIMPLERESOURCEUSER_TRACE  1
+#define MySIMPLERESOURCEUSER_TRACE 0
 
 //Az egyszeru eroforras felhasznalok (userek) eseteben hasznalhato esemeny
 //flagek, melyekkel az egyszeru user statusz callbackbol jelzunk a varakozo
