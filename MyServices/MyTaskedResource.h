@@ -34,10 +34,21 @@ typedef struct
 
     //leallitasi kerelem aktiv jelzes az eroforrasra
     bool resourceStopRequest;
+
     //Az applikacio jelezheti, hogy nem szabad az eroforrast leallitani.
     //Ez akkor fontos, ha olyan folyamatot futtatunk, melynek mindenkepen vegig
     //kell tudni futnia.
     bool prohibitStop;
+
+    //Az eroforras mukodik jelzes. Alapertelmezesben ez ben van allitva, de van
+    //lehetoseg a startFunc() callbackben a flaget torolni. Igy a loop funkcio
+    //ugy indul el, hogy az eroforras manager fele nem jelez "elindult"
+    //allapotot.
+    //A loop-ban igy van lehetoseg az eroforarst inditani, majd ha kesz, akkor
+    //a flaget true-ba allitani, mely hatasara a manager fele "elindult" jelzest
+    //kuld.
+    //Az applikacio a loop-bol kilepve jelezheti, ha elindult az eroforras.
+    bool run;
 
 } taskedRsource_control_t;
 //------------------------------------------------------------------------------

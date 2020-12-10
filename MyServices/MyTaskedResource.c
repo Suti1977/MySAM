@@ -138,6 +138,11 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         control.done=0;
         control.prohibitStop=0;
         control.resourceStopRequest=0;
+        //Alapertelmezesben azt mondjuk, hogy a startFunc() callback meghivasa
+        //utan elindult az eroforras. Ezt a jelzest felul lehet biralni a
+        //startFunc() callbackben, de akkor a loop-ban futo applikacionak
+        //kell tudnia jelezni, hogy elkeszult.
+        control.run=1;
 
         //varakozas arra, hogy az eroforrast elinditjak...
         control.events=MyRTOS_waitForNotifyEvents(control.waitedEvents,
@@ -165,13 +170,21 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         printf("MyTaskedResource RUN. (%s)\n", this->cfg.name);
         #endif
 
-        //Az eroforras elindult. Reportoljuk az eroforras manager fele...
-        MyRM_resourceStatus(resource, RESOURCE_RUN, status);
-
+        //true-ba valt, ha ki lett bocsatva mar a "RUN" statusz a manager fele.
+        bool runStatusSended=false;
 
         //Eroforrast futtato ciklus...
         while(1)
         {
+            if ((runStatusSended==false) && (control.run))
+            {   //nem volt meg a manager fele jelezve a "RUN" alalpot, viszont
+                //az eroforras mar mukodo jelzest mutat.
+                //Kibocsatja a jelzest a managernek
+                MyRM_resourceStatus(resource, RESOURCE_RUN, status);
+                //tobbszor nem bocsatja ki.
+                runStatusSended=true;
+            }
+
             if (control.done)
             {   //Az eroforras befejezte a mukodeset. Jelzes a manager fele.
                 MyRM_resourceStatus(resource, RESOURCE_DONE, status);
