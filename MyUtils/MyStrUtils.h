@@ -13,7 +13,7 @@
 //hexa eseten vagy "0x"-el kezdodik a szam, vagy a vegen h-van (azt is
 //elfogadja, ha mind a ketto meg van adva) "h" utan viszont nem lehet semmi.
 //Negativot nem kezel!!!!
-int MyStrUtils_strToValueo_value(char* srcStr,
+int MyStrUtils_strToValueo_value(const char* srcStr,
                                  uint32_t srcStrLength,
                                  uint32_t *destValue);
 
@@ -27,13 +27,13 @@ int MyStrUtils_strToValueo_value(char* srcStr,
 //  -1, ha kicsi a buffer
 //  -2, ha illegalis karaktert talalt
 //  0-  (egyebkent) a kimeneti adathalmaz merete.
-int MyStrUtils_hexStringToBin(char* srcStr,
+int MyStrUtils_hexStringToBin(const char* srcStr,
                               uint8_t* dst,
                               int bufferSize,
                               uint32_t* length);
 
 //binarisrol hexa stringbe konevrtalo.
-void MyStrUtils_binToHexString(uint8_t* src,
+void MyStrUtils_binToHexString(const uint8_t* src,
                                uint32_t srcLength,
                                char* dst);
 //------------------------------------------------------------------------------
