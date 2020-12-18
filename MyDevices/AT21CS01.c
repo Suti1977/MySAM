@@ -35,6 +35,8 @@ status_t AT21CS01_readManufacturerID(MySWI_Wire_t* wire,
                                      uint8_t slaveAddress,
                                      uint32_t* id)
 {
+    slaveAddress <<=1;
+
     uint8_t opCode=AT21CS01_OPCODE_MANUFACTURER_ID_READ | slaveAddress | 1;
 
     ASSERT(id);
@@ -61,6 +63,8 @@ status_t AT21CS01_readSerialNumber(MySWI_Wire_t* wire,
     if (bufferLength>8) bufferLength=8;
 
     ASSERT(buffer);
+
+    slaveAddress <<=1;
 
     uint8_t wbuff1[2]=
     {
