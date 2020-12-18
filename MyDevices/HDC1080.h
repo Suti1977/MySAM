@@ -17,6 +17,7 @@
 #define HDC1080_MANUFACTURER_ID     0xfe
 #define HDC1080_DEVICE_ID           0xff
 
+#define HDC1080_SERIAL_ID_LEN   3
 //------------------------------------------------------------------------------
 //HDC1080 driver valtozoi
 typedef struct
@@ -49,6 +50,10 @@ double HDC1080_value2Celsius(uint16_t temperatureValue);
 //Eszkoz altal visszaadott meresi eredmenybol %-os paratartalomakonvertalas
 double HDC1080_value2Humidity(uint16_t humidityValue);
 
+//Egyedi azonosito olvasasa. Az ID hossza: HDC1080_SERIAL_ID_LEN.
+status_t HDC1080_readSerialId(HDC1080_t* dev,
+                              uint8_t* buff,
+                              uint8_t length);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //HDC1080_H_

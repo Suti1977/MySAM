@@ -123,7 +123,7 @@ status_t HDC1080_measure(HDC1080_t* dev,
           uint16_t temp;
           uint16_t humy;
         };
-        #pragma pack();
+        #pragma pack()
     } result;
 
 
@@ -176,5 +176,13 @@ double HDC1080_value2Celsius(uint16_t temperatureValue)
 double HDC1080_value2Humidity(uint16_t humidityValue)
 {
     return (double) ((uint32_t)humidityValue*100) / (65536.0);
+}
+//------------------------------------------------------------------------------
+//Egyedi azonosito olvasasa.  Az ID hossza: HDC1080_SERIAL_ID_LEN.
+status_t HDC1080_readSerialId(HDC1080_t* dev,
+                              uint8_t* buff,
+                              uint8_t length)
+{
+    return HDC1080_read(dev, HDC1080_SERIALID1, buff, length);
 }
 //------------------------------------------------------------------------------
