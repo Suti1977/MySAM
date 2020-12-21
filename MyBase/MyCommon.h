@@ -83,6 +83,7 @@ enum _generic_status
     kStatus_InvalidArgument 	= MAKE_STATUS(kStatusGroup_Generic, 4),
     kStatus_Timeout 			= MAKE_STATUS(kStatusGroup_Generic, 5),
     kStatus_NoTransferInProgress= MAKE_STATUS(kStatusGroup_Generic, 6),    
+    kStatus_Busy                = MAKE_STATUS(kStatusGroup_Generic, 7),
 };
 
 
