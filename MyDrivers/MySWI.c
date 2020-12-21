@@ -49,6 +49,7 @@ static void MySWI_mState_byteReaded(MySWI_Driver_t* driver);
 static void MySWI_mState_byteSent(MySWI_Driver_t* driver);
 static void MySWI_stopCondition(MySWI_Driver_t* driver);
 static void MySWI_mState_end(MySWI_Driver_t* driver);
+static void MySWI_mState_osSignallingd(MySWI_Driver_t* driver);
 //------------------------------------------------------------------------------
 //Single-Wire (SWI) driver kezdeti inicializalasa
 void MySWI_driverInit(MySWI_Driver_t* driver,
@@ -62,6 +63,9 @@ void MySWI_driverInit(MySWI_Driver_t* driver,
 
     //TC modul inicializalasa
     MySWI_initTC(driver, cfg);
+
+    driver->tcIrqPriority_timing=cfg->tcIrqPriority_timing;
+    driver->tcIrqPriority_osSignalling=cfg->tcIrqPriority_osSignalling;
 
     //Elereseket szabalyozo mutex letrehozasa
     #ifdef USE_FREERTOS
@@ -535,13 +539,28 @@ static void MySWI_stopCondition(MySWI_Driver_t* driver)
 //------------------------------------------------------------------------------
 static void MySWI_mState_end(MySWI_Driver_t* driver)
 {
+    //A lezaro allapotban majd az OS-nek jelzunk
+    driver->stateFunc=(MySWI_stateFunc_t*)MySWI_mState_osSignallingd;
+
+    //A TC IRQ alacsony(abb) prioritasra kerul, olyanra, melyen a freeRTOS API
+    //hivasok hasznalhatok.
+    uint16_t irqn=driver->tc.info->irqn;
+    NVIC_SetPriority(irqn, driver->tcIrqPriority_osSignalling);
+
+    //Ujabb, de mar alacsonyabb prioritason futo IRQ generalasa.
+    NVIC_SetPendingIRQ(irqn);
+
+    return;
+
+}
+//------------------------------------------------------------------------------
+static void MySWI_mState_osSignallingd(MySWI_Driver_t* driver)
+{
     //Jelzes a varakozo taszknak, hogy befejezodtek a muveletek a megszakitasban
     #ifdef USE_FREERTOS
     xSemaphoreGiveFromISR(driver->doneSemaphore, NULL);
     #endif //USE_FREERTOS
 }
-//------------------------------------------------------------------------------
-
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //                              API
@@ -580,6 +599,10 @@ status_t MySWI_transaction(MySWI_Wire_t* wire,
     //A mukodes a fo allapotgepben indul a resetelessel.
     driver->stateFunc =
                 (MySWI_stateFunc_t*)MySWI_mState_resetAndDiscovery;
+    //A TC IRQ magas prioritasra kerul felprogramozasra. Az OS nem szakithatja
+    //meg.
+    NVIC_SetPriority(driver->tc.info->irqn, driver->tcIrqPriority_timing);
+
     //TimerIT kivaltasa. Folytatas a megszakitasban.
     MySWI_startTimer(driver, 1);
 

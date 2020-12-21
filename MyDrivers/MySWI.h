@@ -33,20 +33,20 @@ enum
 //Bit olvasasanal ennyi idore huzza le a vonalat, mielott elengedne [us]
 #define MySWI_READBIT_DRIVE_LOW_TIME          1.5     //0.1
 //Bit olvasasa ebben az idopontban tortenik meg a vonal elengedese utan [us]
-#define MySWI_READBIT_SAMPLING_TIME           1.5     //1
+#define MySWI_READBIT_SAMPLING_TIME           1.0     //1
 //A mintavetel utan ennyit var, mielott az uj bit olvasasaba kezdene [us]
 #define MySWI_READBIT_HIGH_TIME               20
 //Bit irasnal az 1-hez tartozo alacsony es magas szint idok [us]
-#define MySWI_WRITEBIT_1_LOW_TIME             1
-#define MySWI_WRITEBIT_1_HIGH_TIME            19
+#define MySWI_WRITEBIT_1_LOW_TIME             1         //1
+#define MySWI_WRITEBIT_1_HIGH_TIME            19        //19
 //Bit irasnal a 0-hoz tartozo alacsony es magas szint idok [us]
 #define MySWI_WRITEBIT_0_LOW_TIME             10
 #define MySWI_WRITEBIT_0_HIGH_TIME            10
 //start/stop feltetelhez tartozo ido [us]
-#define MySWI_START_STOP_TIME                 200
+#define MySWI_START_STOP_TIME                 160       //200
 //Reset feltetelnel alacsonyba huzas, majd magasban tartas ideje [us]
-#define MySWI_RESET_LOW_TIME                  500
-#define MySWI_RESET_HIGH_TIME                 200
+#define MySWI_RESET_LOW_TIME                  110       //500
+#define MySWI_RESET_HIGH_TIME                 12        //200
 //------------------------------------------------------------------------------
 //Vonalat alacsony szintbe huzo callback fuggveny
 typedef void MySWI_driveWireFunc_t(void);
@@ -141,6 +141,15 @@ typedef struct
     MyTC_Config_t           tcConfig;
     //Elore kalkulalt mukodesi idozitesi konstansok.
     MySWI_Times_t      times;
+
+    //TC prioritasa a busz utemezesekor (magas prioriatas, OS felett.)
+    uint8_t tcIrqPriority_timing;
+
+    //A TC prioriatsa, amikor az OS fele kell jelezni.
+    //Amikor az OS fele kell jelezni, a TC prioritasa az NVIC-ben erre kerul
+    //atprogramozasra. (alacsony prioritas, OS API hivas  lehetseges.)
+    uint8_t tcIrqPriority_osSignalling;
+
 } MySWI_DriverConfig_t;
 //------------------------------------------------------------------------------
 //A megszakitasban hivott, a megszakitas bekovetkezesekor vegrehajtando allapot
@@ -213,6 +222,13 @@ typedef struct
     //A megszakitasban keletkezo hibakodot orzi meg. Ez kerul visszaadasra
     //a birtoklo taszk szamara.
     status_t asyncStatus;
+
+    //TC prioritasa a busz utemezesekor
+    uint8_t tcIrqPriority_timing;
+    //A TC prioriatsa, amikor az OS fele kell jelezni.
+    //Amikor az OS fele kell jelezni, a TC prioritasa az NVIC-ben erre kerul
+    //atprogramozasra.
+    uint8_t tcIrqPriority_osSignalling;
 } MySWI_Driver_t;
 //------------------------------------------------------------------------------
 //Tranzakcios leiro.
