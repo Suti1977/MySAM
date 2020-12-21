@@ -31,9 +31,9 @@ enum
 //HS modhoz hatarozzuk meg.
 
 //Bit olvasasanal ennyi idore huzza le a vonalat, mielott elengedne [us]
-#define MySWI_READBIT_DRIVE_LOW_TIME          0.1
+#define MySWI_READBIT_DRIVE_LOW_TIME          1.5     //0.1
 //Bit olvasasa ebben az idopontban tortenik meg a vonal elengedese utan [us]
-#define MySWI_READBIT_SAMPLING_TIME           1
+#define MySWI_READBIT_SAMPLING_TIME           1.5     //1
 //A mintavetel utan ennyit var, mielott az uj bit olvasasaba kezdene [us]
 #define MySWI_READBIT_HIGH_TIME               20
 //Bit irasnal az 1-hez tartozo alacsony es magas szint idok [us]

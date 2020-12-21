@@ -35,6 +35,7 @@ static void MySWI_initTC(MySWI_Driver_t* driver,
 static void MySWI_wState_reset_driveWire(MySWI_Driver_t* driver);
 static void MySWI_wState_reset_releaseWire(MySWI_Driver_t* driver);
 static void MySWI_wState_readBit_driveWire(MySWI_Driver_t* driver);
+static void MySWI_wState_readBit_releaseWire(MySWI_Driver_t* driver);
 static void MySWI_wState_readBit_samplingWire(MySWI_Driver_t* driver);
 static void MySWI_wState_writeBit_driveWire(MySWI_Driver_t* driver);
 static void MySWI_wState_writeBit_releaseWire(MySWI_Driver_t* driver);
@@ -214,18 +215,35 @@ static void MySWI_wState_readBit_driveWire(MySWI_Driver_t* driver)
     //Ha nagyobb sebessegen menen a proci, akkor lehet, hogy kell ide par nop
     //a releaseWireFunc() ele.
 
+    //Vonalat foldre huzzuk.
     driver->wireConfig.driveWireFunc();
 
+    //////
+    MySWI_startTimer(driver, driver->times.readBit_lowTime);
+    driver->stateFunc= (MySWI_stateFunc_t*) MySWI_wState_readBit_releaseWire;
+
+    //////
+
+    /*
     MySWI_startTimer(driver, driver->times.readBit_samplingTime);
     driver->stateFunc=
               (MySWI_stateFunc_t*) MySWI_wState_readBit_samplingWire;
-
     //__asm volatile("nop");
     //__asm volatile("nop");
     //__asm volatile("nop");
     //__asm volatile("nop");
-
     driver->wireConfig.releaseWireFunc();
+    */
+}
+//. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+static void MySWI_wState_readBit_releaseWire(MySWI_Driver_t* driver)
+{
+    //Vonalat elengedi
+    driver->wireConfig.releaseWireFunc();
+    //Idozitjuk az elengedeshez kepest a mintavetelt. (hagyunk idot a busznak,
+    //hogy az biztonsaggal felfusson.
+    MySWI_startTimer(driver, driver->times.readBit_samplingTime);
+    driver->stateFunc= (MySWI_stateFunc_t*) MySWI_wState_readBit_samplingWire;
 }
 //. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 static void MySWI_wState_readBit_samplingWire(MySWI_Driver_t* driver)
