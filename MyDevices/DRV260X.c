@@ -24,17 +24,13 @@ status_t DRV260X_readReg(DRV260X_t* dev,
 
     status_t status;
 
-    //regiszter cime (8 bites pointer)
-    uint8_t cmd[1];
-    cmd[0]= address;
-
     //Olvasas...
     //Adatatviteli blokk leirok listajnak osszeallitasa.
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff, 1           },
+        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&address,  1 },
+        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff,                1 },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -48,17 +44,13 @@ status_t DRV260X_writeReg(DRV260X_t* dev, uint8_t address, uint8_t regValue)
 {
     status_t status;
 
-    //regiszter cime (8 bites pointer)
-    uint8_t cmd[1];
-    cmd[0]= address;
-
     //Iras...
     //Adatatviteli blokk leirok listajnak osszeallitasa.
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 1           },
+        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&address,  1 },
+        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 1 },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -132,10 +124,10 @@ status_t DRV260X_setStandby(DRV260X_t* dev, bool standby)
 {
     if (standby)
     {
-        return DRV260X_setBit(dev, DRV260X_MODE_REG, DRV260X_MODE_STANDBY);
+        return DRV260X_writeReg(dev, DRV260X_MODE_REG, DRV260X_MODE_STANDBY);
     } else
     {
-        return DRV260X_clrBit(dev, DRV260X_MODE_REG, DRV260X_MODE_STANDBY);
+        return DRV260X_writeReg(dev, DRV260X_MODE_REG, 0x00);
     }
 }
 //------------------------------------------------------------------------------
@@ -143,6 +135,14 @@ status_t DRV260X_setStandby(DRV260X_t* dev, bool standby)
 status_t DRV260X_config(DRV260X_t* dev, const DRV260X_config_t* cfg)
 {
     status_t status;
+
+    //Standby mod-ba leptetjuk az IC-t
+    status=DRV260X_writeReg(dev, DRV260X_MODE_REG, DRV260X_MODE_STANDBY);
+    if (status) goto error;
+
+    //picit varni kell. min 250usec
+    vTaskDelay(2);
+
     //set rated voltage
     status=DRV260X_writeReg(dev, DRV260X_RAT_VOL_REG, cfg->ratedVoltage);
     if (status) goto error;
@@ -175,13 +175,18 @@ status_t DRV260X_config(DRV260X_t* dev, const DRV260X_config_t* cfg)
     status=DRV260X_writeReg(dev, DRV260X_LIB_SEL_REG, cfg->lib);
     if (status) goto error;
 
+    //Aktiv modba lepteti a vezerlot
+    status=DRV260X_writeReg(dev, DRV260X_MODE_REG, 0);
+    if (status) goto error;
+
 error:
     return status;
 }
 //------------------------------------------------------------------------------
 //Haptic kalibracioja. A rutin nem ter vissza addig, amig a kalibracio be nem
 //fejezodik.
-status_t DRV260X_calibrate(DRV260X_t* dev)
+status_t DRV260X_autoCalibrate(DRV260X_t* dev,
+                               DRV260X_calibrationData_t* calibData)
 {
     status_t status;
 
@@ -204,7 +209,110 @@ status_t DRV260X_calibrate(DRV260X_t* dev)
         vTaskDelay(20);
     }
 
+    //Auto kalibracio sikresessegenek olvasasa
+    uint8_t statusRegValue;
+    status=DRV260X_getStatus(dev, &statusRegValue);
+    if (status) goto error;
+    if (statusRegValue & DRV260X_STATUS_DIAG_RESULT)
+    {   //Az auto kalibracio hibat jelez
+        status=kStatus_Fail;
+        goto error;
+    }
+
+    if (calibData)
+    {   //Kalibracios adatok kiolvasasa...
+        //A kiolvasott valtozokat kesobb a chipbe toltve, nem kell futtatni a
+        //kalibraciot.
+
+        status=DRV260X_readReg(dev,
+                               DRV260X_CAL_COMP_RES_REG,
+                               &calibData->compensation);
+        if (status) goto error;
+
+        status=DRV260X_readReg(dev,
+                               DRV260X_CAL_BACK_EMF_RES_REG,
+                               &calibData->backEmf);
+        if (status) goto error;
+
+        status=DRV260X_readReg(dev,
+                               DRV260X_FB_CTRL_REG,
+                               &calibData->backEmfGain);
+        if (status) goto error;
+
+    }
+
 error:
     return status;
 }
+//------------------------------------------------------------------------------
+//Kalibracios adatok beallitasa. A calibData-ban atadott strukturat egy korabbi
+// DRV260X_autoCalibrate() hivaskor adta at a driver.
+status_t DRV260X_setCalibrationParameters(DRV260X_t* dev,
+                                          DRV260X_calibrationData_t* calibData)
+{
+    status_t status;
+    status=DRV260X_writeReg(dev,
+                            DRV260X_CAL_COMP_RES_REG,
+                            calibData->compensation);
+    if (status) goto error;
+
+    status=DRV260X_writeReg(dev,
+                            DRV260X_CAL_BACK_EMF_RES_REG,
+                            calibData->backEmf);
+    if (status) goto error;
+
+    status=DRV260X_writeReg(dev,
+                            DRV260X_FB_CTRL_REG,
+                            calibData->backEmfGain);
+    if (status) goto error;
+
+error:
+    return status;
+}
+//------------------------------------------------------------------------------
+//trigger mod beallitasa
+status_t DRV260X_setTriggerMode(DRV260X_t* dev, uint8_t triggerMode)
+{
+    status_t status;
+    status=DRV260X_writeReg(dev, DRV260X_MODE_REG, triggerMode);
+    if (status) goto error;
+error:
+    return status;
+}
+//------------------------------------------------------------------------------
+//program/folyamat inditasa
+status_t DRV260X_go(DRV260X_t* dev)
+{
+    return DRV260X_writeReg(dev, DRV260X_GO_REG, DRV260X_GO_GO);
+}
+//------------------------------------------------------------------------------
+//program/folyamat azonnali megszakitasa
+status_t DRV260X_stop(DRV260X_t* dev)
+{
+    return DRV260X_writeReg(dev, DRV260X_GO_REG, 0);
+}
+//------------------------------------------------------------------------------
+//Annak tesztelese, hogy a lejatszas meg fut-e...
+bool DRV260X_isDone(DRV260X_t* dev, status_t* status)
+{
+    status_t stat;
+    uint8_t goRegVale;
+
+    stat=DRV260X_readReg(dev, DRV260X_GO_REG, &goRegVale);
+
+    if (status) *status=stat;
+    if (stat) return false;
+
+    //Amig a go regiszter nem 0, addig fut a lejatszas
+    if (goRegVale & DRV260X_GO_GO) return false;
+
+    return true;
+}
+//------------------------------------------------------------------------------
+//seq regiszter beallitasa
+status_t DRV260X_setSeqReg(DRV260X_t* dev, uint8_t regIndex, uint8_t regValue)
+{
+    return DRV260X_writeReg(dev, DRV260X_WAV_SEQ_1_REG+regIndex, regValue);
+}
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

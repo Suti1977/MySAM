@@ -69,14 +69,14 @@
 #define DRV260X_LIB_SEL_HI_Z                BIT(4)
 #define DRV260X_LIB_SEL_LIBRARY_SEL_START   0
 #define DRV260X_LIB_SEL_LIBRARY_SEL_LEN     3
-#define DRV260X_LIB_SEL_LIBRARY_SEL_EMPTY   BIT(0)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_A   BIT(1)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_B   BIT(2)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_C   BIT(3)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_D   BIT(4)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_E   BIT(5)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LRA_LIB BIT(6)
-#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_F   BIT(7)
+#define DRV260X_LIB_SEL_LIBRARY_SEL_EMPTY   0
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_A   1
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_B   2
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_C   3
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_D   4
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_E   5
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LRA_LIB 6
+#define DRV260X_LIB_SEL_LIBRARY_SEL_LIB_F   7
 
 // #define DRV260X_WAV_SEQ_1_REG	0x04
 // ..
@@ -88,7 +88,7 @@
 #define DRV260X_WAV_SEQ_X_WAIT_TIME_LEN     7
 
 // #define DRV260X_GO_REG				0x0c
-#define DRV260X_GO_GO                       0
+#define DRV260X_GO_GO                       BIT(0)
 
 // #define DRV260X_RAT_VOL_REG		        0x16
 #define DRV260X_RAT_VOL_START               0
@@ -97,6 +97,27 @@
 // #define DRV260X_ODC_VOL_REG		        0x17
 #define DRV260X_ODC_VOL_START               0
 #define DRV260X_ODC_VOL_LEN                 8
+
+//Kalibraciokor visszaadott struktura, mellyel kesobb a chip inicializalhato.
+typedef  struct
+{
+    uint8_t compensation;
+    uint8_t backEmf;
+    uint8_t backEmfGain;
+} DRV260X_calibrationData_t;
+
+//Chip inicializalasahoz struktura.
+typedef struct
+{
+    uint8_t ratedVoltage;
+    uint8_t odcVoltage;
+    uint8_t feedbackControl;
+    uint8_t ctrl1;
+    uint8_t ctrl2;
+    uint8_t ctrl3;
+    uint8_t ctrl4;
+    uint8_t lib;
+} DRV260X_config_t;
 //------------------------------------------------------------------------------
 //DRV260X valtozoi
 typedef struct
@@ -134,24 +155,35 @@ status_t DRV260X_reset(DRV260X_t* dev);
 //Eszkoz standby-ba helyezese/ebresztese
 status_t DRV260X_setStandby(DRV260X_t* dev, bool standby);
 
-//Chip inicializalasahoz struktura.
-typedef struct
-{
-    uint8_t ratedVoltage;
-    uint8_t odcVoltage;
-    uint8_t feedbackControl;
-    uint8_t ctrl1;
-    uint8_t ctrl2;
-    uint8_t ctrl3;
-    uint8_t ctrl4;
-    uint8_t lib;
-} DRV260X_config_t;
+
 //Chip/motor konfiguralasa
 status_t DRV260X_config(DRV260X_t* dev, const DRV260X_config_t* cfg);
 
+
 //Haptic kalibracioja. A rutin nem ter vissza addig, amig a kalibracio be nem
 //fejezodik.
-status_t DRV260X_calibrate(DRV260X_t* dev);
+status_t DRV260X_autoCalibrate(DRV260X_t* dev,
+                               DRV260X_calibrationData_t* calibData);
+
+//Kalibracios adatok beallitasa. A calibData-ban atadott strukturat egy korabbi
+// DRV260X_autoCalibrate() hivaskor adta at a driver.
+status_t DRV260X_setCalibrationParameters(DRV260X_t* dev,
+                                          DRV260X_calibrationData_t* calibData);
+
+//trigger mod beallitasa
+status_t DRV260X_setTriggerMode(DRV260X_t* dev, uint8_t triggerMode);
+
+//program/folyamat inditasa
+status_t DRV260X_go(DRV260X_t* dev);
+
+//program/folyamat azonnali megszakitasa
+status_t DRV260X_stop(DRV260X_t* dev);
+
+//Annak tesztelese, hogy a lejatszas meg fut-e...
+bool DRV260X_isDone(DRV260X_t* dev, status_t* status);
+
+//seq regiszter beallitasa
+status_t DRV260X_setSeqReg(DRV260X_t* dev, uint8_t regIndex, uint8_t regValue);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //DRV260X_H_
