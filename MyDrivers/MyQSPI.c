@@ -90,7 +90,7 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
     }
     hw->INSTRCTRL.reg=tmp;
 
-    //Instrukcio frame regiszter beallitasa. A cmd.ben talalhato bitmezo fele-
+    //Instrukcio frame regiszter beallitasa. A cmd-ben talalhato bitmezo fele-
     //pitese megegyezik a regiszter bitjeinek a felepitesevel, igy abba az
     //azonnal beirhato.
     hw->INSTRFRAME.reg=cmd->instFrame.word;
@@ -109,6 +109,7 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
         uint32_t dumy=hw->INSTRFRAME.reg;
         (void) dumy;
 
+        //Ha van adatmozgatas, akkor valamelyik buffernek definialt kell lennie!
         ASSERT(cmd->txBuf || cmd->rxBuf);
 
         bool cacheEnabled=false;
@@ -133,6 +134,7 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
             MY_LEAVE_CRITICAL();
         }
 
+
         //irany szerinti adatmozgatas...
         if (cmd->txBuf)
         {   //Van kimeneti buffer. Kifele irunk...
@@ -147,7 +149,7 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
         }
 
         __DSB();
-        __ISB();
+        __ISB();        
 
         if (dev->disableCacheHandling==false)
         {
@@ -163,11 +165,10 @@ status_t MyQSPI_transfer(MyQSPI_t* dev, const MyQSPI_cmd_t* cmd)
                 CMCC->CTRL.bit.CEN = 1;
                 while (CMCC->SR.bit.CSTS==0) {}
             }
-            MY_ENTER_CRITICAL();
+            MY_LEAVE_CRITICAL();
         }
 
     } //if (cmd->inst_frame.bits.data_en)
-
 
     //transzfer lezarasa. (A driver ugy van beallitva, hogy a tranzakcio leza-
     //rasat a LASTXFER bit-el jelezzuk.)

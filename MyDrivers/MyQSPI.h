@@ -80,6 +80,7 @@ typedef struct
             /* Option Length */
             uint32_t opt_len : 2;
             /* Address Length */
+            //1: 32 bite,  0: 24 bit
             uint32_t addr_len : 1;
             /* Option Length */
             uint32_t reserved1 : 1;
