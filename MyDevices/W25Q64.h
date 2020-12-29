@@ -77,6 +77,12 @@ void W25Q64_exitQpiMode(W25Q64_t* dev);
 //Egyedi azonosito olvasasa.
 //Megjegyzes: Ezt csak standard SPI modban lehet kiolvasni
 void W25Q64_readUid(W25Q64_t* dev, uint8_t* buff, uint32_t length);
+
+//Eszkoz alacsony fogyasztasu modba leptetese
+void W25Q64_powerDown(W25Q64_t* dev);
+
+//Eszkoz alacsony fogyasztasu modbol ebresztese
+void W25Q64_powerUp(W25Q64_t* dev);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //W25Q64_H_

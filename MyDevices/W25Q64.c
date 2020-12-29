@@ -223,5 +223,15 @@ void W25Q64_readUid(W25Q64_t* dev, uint8_t* buff, uint32_t length)
     MyQSPI_transfer(dev->qspi, &cmd);
 }
 //------------------------------------------------------------------------------
+//Eszkoz alacsony fogyasztasu modba leptetese
+void W25Q64_powerDown(W25Q64_t* dev)
+{
+    W25Q64_writeReg(dev, 0xB9, NULL, 0);
+}
 //------------------------------------------------------------------------------
+//Eszkoz alacsony fogyasztasu modbol ebresztese
+void W25Q64_powerUp(W25Q64_t* dev)
+{
+    W25Q64_writeReg(dev, 0xAB, NULL, 0);
+}
 //------------------------------------------------------------------------------
