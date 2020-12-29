@@ -235,3 +235,87 @@ void W25Q64_powerUp(W25Q64_t* dev)
     W25Q64_writeReg(dev, 0xAB, NULL, 0);
 }
 //------------------------------------------------------------------------------
+//Olvasas (QPI-ben csak fast read alkalmazhato)
+void W25Q64_fastRead(W25Q64_t* dev,
+                     uint32_t address,
+                     void* buffer,
+                     uint32_t len)
+{
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 1,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_READ_ACCESS,
+        .instFrame.bits.dummy_cycles=2,
+        .instruction             = 0x0B,
+        .bufLen                  = len,
+        .rxBuf                   = buffer,
+        .address                 = address,
+    };
+
+    MyQSPI_transfer(dev->qspi, &cmd);
+}
+//------------------------------------------------------------------------------
+//Lap irasa
+void W25Q64_pageWrite(W25Q64_t* dev,
+                      uint32_t address,
+                      const void* buffer,
+                      uint32_t len)
+{
+    //iras engedelyezese
+    W25Q64_writeEnable(dev);
+
+    //iras
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 1,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_WRITE_ACCESS,
+        .instFrame.bits.dummy_cycles=0,
+        .instruction             = 0x02,
+        .bufLen                  = len,
+        .txBuf                   = buffer,
+        .address                 = address,
+    };
+
+    MyQSPI_transfer(dev->qspi, &cmd);
+
+    //varakozas, amig az irasi ciklus befejezodik...
+    while(W25Q64_isBusy(dev));
+}
+//------------------------------------------------------------------------------
+//Adott szamu szektor torlese
+void W25Q64_sectorErase(W25Q64_t* dev,
+                        uint32_t firstSector,
+                        uint32_t num)
+{
+    //iras engedelyezese
+    W25Q64_writeEnable(dev);
+
+    uint32_t address=firstSector;
+
+    //erase 1 sector...
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 0,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_WRITE_ACCESS,
+        .instFrame.bits.dummy_cycles=0,
+        .instruction             = 0x20,
+        .bufLen                  = 0,
+        .txBuf                   = NULL,
+        .address                 = address,
+    };
+    MyQSPI_transfer(dev->qspi, &cmd);
+
+    //varakozas, amig az irasi ciklus befejezodik...
+    while(W25Q64_isBusy(dev));
+
+}
+//------------------------------------------------------------------------------

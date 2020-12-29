@@ -83,6 +83,24 @@ void W25Q64_powerDown(W25Q64_t* dev);
 
 //Eszkoz alacsony fogyasztasu modbol ebresztese
 void W25Q64_powerUp(W25Q64_t* dev);
+
+//Olvasas (QPI-ben csak fast read alkalmazhato)
+void W25Q64_fastRead(W25Q64_t* dev,
+                     uint32_t address,
+                     void* buffer,
+                     uint32_t len);
+
+//Lap irasa
+void W25Q64_pageWrite(W25Q64_t* dev,
+                      uint32_t address,
+                      const void* buffer,
+                      uint32_t len);
+
+//Adott szamu szektor torlese
+void W25Q64_sectorErase(W25Q64_t* dev,
+                        uint32_t firstSector,
+                        uint32_t num);
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //W25Q64_H_
