@@ -9,12 +9,25 @@
 #include "W25Q64.h"
 #include <string.h>
 
+static void W25Q64_waitingForRady(W25Q64_t* dev);
 //------------------------------------------------------------------------------
 //Nor flash letrehozasa
-void W25Q64_create(W25Q64_t* dev, MyQSPI_t* qspi)
+void W25Q64_create(W25Q64_t* dev,
+                   MyQSPI_t* qspi,
+                   W25Q64_extWaitFunc_t* waitFunc,
+                   void* waitFunCallbackData)
 {
     memset(dev, 0, sizeof (W25Q64_t));
     dev->qspi=qspi;
+
+    if (waitFunc)
+    {   //A megadott varakozo ruton kerul hivasra a mukodes folyaman
+        dev->waitFunc=waitFunc;
+        dev->waitFuncCallbackData=waitFunCallbackData;
+    } else
+    {
+
+    }
 
     //kezdetben az eszkozt 1 bites modban eri el.
     dev->busWidth=MYQSPI_INST1_ADDR1_DATA1;
@@ -108,6 +121,21 @@ void W25Q64_writeStatus3(W25Q64_t* dev, uint8_t regValue)
     W25Q64_writeReg(dev, 0x11, &regValue, 1);
 }
 //------------------------------------------------------------------------------
+//Varakozas, hogy a chip elkeszuljon
+static void W25Q64_waitingForRady(W25Q64_t* dev)
+{
+    if (dev->waitFunc)
+    {   //Kulso tesztelo rutint kell hivni
+        dev->waitFunc(dev->waitFuncCallbackData);
+    } else
+    {   //Folyamatosan teszteli a chipet.
+        while(W25Q64_isBusy(dev))
+        {
+
+        }
+    }
+}
+//------------------------------------------------------------------------------
 //A flash foglaltsag lekerdezese
 bool W25Q64_isBusy(W25Q64_t* dev)
 {
@@ -119,7 +147,7 @@ bool W25Q64_isBusy(W25Q64_t* dev)
 void W25Q64_writeEnable(W25Q64_t* dev)
 {
     //Varakozas, amig az eszkoz foglalt...
-    while(W25Q64_isBusy(dev));
+    W25Q64_waitingForRady(dev);
 
     //Write enable parancs kiadasa
     W25Q64_writeReg(dev, 0x06, NULL, 0);
@@ -153,7 +181,7 @@ void W25Q64_qspiEnable(W25Q64_t* dev)
         W25Q64_writeStatus12(dev, status12);
 
         //Varakozas, amig az eszkoz foglalt...
-        while(W25Q64_isBusy(dev));
+        W25Q64_waitingForRady(dev);
     }
 }
 //------------------------------------------------------------------------------
@@ -173,7 +201,7 @@ void W25Q64_enterQpiMode(W25Q64_t* dev)
     W25Q64_writeReg(dev, 0x38, NULL, 0);
 
     //mind a 4 adatvonalat hasznaljuk
-    dev->busWidth=MYQSPI_INST4_ADDR4_DATA4;
+    dev->busWidth=MYQSPI_INST4_ADDR4_DATA4;       
 }
 //------------------------------------------------------------------------------
 //QPI modbol torteno kileptetes
@@ -240,7 +268,7 @@ void W25Q64_fastRead(W25Q64_t* dev,
                      uint32_t address,
                      void* buffer,
                      uint32_t len)
-{
+{    
     MyQSPI_cmd_t cmd=
     {
         .instFrame.bits.width    = dev->busWidth,
@@ -250,6 +278,29 @@ void W25Q64_fastRead(W25Q64_t* dev,
         .instFrame.bits.tfr_type = MYQSPI_READ_ACCESS,
         .instFrame.bits.dummy_cycles=2,
         .instruction             = 0x0B,
+        .bufLen                  = len,
+        .rxBuf                   = buffer,
+        .address                 = address,
+    };   
+
+    MyQSPI_transfer(dev->qspi, &cmd);
+}
+//------------------------------------------------------------------------------
+//Olvasas (SPI-ben)
+void W25Q64_read(W25Q64_t* dev,
+                 uint32_t address,
+                 void* buffer,
+                 uint32_t len)
+{
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 1,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_READ_ACCESS,
+        .instFrame.bits.dummy_cycles=0,
+        .instruction             = 0x03,
         .bufLen                  = len,
         .rxBuf                   = buffer,
         .address                 = address,
@@ -285,18 +336,14 @@ void W25Q64_pageWrite(W25Q64_t* dev,
     MyQSPI_transfer(dev->qspi, &cmd);
 
     //varakozas, amig az irasi ciklus befejezodik...
-    while(W25Q64_isBusy(dev));
+    W25Q64_waitingForRady(dev);
 }
 //------------------------------------------------------------------------------
-//Adott szamu szektor torlese
-void W25Q64_sectorErase(W25Q64_t* dev,
-                        uint32_t firstSector,
-                        uint32_t num)
+//4 kbyteos szektor torlese
+void W25Q64_sectorErase4k(W25Q64_t* dev, uint32_t address)
 {
     //iras engedelyezese
     W25Q64_writeEnable(dev);
-
-    uint32_t address=firstSector;
 
     //erase 1 sector...
     MyQSPI_cmd_t cmd=
@@ -315,7 +362,71 @@ void W25Q64_sectorErase(W25Q64_t* dev,
     MyQSPI_transfer(dev->qspi, &cmd);
 
     //varakozas, amig az irasi ciklus befejezodik...
-    while(W25Q64_isBusy(dev));
+    W25Q64_waitingForRady(dev);
+}
+//------------------------------------------------------------------------------
+//32kbyteos szektor torlese
+void W25Q64_blockErase32k(W25Q64_t* dev, uint32_t address)
+{
+    //iras engedelyezese
+    W25Q64_writeEnable(dev);
 
+    //erase 1 sector...
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 0,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_WRITE_ACCESS,
+        .instFrame.bits.dummy_cycles=0,
+        .instruction             = 0x52,
+        .bufLen                  = 0,
+        .txBuf                   = NULL,
+        .address                 = address,
+    };
+    MyQSPI_transfer(dev->qspi, &cmd);
+
+    //varakozas, amig az irasi ciklus befejezodik...
+    W25Q64_waitingForRady(dev);
+
+}
+//------------------------------------------------------------------------------
+//64kbyteos szektor torlese
+void W25Q64_blockErase64k(W25Q64_t* dev, uint32_t address)
+{
+    //iras engedelyezese
+    W25Q64_writeEnable(dev);
+
+    //erase 1 sector...
+    MyQSPI_cmd_t cmd=
+    {
+        .instFrame.bits.width    = dev->busWidth,
+        .instFrame.bits.inst_en  = 1,
+        .instFrame.bits.data_en  = 0,
+        .instFrame.bits.addr_en  = 1,
+        .instFrame.bits.tfr_type = MYQSPI_WRITE_ACCESS,
+        .instFrame.bits.dummy_cycles=0,
+        .instruction             = 0xd8,
+        .bufLen                  = 0,
+        .txBuf                   = NULL,
+        .address                 = address,
+    };
+    MyQSPI_transfer(dev->qspi, &cmd);
+
+    //varakozas, amig az irasi ciklus befejezodik...
+    W25Q64_waitingForRady(dev);
+}
+//------------------------------------------------------------------------------
+//teljes chip erase
+void W25Q64_chipErase(W25Q64_t* dev)
+{
+    //iras engedelyezese
+    W25Q64_writeEnable(dev);
+
+    W25Q64_writeReg(dev, 0xC7, NULL, 0);
+
+    //varakozas, amig az irasi ciklus befejezodik...
+    W25Q64_waitingForRady(dev);
 }
 //------------------------------------------------------------------------------

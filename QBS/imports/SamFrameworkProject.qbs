@@ -38,6 +38,10 @@ Project
     //libfixmath hasznalata (fix pontos MIT licences lib)
     property bool uselibfixmath: false
 
+    //spiffs opensource lib hasznalata
+    property bool useSpiffs: false
+
+
 	//Ha ez true, akkor az indulo (startup) fileokat az applikacionak kell 
 	//biztositani, es nem az kerul beforditasra, amit a CMSIS-ek biztositanak.
 	//Ez foleg bootloaderes applikaciok eseten szukseges.

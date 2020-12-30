@@ -9,8 +9,18 @@
 #include "MyQSPI.h"
 
 //Chipben tarolt egyedi azonosito hossza (byte-ban)
-#define W25Q64_UID_LENGTH   8
+#define W25Q64_UID_LENGTH               8
 
+//Iro lap merete
+#define W25Q64_PAGE_SIZE                256
+
+//A legkisebb egyben torolheto szektor merete
+#define W25Q64_MIN_ERASE_SECTOR_SIZE    4096
+//A chip ezen kivul rendelkezik 32kbyte es 64kbyte tovabba a teljes chipet
+//torlo erase lehetosegekkel
+
+//A chip elkeszultenek tesztelesehez kulso callback hivas funkcio
+typedef void W25Q64_extWaitFunc_t(void* callbackData);
 //------------------------------------------------------------------------------
 //W25Q64 valtozoi
 typedef struct
@@ -23,10 +33,17 @@ typedef struct
     //MYQSPI_INST4_ADDR4_DATA4
     uint32_t     busWidth;
 
+    //A chip elkeszultenek tesztelesehez kulso callback hivas funkcio
+    W25Q64_extWaitFunc_t* waitFunc;
+    void* waitFuncCallbackData;
+
 } W25Q64_t;
 //------------------------------------------------------------------------------
 //Nor flash letrehozasa
-void W25Q64_create(W25Q64_t* dev, MyQSPI_t* qspi);
+void W25Q64_create(W25Q64_t* dev,
+                   MyQSPI_t* qspi,
+                   W25Q64_extWaitFunc_t* waitFunc,
+                   void* waitFunCallbackData);
 
 //Regiszter olvasasa
 void W25Q64_readReg(W25Q64_t* dev, uint8_t instr, uint8_t* buff, uint32_t len);
@@ -90,17 +107,29 @@ void W25Q64_fastRead(W25Q64_t* dev,
                      void* buffer,
                      uint32_t len);
 
+//Olvasas (SPI-ben)
+void W25Q64_read(W25Q64_t* dev,
+                 uint32_t address,
+                 void* buffer,
+                 uint32_t len);
+
 //Lap irasa
 void W25Q64_pageWrite(W25Q64_t* dev,
                       uint32_t address,
                       const void* buffer,
                       uint32_t len);
 
-//Adott szamu szektor torlese
-void W25Q64_sectorErase(W25Q64_t* dev,
-                        uint32_t firstSector,
-                        uint32_t num);
+//4 kbyteos szektor torlese
+void W25Q64_sectorErase4k(W25Q64_t* dev, uint32_t address);
 
+//32 kbyteos szektor torlese
+void W25Q64_blockErase32k(W25Q64_t* dev, uint32_t address);
+
+//64 kbyteos szektor torlese
+void W25Q64_sectorErase64k(W25Q64_t* dev, uint32_t address);
+
+//teljes chip erase
+void W25Q64_chipErase(W25Q64_t* dev);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //W25Q64_H_

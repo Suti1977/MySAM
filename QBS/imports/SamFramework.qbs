@@ -55,6 +55,12 @@ ArmMcuProduct
             arr.push("USE_SYSTEMVIEW");
         }
 
+        //spiffs hasznalat jelezese
+        if (project.useSpiffs)
+        {   //Spiffs filerendszer kezelo hozzaadasa
+            arr.push("USE_SPIFFS");
+        }
+
         return arr;
     }
     //--------------------------------------------------------------------------
@@ -76,6 +82,12 @@ ArmMcuProduct
         if (project.uselibfixmath)
         {   //libfixmath fixpontos lib hozzaadasa
             arr.push(mywayPath+"/Thirdparty/libfixmath/libfixmath");
+        }
+
+        //spiffs hasznalat jelezese
+        if (project.useSpiffs)
+        {   //Spiffs filerendszer hozzaadasa
+            arr.push(mywayPath+"/Thirdparty/spiffs/src");
         }
 
         return arr;
