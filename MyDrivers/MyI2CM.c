@@ -296,7 +296,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 
         if (i2cm->transferDir==MYI2CM_DIR_RX)
         {
-            //Elore csokkentjuka  beolavsando byteok szamat, mivel a start
+            //Elore csokkentjuk a beolavsando byteok szamat, mivel a start
             //kiadasa azonnal egy olvasast is general majd.
             if (i2cm->leftByteCnt)
             {
