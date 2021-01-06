@@ -77,6 +77,9 @@ void MyCmdLine_feeding(MyCmdLine_t* cmd, char newChar)
         case CHAR_LF:  //Kocsi vissza
                     toBuffer=0;
                     break;
+
+        case 0:     //szemet lehet. nem kerul a bufferbe.
+                    return;
     }
 
 
@@ -174,6 +177,12 @@ static void MyCmdLine_tokenise(MyCmdLine_t* cmd)
                 cmd->argsCount++;
                 //tovabbi szokozek/tabok atugralasa
                 skip=1;
+                if (cmd->argsCount>=MY_CMDLINE_MAX_ARGUMENTS_COUNT)
+                {   //Nem kezel tobb argumentumot.
+                    //A tokenizalasnak vege. A tobbit eldobja.
+                    //TODO: esetleg lehetne jelezni valahol
+                    break;
+                }
                 continue;
             }
         } else
