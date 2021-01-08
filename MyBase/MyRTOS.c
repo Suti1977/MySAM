@@ -171,12 +171,14 @@ uint64_t MyRTOS_getTick(void)
     return Res;
 }
 //------------------------------------------------------------------------------
+#if( configUSE_TICKLESS_IDLE == 1 )
 //Tickless IDLE eseten hasznaljuk. Csak ugy mint az RTOS tick szamlalojat,
 //ugy a sajat tick szamlalot is adjusztalni kell, az idle-ben toltott idovel.
 static void inline MyRTOS_adjustMyTickCnt(uint32_t Adjust)
 {
     MyRTOS_tickCnt+=Adjust;
 }
+#endif
 //------------------------------------------------------------------------------
 //FreeRTOS tick-enkent meghivodo hook rutin. Ebben valositjuk meg a sajat
 //64 bites tick szamlalonkat.

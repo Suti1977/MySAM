@@ -81,7 +81,7 @@ typedef struct
 #define MYSPIM_CTRLA_CONFIG_MASK      (SERCOM_SPI_CTRLA_RUNSTDBY            | \
                                        SERCOM_SPI_CTRLA_IBON                | \
                                        SERCOM_SPI_CTRLA_DOPO_Msk            | \
-                                       SERCOM_SPI_CTRLA_DIPO_Msk            | \                                       
+                                       SERCOM_SPI_CTRLA_DIPO_Msk            | \
                                        SERCOM_SPI_CTRLA_DORD)
 //------------------------------------------------------------------------------
 //Seged makro, az SPI periferia BAUD regiszter ertekenek kiszamitasahoz.

@@ -129,10 +129,6 @@ status_t HDC1080_measure(HDC1080_t* dev,
 
     for(int i=0; i<40; i++)
     {
-        //regiszter cime (8 bites pointer)
-        uint8_t cmd[1];
-        cmd[0]= HDC1080_TEMPERATURE;
-
         //Olvasas...
         //Adatatviteli blokk leirok listajnak osszeallitasa.
         //(Ez a stcaken marad, amig le nem megy a transzfer!)

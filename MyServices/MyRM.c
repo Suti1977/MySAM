@@ -504,23 +504,25 @@ static inline void MyRM_sendNotify(MyRM_t* rm, uint32_t eventBits)
     xTaskNotify(rm->taskHandle, eventBits, eSetBits);
 }
 //------------------------------------------------------------------------------
+#if MyRM_TRACE
 static void MyRM_dumpResourceValues(resource_t* resource)
 {
     printf("::: %12s  [%-8s]:: {started:%x running:%x inited:%x error:%x done:%x haltReq:%x halted:%x run:%x} usageCnt:%2d  depCnt:%2d :::\n",
            resource->resourceName,
            MyRM_resourceStateStrings[resource->state],
-           resource->flags.started,
-           resource->flags.running,
-           resource->flags.inited,
-           resource->flags.error,
-           resource->flags.done,
-           resource->flags.haltReq,
-           resource->flags.halted,
-           resource->flags.run,
-           resource->usageCnt,
-           resource->depCnt
+           (int)resource->flags.started,
+           (int)resource->flags.running,
+           (int)resource->flags.inited,
+           (int)resource->flags.error,
+           (int)resource->flags.done,
+           (int)resource->flags.haltReq,
+           (int)resource->flags.halted,
+           (int)resource->flags.run,
+           (int)resource->usageCnt,
+           (int)resource->depCnt
           );
 }
+#endif
 //------------------------------------------------------------------------------
 //Eroforras managementet futtato taszk
 static void __attribute__((noreturn)) MyRM_task(void* taskParam)
@@ -950,8 +952,8 @@ stop_resource:
         printf("!!!MyRM: Sending requested status...\n");
         resource->flags.statusRequest=0;
 
-        resourceStatus_t resourceStatus;
-        switch(resource->state)
+        resourceStatus_t resourceStatus=RESOURCE_STOP;
+        switch((int)resource->state)
         {
             case RESOURCE_STATE_RUN:
                 resourceStatus=RESOURCE_RUN;
@@ -1346,13 +1348,14 @@ static void MyRM_resourceStatusCore(resource_t* resource,
                                     resourceStatus_t resourceStatus,
                                     status_t errorCode)
 {
+
+    #if MyRM_TRACE
     if (resourceStatus>ARRAY_SIZE(MyRM_resourceStatusStrings))
     {   //Olyan statusz kodot kapott, ami nincs definialva!
         ASSERT(0);
         return;
     }
 
-    #if MyRM_TRACE    
     printf("----RESOURCE STATUS (%s)[%s], errorCode:%d\n",
            resource->resourceName,
            MyRM_resourceStatusStrings[resourceStatus],
