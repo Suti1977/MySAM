@@ -34,6 +34,10 @@
 #define MY_PASTER( a, b )        a ## b
 #define MY_EVALUATOR( a, b )     MY_PASTER(a, b)
 
+//Definicio stringe alakitasa
+#define MY_STRINGIZE2(s) #s
+#define MY_STRINGIZE(s) MY_STRINGIZE2(s)
+
 //Fuggvenek visszateresi ertekenek tipusdefinicioja
 typedef int mystatus_t;
 
