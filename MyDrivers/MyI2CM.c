@@ -109,7 +109,7 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 //Stop feltetel generalasa a buszon
 static void MyI2CM_sendStop(SercomI2cm* hw)
 {
-    for(int i=0; i<100; i++) __NOP();
+    //for(int i=0; i<300; i++) __NOP();
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
     uint32_t tmp;
     while(hw->SYNCBUSY.reg !=0 );
