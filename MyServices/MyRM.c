@@ -949,7 +949,10 @@ stop_resource:
     if (resource->flags.statusRequest)
     {   //Valamelyik hasznaloja keri, hogy kuldjon az allapotarol statuszt.
 
+        #if MyRM_TRACE
         printf("!!!MyRM: Sending requested status...\n");
+        #endif
+
         resource->flags.statusRequest=0;
 
         resourceStatus_t resourceStatus=RESOURCE_STOP;
@@ -1907,7 +1910,9 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
 //Az eroforras ujrainditasanak kezdete
 static void MyRM_restartDo(resourceUser_t* user)
 {
+    #if MyRM_TRACE
     printf("___RESTART REQUEST___\n");
+    #endif
 
     //keres torlese
     user->restartRequestFlag=false;
