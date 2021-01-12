@@ -13,7 +13,7 @@
 //  Allapotot valtani a MySM_changeState() fuggvennyel, vagy a MYSM_NEW_STATE
 //  makroval lehet. Ez utobbi ki is lep a hivott allapotbol.
 //  Minden allapoton belul beallithato egy kilepesi fuggveny, melyet akkor hiv,
-//  ha uj alalpotba leptetjuk az allapotgepet. Beallitasa a MySM_setExitFunc()
+//  ha uj allapotba leptetjuk az allapotgepet. Beallitasa a MySM_setExitFunc()
 //  fugvenynel lehetseges. A fuggvenyt a hivasa utan elfelejti.
 //  Beallithato egy olyan fuggveny is, melyet minden futaskor/allapotvaltaskor
 //  meghiv. Ennek beallitasa a MySM_setAlwaysRunFunc() fugvenynel lehetseges.

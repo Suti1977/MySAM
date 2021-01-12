@@ -458,7 +458,7 @@ static void MyRM_deleteResourceFromProcessReqList(MyRM_t* rm, resource_t* resour
     } else
     {   //volt elotte a listaban
         if (next)
-        {   //Volt utanan is. (Ez egy kozbulso listaelem)
+        {   //Volt utanna is. (Ez egy kozbulso listaelem)
             next->processReqList.prev=(struct resource_t*) prev;
             prev->processReqList.next=(struct resource_t*) next;
         } else

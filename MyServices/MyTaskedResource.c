@@ -177,7 +177,7 @@ static void __attribute__((noreturn)) MyTaskedResource_task(void* taskParam)
         while(1)
         {
             if ((runStatusSended==false) && (control.run))
-            {   //nem volt meg a manager fele jelezve a "RUN" alalpot, viszont
+            {   //nem volt meg a manager fele jelezve a "RUN" allapot, viszont
                 //az eroforras mar mukodo jelzest mutat.
                 //Kibocsatja a jelzest a managernek
                 MyRM_resourceStatus(resource, RESOURCE_RUN, status);

@@ -366,7 +366,7 @@ void MyTimer_delete(MyTimer_t* timer)
     } else
     {   //Volt elotte a sorban timer.
         if (nextTimer)
-        {   //Volt utanan is. (Ez egy kozbulso listaelem)
+        {   //Volt utanna is. (Ez egy kozbulso listaelem)
             nextTimer->prev=(struct MyTimer_t*) prevTimer;
             prevTimer->next=(struct MyTimer_t*) nextTimer;
         } else
