@@ -10,8 +10,13 @@
 //  fuggveny is kilep.
 //  Az allapotvaltasokkor az MySM_t struktura "init" eleme true-ba all. Igy a
 //  frissen hivott allapot elvegezheti az inicializalasait.
-//  Allapotot valtani a MySM_ChangeState() fuggvennyel, vagy a MYSM_NEW_STATE
+//  Allapotot valtani a MySM_changeState() fuggvennyel, vagy a MYSM_NEW_STATE
 //  makroval lehet. Ez utobbi ki is lep a hivott allapotbol.
+//  Minden allapoton belul beallithato egy kilepesi fuggveny, melyet akkor hiv,
+//  ha uj alalpotba leptetjuk az allapotgepet. Beallitasa a MySM_setExitFunc()
+//  fugvenynel lehetseges. A fuggvenyt a hivasa utan elfelejti.
+//  Beallithato egy olyan fuggveny is, melyet minden futaskor/allapotvaltaskor
+//  meghiv. Ennek beallitasa a MySM_setAlwaysRunFunc() fugvenynel lehetseges.
 //------------------------------------------------------------------------------
 #include "MySM.h"
 #include <string.h>
@@ -51,12 +56,27 @@ static status_t MySM_dummyState(struct MySM_t* sm)
 }
 //------------------------------------------------------------------------------
 //Allapotot valto rutin.
-void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState)
+void MySM_changeState(MySM_t* sm, MySM_stateFunc_t* newState)
 {
     sm->newState=newState;
     //Eloirjuk, hogy uj allapot eseten (vagy ha ugyan az az allapot is marad, de
     //ezt a fuggvenyt meghivtak), hogy inicializalja az allapotot.
     sm->init=true;
+}
+//------------------------------------------------------------------------------
+//Allapot elhagyasakor hivando fuggveny beallitasa
+//Allapotokon belul is hivhato.
+void MySM_setExitFunc(MySM_t* sm, MySM_stateExitFunc* exitFunc)
+{
+    sm->exitFunc=exitFunc;
+}
+//------------------------------------------------------------------------------
+//Az allapotgep belso ciklusaban, minden allapotvaltas vagy allapot futtatas
+//elott meghivodo fuggevny beallitasa.
+//Allapotokon belul is hivhato.
+void MySM_setAlwaysRunFunc(MySM_t* sm, MySM_alwaysRunFunc* alwaysRunFunc)
+{
+    sm->alwaysRunFunc=alwaysRunFunc;
 }
 //------------------------------------------------------------------------------
 //Allapotgep futtatasa.
@@ -67,6 +87,15 @@ status_t MySM_run(MySM_t* sm)
     //Ciklus mindaddig, amig van uj allapotvaltas...
     while(1)
     {
+        //Minden allapot futtataskor, vagy valtaskor lefuttatando fuggveny
+        //meghivasa, ha az definialt.
+        if (sm->alwaysRunFunc)
+        {
+            status=sm->alwaysRunFunc((struct MySM_t*) sm);
+            //Hiba eseten kilepes a hibakoddal
+            if (status) break;
+        }
+
         if (sm->newState)
         {   //Van eloirva allapotvaltas. Ellenorizzuk, hogy nem e ugyan az, mint
             //ami fut...
@@ -78,6 +107,8 @@ status_t MySM_run(MySM_t* sm)
 
                 //Az uj allapot lesz aktiv...
                 sm->state=sm->newState;
+                //Kilepesi fuggvenyt toroljuk.
+                sm->exitFunc=NULL;
             }
 
             //Kerelem torlese
@@ -89,21 +120,34 @@ status_t MySM_run(MySM_t* sm)
             if (sm->state==NULL) sm->state=MySM_dummyState;
         }
 
+
         //Allapothoz tartozo funkcio meghivsa...
         status=sm->state((struct MySM_t*) sm);
 
         //Korabban beallitott init jelzes torlese.
         sm->init=false;
 
+        //Hiba eseten kilepes a hibakoddal
+        if (status) break;
+
         if (sm->newState)
         {   //Van eloirva uj allapot
             if (sm->newState==sm->state)
-            {   //Ha ugyan az az allpot, mint ami most fut, akkor nincs mit
+            {   //Ha ugyan az az allapot, mint ami most fut, akkor nincs mit
                 //tenni. Kilepunk. Majd a kovetkezo korben futhat.
                 break;
             }
-            //Uj allapot van eloirva. Ugras a ciklus elejere, es az uj allapot
-            //kiertekelese...
+            //Uj allapot van eloirva.
+
+            //Ha van kilepesi fuggeveny, akkor azt meghivja
+            if (sm->exitFunc)
+            {
+                status=sm->exitFunc((struct MySM_t*) sm);
+                //A kilepesi fuggevnyt toroljuk.
+                sm->exitFunc=NULL;
+            }
+
+            //Ugras a ciklus elejere, es az uj allapot kiertekelese...
             continue;
 
         } else

@@ -10,8 +10,13 @@
 //  fuggveny is kilep.
 //  Az allapotvaltasokkor az MySM_t struktura "init" eleme true-ba all. Igy a
 //  frissen hivott allapot elvegezheti az inicializalasait.
-//  Allapotot valtani a MySM_ChangeState() fuggvennyel, vagy a MYSM_NEW_STATE
+//  Allapotot valtani a MySM_changeState() fuggvennyel, vagy a MYSM_NEW_STATE
 //  makroval lehet. Ez utobbi ki is lep a hivott allapotbol.
+//  Minden allapoton belul beallithato egy kilepesi fuggveny, melyet akkor hiv,
+//  ha uj alalpotba leptetjuk az allapotgepet. Beallitasa a MySM_setExitFunc()
+//  fugvenynel lehetseges. A fuggvenyt a hivasa utan elfelejti.
+//  Beallithato egy olyan fuggveny is, melyet minden futaskor/allapotvaltaskor
+//  meghiv. Ennek beallitasa a MySM_setAlwaysRunFunc() fugvenynel lehetseges.
 //------------------------------------------------------------------------------
 #ifndef MY_SM_H_
 #define MY_SM_H_
@@ -22,6 +27,11 @@ struct MySM_t;
 
 //Allapotokhoz tartozo fuggvenyek felepitese
 typedef status_t MySM_stateFunc_t(struct MySM_t* sm);
+//Az allapotok elhagyasakor hivhato fuggveny definialasa
+typedef status_t MySM_stateExitFunc(struct MySM_t* sm);
+//Az allapotgep belso ciklusaban, minden allapotvaltas vagy allapot futtatas
+//elott meghivodo fuggevny definicioja
+typedef status_t MySM_alwaysRunFunc(struct MySM_t* sm);
 //------------------------------------------------------------------------------
 //MySM valtozoi
 typedef struct _MySM
@@ -31,7 +41,15 @@ typedef struct _MySM
     //Aktualis allapotra mutato pointer
     MySM_stateFunc_t* state;
 
-    //Tetszolegesen beallithato valtozo. Az allapotgep allpotaiban az "sm"
+    //Az allapotok elhagyasakor hivhato fuggveny.
+    //Az allapotbol torteno kilepes utan torlodik.
+    MySM_stateExitFunc* exitFunc;
+
+    //Az allapotgep belso ciklusaban, minden allapotvaltas vagy allapot futtatas
+    //elott meghivodo fuggevny. Ha ez nem NULL, akkor hivja.
+    MySM_alwaysRunFunc* alwaysRunFunc;
+
+    //Tetszolegesen beallithato valtozo. Az allapotgep allapotaiban az "sm"
     //mezobol kiolvashato.
     void* userData;
 
@@ -48,13 +66,22 @@ status_t MySM_run(MySM_t* sm);
 
 
 //Allapotot valto rutin.
-void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState);
+void MySM_changeState(MySM_t* sm, MySM_stateFunc_t* newState);
+
+//Allapot elhagyasakor hivando fuggveny beallitasa.
+//Allapotokon belul is hivhato.
+void MySM_setExitFunc(MySM_t* sm, MySM_stateExitFunc* exitFunc);
+
+//Az allapotgep belso ciklusaban, minden allapotvaltas vagy allapot futtatas
+//elott meghivodo fuggevny beallitasa.
+//Allapotokon belul is hivhato.
+void MySM_setAlwaysRunFunc(MySM_t* sm, MySM_alwaysRunFunc* alwaysRunFunc);
 
 //Az allapotokban egyszerubb allapotvaltast leiro makro.
 //A makro kStatus_Succes-el ki is lep a futtatott allapotbol
 //Fontos, hogy az allapotgep handlere az "sm" valtozonevet hasznlja!
 #define MYSM_NEW_STATE(newState)                   \
-        MySM_ChangeState((MySM_t*)sm, newState); \
+        MySM_changeState((MySM_t*)sm, newState); \
         return kStatus_Success
 
 //Egy makro, mely visszaadja az initkor beallitott userData parametrert.
@@ -66,8 +93,20 @@ void MySM_ChangeState(MySM_t* sm, MySM_stateFunc_t* newState);
 #define MYSM_STATE_INIT()     (((MySM_t*)sm)->init)
 
 //Makro, mely segit letrehozni az allapotfuggvenyeket
+//MySM_stateFunc_t
 #define MYSM_STATE(functionName) \
     status_t functionName (struct MySM_t* sm)
+
+//Makro, mely segit letrehozni az allapotok elhagyasakor hivhato fuggevnyeket
+//MySM_stateExitFunc
+#define MYSM_STATE_EXIT_FUNC(functionName) \
+    status_t functionName (struct MySM_t* sm)
+
+//Makro, mely segit letrehozni az allapotgepben mindig lefutatott fuggvenyt
+//MySM_alwaysRunFunc
+#define MYSM_ALWAYS_RUN_FUNC(functionName) \
+    status_t functionName (struct MySM_t* sm)
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MY_SM_H_
