@@ -39,7 +39,7 @@ static void MySWI_wState_readBit_releaseWire(MySWI_Driver_t* driver);
 static void MySWI_wState_readBit_samplingWire(MySWI_Driver_t* driver);
 static void MySWI_wState_writeBit_driveWire(MySWI_Driver_t* driver);
 static void MySWI_wState_writeBit_releaseWire(MySWI_Driver_t* driver);
-//Fo allapotgephez tartozo allpotok fuggvenyei
+//Fo allapotgephez tartozo allapotok fuggvenyei
 static void MySWI_mState_checkDiscoveryBit(MySWI_Driver_t* driver);
 static void MySWI_startCondition(MySWI_Driver_t* driver);
 static void MySWI_mState_sendByte(MySWI_Driver_t* driver);

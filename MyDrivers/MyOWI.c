@@ -40,7 +40,7 @@ static void MyOWI_wState_readBit_samplingWire(MyOWI_Driver_t* driver);
 static void MyOWI_wState_writeBit_driveWire(MyOWI_Driver_t* driver);
 static void MyOWI_wState_writeBit_releaseWire(MyOWI_Driver_t* driver);
 
-//Fo allapotgephez tartozo allpotok fuggvenyei
+//Fo allapotgephez tartozo allapotok fuggvenyei
 static void MyOWI_mState_sendByte(MyOWI_Driver_t* driver);
 static void MyOWI_mState_byteSent(MyOWI_Driver_t* driver);
 static void MyOWI_readByte(MyOWI_Driver_t* driver);
