@@ -94,19 +94,19 @@ void MyEIC_getDefaultChannelConfig(MyEIC_ChannelConfig_t* cfg);
 //megszakitasi  vonal engedelyezese
 static inline void MyEIC_enableExtInt(uint8_t channel)
 {
-    EIC->INTENSET.reg = 1 << channel;
+    EIC->INTENSET.reg = 1ul << channel;
 }
 
 //megszakitasi vonal tiltasa
 static inline void MyEIC_disableExtInt(uint8_t channel)
 {
-    EIC->INTENCLR.reg = 1 << channel;
+    EIC->INTENCLR.reg = 1ul << channel;
 }
 
 //megszakitasi flag torlese
 static inline void MyEIC_clearExtIntFlag(uint8_t channel)
 {
-    EIC->INTFLAG.reg = 1 << channel;
+    EIC->INTFLAG.reg = 1ul << channel;
 }
 
 //------------------------------------------------------------------------------

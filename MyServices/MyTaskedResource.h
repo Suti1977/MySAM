@@ -150,6 +150,20 @@ void MyTaskedResource_setEvent(resource_t* resource, uint32_t event)
     //                   event);
     xTaskNotify(MyTaskedResource_getTaskHandler(resource), event, eSetBits);
 }
+//A taszkkal bovitett eroforras taszkjanak esemeny(notify) kuldese megszakitasbol
+static inline
+void MyTaskedResource_setEventFromIsr(resource_t* resource, uint32_t event)
+{
+    BaseType_t higherPriorityTaskWoken=pdFALSE;
+    //xEventGroupSetBits(((taskedResourceExtension_t*)resource->ext)->events,
+    //                   event);
+    xTaskNotifyFromISR(MyTaskedResource_getTaskHandler(resource),
+                       event,
+                       eSetBits,
+                       &higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(higherPriorityTaskWoken)
+}
+
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
