@@ -1014,7 +1014,7 @@ stop_resource:
 static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
 {        
     //Kell ellenorizni az eroforras leallitasra, vagy inditasra?
-    //Amig iylen jellegu kereseket allit be, akar statusz, akar a kiertekelo
+    //Amig ilyen jellegu kereseket allit be, akar statusz, akar a kiertekelo
     //logika (MyRM_checkStartStop), addig a kiertekelest ujra le kell futtatni.
     while(resource->flags.checkStartStopReq)
     {
