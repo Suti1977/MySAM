@@ -1,1 +1,1 @@
-Ebbe a mappába kerül az Atmel Start segítségével a web felületen összekattogtaott csomag.
+Ebbe a mappába kerül az Atmel Start segítségével a web felületen összekattogtatott csomag.
