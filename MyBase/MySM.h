@@ -80,7 +80,7 @@ void MySM_setAlwaysRunFunc(MySM_t* sm, MySM_alwaysRunFunc* alwaysRunFunc);
 //Az allapotokban egyszerubb allapotvaltast leiro makro.
 //A makro kStatus_Succes-el ki is lep a futtatott allapotbol
 //Fontos, hogy az allapotgep handlere az "sm" valtozonevet hasznlja!
-#define MYSM_NEW_STATE(newState)                   \
+#define MYSM_CHANGE_STATE(newState)                   \
         MySM_changeState((MySM_t*)sm, newState); \
         return kStatus_Success
 
