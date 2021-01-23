@@ -27,7 +27,7 @@
 
 //BIT-re maszkot eloallito seged makro
 #ifndef BIT
-#define BIT(a)  (1U << a)
+#define BIT(a)  (1ULL << a)
 #endif
 
 //Deffiniciok osszefuzesehez haszanlhato makrok
