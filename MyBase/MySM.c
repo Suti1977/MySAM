@@ -101,6 +101,14 @@ status_t MySM_run(MySM_t* sm)
             //ami fut...
             if (sm->newState != sm->state)
             {   //Ez egy uj allapot
+
+                //Ha az elozo allapothoz van kilepesi fuggeveny, akkor azt
+                //meghivja
+                if (sm->exitFunc)
+                {
+                    status=sm->exitFunc((struct MySM_t*) sm);
+                }
+
                 //Jelezni fogjuk az uj allapotnak, hogy ha kell inicializaljon,
                 //mert ez az elso futtatasa
                 sm->init=true;

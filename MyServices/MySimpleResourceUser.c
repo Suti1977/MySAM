@@ -113,6 +113,8 @@ void MySimpleResourceUser_delete(simpleResourceUser_t* user)
 //------------------------------------------------------------------------------
 //Eroforras hasznalatba vetele. A rutin megvarja, amig az eroforras elindul,
 //vagy hibara nem fut az inditasi folyamatban valami miatt.
+//Ha egy use varokozas kozben (tehat varunk az eroforras elindulasara), egy
+//masik taszkbol egy unuse erkezik, a rutin akkor is ki fog lepni.
 status_t MySimpleResourceUser_use(simpleResourceUser_t* user)
 {
     status_t status=kStatus_Success;
@@ -129,7 +131,11 @@ status_t MySimpleResourceUser_use(simpleResourceUser_t* user)
 
     //Varakozas, hogy megjojjon az inditasi folyamtrol a statusz.
     //TODO: timeoutot belefejleszteni?
+    //Ha egy use varokozas kozben (tehat varunk az eroforras elindulasara), egy
+    //masik taszkbol egy unuse erkezik, a rutin akkor is ki fog lepni. Ezt
+    //biztositja a SIMPLE_USER_EVENT__STOP flag figelese.
     EventBits_t Events=xEventGroupWaitBits( user->events,
+                                            SIMPLE_USER_EVENT__STOP |   //!!!
                                             SIMPLE_USER_EVENT__RUN |
                                             SIMPLE_USER_EVENT__ERROR,
                                             pdTRUE,

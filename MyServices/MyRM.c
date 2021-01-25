@@ -1662,7 +1662,7 @@ void MyRM_unuseResource(resourceUser_t* user)
             MyRM_stopDependency(&user->dependency);
 
             //Jelzes a taszknak...
-            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_USE);
+            MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_UNUSE);
 
             break;
 
