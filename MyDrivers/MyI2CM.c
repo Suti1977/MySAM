@@ -109,12 +109,12 @@ static void MyI2CM_initSercom(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 //Stop feltetel generalasa a buszon
 static void MyI2CM_sendStop(SercomI2cm* hw)
 {
-    //for(int i=0; i<300; i++) __NOP();
+    for(int i=0; i<300; i++) __NOP();
     //0x03 irasa a parancs regiszterbe STOP-ot general az eszkoz.
     uint32_t tmp;
-    while(hw->SYNCBUSY.reg !=0 );
+    //while(hw->SYNCBUSY.reg !=0 );
     tmp = hw->CTRLB.reg;
-    tmp &= ~(SERCOM_I2CM_CTRLB_CMD_Msk /*| SERCOM_I2CM_CTRLB_ACKACT*/);
+    //tmp &= ~(SERCOM_I2CM_CTRLB_CMD_Msk /*| SERCOM_I2CM_CTRLB_ACKACT*/);
     tmp |= SERCOM_I2CM_CTRLB_CMD(0x03);
     hw->CTRLB.reg =tmp;
     __DMB();
@@ -349,15 +349,15 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
         //RX eseten az utolso byte-ot most lehet kiolvasni.
         if (i2cm->transferDir==MYI2CM_DIR_RX)
         {                        
-            while(hw->SYNCBUSY.reg !=0 );
             if (i2cm->dataPtr)
             {   //Van buffer az adatoknak
                 *i2cm->dataPtr=hw->DATA.reg & 0xff;
             } else
             {   //nincs buffer. Csak olvassuk a regisztert.
                 volatile uint8_t dummyRead=hw->DATA.reg & 0xff;
-                (void)dummyRead;
+                //(void)dummyRead;
             }
+            while(hw->SYNCBUSY.reg !=0 );
         }
 
 
@@ -365,7 +365,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
         MyI2CM_end(i2cm);
 
     } else
-    {   //Vam meg hatra block.
+    {   //Van meg hatra block.
 
         //A jelenlegi iranynak megfelelo folyamatotot kell folytatni?
         if (i2cm->last==false)
@@ -436,6 +436,7 @@ static void MyI2CM_startNextXferBlock(MyI2CM_t* i2cm, bool first)
 
                     //utolso byte mentese a bufferbe
                     *savedReadPtr=hw->DATA.reg & 0xff;
+                    savedReadPtr=NULL;
                 }
             }
 
@@ -558,7 +559,11 @@ void MyI2CM_service(MyI2CM_t* i2cm)
         {   //Az utolso adatbyte olvasasa fog indulni, ha a DATA regisztert
             //kiolvassuk. Ezert meg elotte be kell allitani, hogy NACK-t adjon
             //majd arra a periferia.
-            hw->CTRLB.bit.ACKACT=1; __DMB();
+            uint32_t regval;
+            regval=hw->CTRLB.reg;
+            regval |= SERCOM_I2CM_CTRLB_ACKACT;
+            hw->CTRLB.reg=regval;
+            __DMB();
             while(hw->SYNCBUSY.reg);
         }
 
@@ -575,8 +580,8 @@ void MyI2CM_service(MyI2CM_t* i2cm)
 
             //beerkezett adatbyte olvasasa a periferiarol. A SMART mode miatt
             //azonanl elindul a kovetkezo adatbyte olvasasa is.
-            while(hw->SYNCBUSY.reg);
             *i2cm->dataPtr++ = (uint8_t) hw->DATA.reg;
+            while(hw->SYNCBUSY.reg);
 
             //Hatralevo byteok szamanak csokkenetese...
             i2cm->leftByteCnt--;
