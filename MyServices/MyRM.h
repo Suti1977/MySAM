@@ -217,7 +217,7 @@ typedef struct
     //Az eroforrashoz tartozo fuggosegek szama.
     uint32_t        depCount;
     //A meg inditasra varo fuggosegek szamat nyilvantaro szamlalo.
-    //Ha erteke 0-ra csokken, akkor az eroforras mukodesehez tratozo egyeb
+    //Ha erteke 0-ra csokken, akkor az eroforras mukodesehez tartozo egyeb
     //fuggosegek elindultak, es az eroforras is indithato.
     uint32_t        depCnt;
 
