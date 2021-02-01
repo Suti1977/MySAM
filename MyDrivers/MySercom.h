@@ -37,8 +37,12 @@ typedef struct
     uint8_t sercomNr;
     //A sercom Core orajelehez rendelt GCLK modul sorszama
     uint8_t gclkCore;
+    //Core orajel frekvenciaja
+    uint32_t coreFreq;
     //A sercom Slow orajelehez rendelt GCLK modul sorszama
     uint8_t gclkSlow;
+    //Slow orajel frekvenciaja
+    uint32_t slowFreq;
     //A sercomhoz tartozo IRQ vonalak prioritasa
     uint32_t irqPriorites;
 } MySercom_Config_t;
@@ -52,6 +56,15 @@ typedef struct
 
     //A sercom informacios blokkjara mutat
     const MySercom_Info_t*   info;
+
+    //A sercom Core orajelehez rendelt GCLK modul sorszama
+    uint8_t gclkCore;
+    //Core orajel frekvenciaja
+    uint32_t coreFreq;
+    //A sercom Slow orajelehez rendelt GCLK modul sorszama
+    uint8_t gclkSlow;
+    //Slow orajel frekvenciaja
+    uint32_t slowFreq;
 } MySercom_t;
 //------------------------------------------------------------------------------
 //Sercom driver kezdeti inicializalasa

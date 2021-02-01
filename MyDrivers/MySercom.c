@@ -97,6 +97,15 @@ void MySercom_init(MySercom_t* sercom, const MySercom_Config_t* config)
     *sercomInfo->mclkApbMaskReg |= sercomInfo->mclkApbMask;
     MY_LEAVE_CRITICAL();
 
+    //A sercom Core orajelehez rendelt GCLK modul sorszama
+    sercom->gclkCore=config->gclkCore;
+    //Core orajel frekvenciaja
+    sercom->coreFreq=config->coreFreq;
+    //A sercom Slow orajelehez rendelt GCLK modul sorszama
+    sercom->gclkSlow=config->gclkSlow;
+    //Slow orajel frekvenciaja
+    sercom->slowFreq=config->slowFreq;
+
     //A Sercom Core es Slow orajeleinek bekotese a GCLK modulok valamelyikehez,
     //a configok alapjan.
     MyGclk_setPeripherialClock(sercomInfo->gclkId_Core, config->gclkCore);

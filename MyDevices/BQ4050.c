@@ -34,8 +34,8 @@ status_t BQ4050_readRegs(BQ4050_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, (uint8_t*) buffer, length},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, (uint8_t*) buffer, length},
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -64,8 +64,8 @@ status_t BQ4050_writeReg16(BQ4050_t* dev, uint8_t regAddress, uint16_t regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 2           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,                 sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&regValue, 2           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

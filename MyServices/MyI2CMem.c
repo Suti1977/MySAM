@@ -43,11 +43,11 @@ status_t MyI2CMem_read(MyI2CMem_t* mem,
     MyI2CM_xfer_t xferBlocks[]=
     {
         //Cim kiirasa. Ez a konfiguracio szerinti hosszusagu lehet
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX,
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX,
                        ((uint8_t*)&address+4)-mem->addressFieldSize,
                        mem->addressFieldSize},
         //Adattartalom
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, data, length }
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, data, length }
     };
 
     //I2C mukodes kezdemenyezese.
@@ -102,11 +102,11 @@ status_t MyI2CMem_write(MyI2CMem_t* mem,
         MyI2CM_xfer_t xferBlocks[]=
         {
             //Cim kiirasa. Ez a konfiguracio szerinti hosszusagu lehet
-            (MyI2CM_xfer_t){MYI2CM_DIR_TX,
+            (MyI2CM_xfer_t){MYI2CM_FLAG_TX,
                            ((uint8_t*)&addr + 4) - mem->addressFieldSize,
                            mem->addressFieldSize},
             //Adattartalom
-            (MyI2CM_xfer_t){MYI2CM_DIR_TX, data, writeLen }
+            (MyI2CM_xfer_t){MYI2CM_FLAG_TX, data, writeLen }
         };
 
         //I2C muvelet kezdemenyezese.

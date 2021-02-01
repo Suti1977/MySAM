@@ -33,8 +33,8 @@ status_t TMP1075_read(TMP1075_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff, length           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, buff, length           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -60,8 +60,8 @@ status_t TMP1075_writeReg(TMP1075_t* dev, uint8_t address, uint16_t regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 2           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,                 sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&regValue, 2           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -85,8 +85,8 @@ status_t TMP1075_readReg(TMP1075_t* dev, uint8_t address, uint16_t* regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, (uint8_t*)&temp,     2           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,                 sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, (uint8_t*)&temp,     2           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

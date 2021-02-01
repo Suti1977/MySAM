@@ -42,8 +42,8 @@ status_t BQ25700_readRegs(BQ25700_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, (uint8_t*) buffer, length},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, (uint8_t*) buffer, length},
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -72,8 +72,8 @@ status_t BQ25700_writeReg16(BQ25700_t* dev, uint8_t regAddress, uint16_t regValu
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 2           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,                 sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&regValue, 2           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

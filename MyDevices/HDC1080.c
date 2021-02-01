@@ -34,8 +34,8 @@ status_t HDC1080_read(HDC1080_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff, length           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, buff, length           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -61,8 +61,8 @@ status_t HDC1080_writeReg(HDC1080_t* dev, uint8_t address, uint16_t regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,                 sizeof(cmd) },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 2           },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,                 sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&regValue, 2           },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -84,7 +84,7 @@ status_t HDC1080_startMeasure(HDC1080_t* dev)
 
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd, sizeof(cmd) },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd, sizeof(cmd) },
     };
 
     //I2C mukodes kezdemenyezese.
@@ -114,6 +114,9 @@ status_t HDC1080_measure(HDC1080_t* dev,
     status=HDC1080_startMeasure(dev);
     if (status)  goto error;
 
+    //Tapasztalat. Ha itt nem varunk, akkor az eszkoz kesobb NACK-t fog adni.
+    vTaskDelay(20);
+
     union
     {
         uint8_t buff[4];
@@ -127,14 +130,14 @@ status_t HDC1080_measure(HDC1080_t* dev,
     } result;
 
 
-    for(int i=0; i<40; i++)
+    for(int i=0; i<10; i++)
     {
         //Olvasas...
         //Adatatviteli blokk leirok listajnak osszeallitasa.
         //(Ez a stcaken marad, amig le nem megy a transzfer!)
         MyI2CM_xfer_t xferBlocks[]=
         {
-            (MyI2CM_xfer_t){MYI2CM_DIR_RX, result.buff, sizeof(result) },
+            (MyI2CM_xfer_t){MYI2CM_FLAG_RX, result.buff, sizeof(result) },
         };
         //I2C mukodes kezdemenyezese.
         //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
