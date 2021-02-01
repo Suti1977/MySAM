@@ -18,6 +18,9 @@ void MyGPIO_initPorts(void)
     PORT->Group[PORT_A].CTRL.bit.SAMPLING = 0xffffffff;
     PORT->Group[PORT_B].CTRL.bit.SAMPLING = 0xffffffff;
     PORT->Group[PORT_C].CTRL.bit.SAMPLING = 0xffffffff;
+#ifdef PORT_D
+    PORT->Group[PORT_D].CTRL.bit.SAMPLING = 0xffffffff;
+#endif
 
 }
 //------------------------------------------------------------------------------
