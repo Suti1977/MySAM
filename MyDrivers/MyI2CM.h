@@ -32,37 +32,6 @@ typedef struct
 
 } MyI2CM_Config_t;
 //------------------------------------------------------------------------------
-//Seged makro, az I2C periferia BAUDLOW ertekenek kiszamitasahoz.
-//  (ASF-bol vett megoldas)
-//
-//                  gclk_freq - (i2c_scl_freq * 10) - (gclk_freq * i2c_scl_freq * Trise)
-// BAUD + BAUDLOW = --------------------------------------------------------------------
-//                  i2c_scl_freq
-//
-// BAUD:    register value low  [7:0]
-// BAUDLOW: register value high [15:8], only used for odd BAUD + BAUDLOW
-//
-//
-// gclkfreq: A sercom Core orajelehez rendelt GCLK modul kimeneti frekvenciaja
-// baud:     Az I2C busz sebesseg
-// trise:    rise time ido [ns-ban]. 215-300 us kozott lehet!
-
-#define MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise)                           \
-                            (((gclkfreq - (baud * 10U)                       \
-                               - (trise * (baud / 100U) * (gclkfreq / 10000U)\
-                                  / 1000U))                                  \
-                                  * 10U                                      \
-                                  + 5U)                                      \
-                                  / (baud * 10U))
-
-#define MYI2CM_CALC_BAUDVALUE(gclkfreq, baud, trise)                        \
-        ((  MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise) & 0x1)               \
-         ? (MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise) / 2) +               \
-          ((MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise) / 2 + 1) << 8)       \
-         : (MYI2CM_CALC_BAUDLOW(gclkfreq, baud, trise) / 2))
-
-
-//------------------------------------------------------------------------------
 //I2C master modot befolyasolo konfiguracios attributumok, melyeket a periferia
 //konfiguraciojanal hasznalunk az Attribs mezo feltoltesere.
 //Az egyes attributumok bitmaszkot kepeznek, igy azokat vagy kapcsolattal
@@ -127,7 +96,7 @@ typedef struct
                                        SERCOM_I2CM_CTRLA_INACTOUT_Msk      | \
                                        SERCOM_I2CM_CTRLA_LOWTOUTEN)
 //------------------------------------------------------------------------------
-//Adatblokk atvitel iranyai
+//Adatblokk atvitel iranyai, egyeb flagek
 typedef enum
 {
     //Adat kiiras a buszon
@@ -136,26 +105,22 @@ typedef enum
     MYI2CM_DIR_RX=1,
     //10 bites cimzes eloirasa
     MYI2CM_FLAG_TENBIT=2,
-    //STOP feltetel eloirasa a leiro vegen
-    MYI2CM_FLAG_STOP=4,
-    //RESTART feltetel eloirasa a leiro vegen
-    MYI2CM_FLAG_RESTART=8,
-} MyI2CM_dir_t;
+} MyI2CM_flag_t;
 
-#define MYI2CM_DIR_MASK     1
 
 //I2C- buszon torteno adatblokk tranzakcios leiro. Ilyenekbol tobb felsorolhato,
 //melyet a driver egymas utan hajt vegre. Egy-egy ilyen leiro adat irast, vagy
 //olvasast is eloirhat.
 typedef struct
 {
-    //A blokk iranya
-    MyI2CM_dir_t   dir;
+    //A blokk iranya, es egyeb flagek
+    MyI2CM_flag_t  flags;
     //Az adatok helyere/celteruletere mutat
     uint8_t*       buffer;
     //A blokkban mozgatni kivant adatbyteok szama
     uint32_t       length;
 } MyI2CM_xfer_t;
+#define MYI2CM_DIR_MASK     1
 //------------------------------------------------------------------------------
 //MyI2CM valtozoi
 typedef struct
@@ -174,8 +139,6 @@ typedef struct
     //Az aktualisan vegrehajtott transzfer leirora mutat
     const MyI2CM_xfer_t* actualBlock;
 
-    //A kovetkezo vegrehajtando adatatatviteli leirora mutat
-    //const MyI2CM_xfer_t* nextBlock;
     //Ennyi blokk van meg hatra amit vegre kell hajtani
     uint32_t leftBlockCnt;
     //A kommunikaltatott I2C eszkoz slave cime.
@@ -186,28 +149,12 @@ typedef struct
     //A hatralevo adatbyteok szama
     uint32_t    leftByteCnt;
 
-    //Az aktualisan kuldes alatt allo adatblokk iranyat orzi.
-    //Ezt hasznalja arra, hogy tudja, hogy TX-bol RX-be valtunk, vagy forditva,
-    //es ezert restartot kell inditani.
-    //MyI2CM_dir_t    transferDir;
-
-    //true, ha egy iranyhoz tartozo utolso transzfer block vegrehajtasa van.
-    //Ez RX eseten az utolso olvasott byte eseten NACK kuldeset majd stop-ot
-    //jelent.
-    //bool    last;
-
-    //true, ha egy eszkozon be kell varni, amig vegez, es csak utana szabad
-    //lezarni a buszt a STOP kondicioval.
-    //Ez ott eredekes, ahol peldaul egy eszkoz NACK-val jelzi, ha egy muvelet
-    //miatt foglalt, es azt be kell varnunk, meg ugyan abban az I2C keretben.
-    //bool waitingWhileBusy;
-    //true, ha a foglaltsagra tesztelesi allapotban vagyunk
-    //bool busyTest;
-
     //Az I2C folyamatok alatt beallitott statusz, melyet az applikacio fele
     //visszaad.
     int     asyncStatus;
 
+    //A megszakitasban kiolvasott STATUS regiszter erteke.
+    uint32_t statusRegValue;
 
 } MyI2CM_t;
 //------------------------------------------------------------------------------
@@ -231,7 +178,6 @@ enum
     kMyI2CMStatus_MasterSclExtendTimeout,
     //Slave SCL Low Extend Timeout
     kMyI2CMStatus_SlaveSclLowExtendTimeout,
-
     //Hibas leiro
     kMyI2CMStatus_InvalidTransferDescriptor,
 };
