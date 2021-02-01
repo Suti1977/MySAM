@@ -20,7 +20,10 @@ typedef struct
     //A (kezdeti) adatatvitei sebesseghez tartozo BAUD ertek.
     //Ez fugg a Sercomhoz rendelt GCLK altal eloallitott orajel frekitol.
     //Kiszamitasa a MYI2CM_CALC_BAUDVALUE() makro segitsegevel egyszerubb.
-    uint32_t    baudValue;
+    //uint32_t    baudValue;
+
+    //Busz frekvencia/sebesseg
+    uint32_t busFreq;
 
     //Konfiguracios attributumok (bitmaszk mezo)
     //Az ertelmezett attributumok definicioit lasd lejebb, a "MYI2CM_ATTR_"
@@ -131,7 +134,15 @@ typedef enum
     MYI2CM_DIR_TX=0,
     //Adat olvasas a buszrol. (A logika kihasznalja, hogy az RX=1!!!)
     MYI2CM_DIR_RX=1,
+    //10 bites cimzes eloirasa
+    MYI2CM_FLAG_TENBIT=2,
+    //STOP feltetel eloirasa a leiro vegen
+    MYI2CM_FLAG_STOP=4,
+    //RESTART feltetel eloirasa a leiro vegen
+    MYI2CM_FLAG_RESTART=8,
 } MyI2CM_dir_t;
+
+#define MYI2CM_DIR_MASK     1
 
 //I2C- buszon torteno adatblokk tranzakcios leiro. Ilyenekbol tobb felsorolhato,
 //melyet a driver egymas utan hajt vegre. Egy-egy ilyen leiro adat irast, vagy
@@ -160,15 +171,15 @@ typedef struct
     #endif //USE_FREERTOS
 
 
-    //Az aktualisan vegrehajtott blokkra mutat
+    //Az aktualisan vegrehajtott transzfer leirora mutat
     const MyI2CM_xfer_t* actualBlock;
 
     //A kovetkezo vegrehajtando adatatatviteli leirora mutat
-    const MyI2CM_xfer_t* nextBlock;
+    //const MyI2CM_xfer_t* nextBlock;
     //Ennyi blokk van meg hatra amit vegre kell hajtani
     uint32_t leftBlockCnt;
-    //A kommunikaltatott I2C eszkoz slave cime
-    uint8_t  slaveAddress;
+    //A kommunikaltatott I2C eszkoz slave cime.
+    uint32_t  slaveAddress;
 
     //A blokkon beluli adatbyteokat cimzi
     uint8_t*    dataPtr;
@@ -178,20 +189,20 @@ typedef struct
     //Az aktualisan kuldes alatt allo adatblokk iranyat orzi.
     //Ezt hasznalja arra, hogy tudja, hogy TX-bol RX-be valtunk, vagy forditva,
     //es ezert restartot kell inditani.
-    MyI2CM_dir_t    transferDir;
+    //MyI2CM_dir_t    transferDir;
 
     //true, ha egy iranyhoz tartozo utolso transzfer block vegrehajtasa van.
     //Ez RX eseten az utolso olvasott byte eseten NACK kuldeset majd stop-ot
     //jelent.
-    bool    last;
+    //bool    last;
 
     //true, ha egy eszkozon be kell varni, amig vegez, es csak utana szabad
     //lezarni a buszt a STOP kondicioval.
     //Ez ott eredekes, ahol peldaul egy eszkoz NACK-val jelzi, ha egy muvelet
     //miatt foglalt, es azt be kell varnunk, meg ugyan abban az I2C keretben.
-    bool waitingWhileBusy;
+    //bool waitingWhileBusy;
     //true, ha a foglaltsagra tesztelesi allapotban vagyunk
-    bool busyTest;
+    //bool busyTest;
 
     //Az I2C folyamatok alatt beallitott statusz, melyet az applikacio fele
     //visszaad.
@@ -210,6 +221,19 @@ enum
     kMyI2CMStatus_BusError,
     //Arbitacio elvesztese
     kMyI2CMStatus_ArbitationLost,
+    //Low timeout
+    kMyI2CMStatus_LowTimeout,
+    //periferia LEN error
+    kMyI2CMStatus_LenError,
+    //SCL Low Timeout
+    kMyI2CMStatus_SclLowTimeout,
+    //Master SCL Low Extend Timeout
+    kMyI2CMStatus_MasterSclExtendTimeout,
+    //Slave SCL Low Extend Timeout
+    kMyI2CMStatus_SlaveSclLowExtendTimeout,
+
+    //Hibas leiro
+    kMyI2CMStatus_InvalidTransferDescriptor,
 };
 //------------------------------------------------------------------------------
 //  Altalanos I2C buszra kotott eszkozok elerese
@@ -244,38 +268,15 @@ void MyI2CM_createDevice(MyI2CM_Device_t* i2cDevice,
                          uint8_t slaveAddress,
                          void* handler);
 
-//Atviteli leirok listaja alapjan mukodes inditasa
+//Atviteli leirok listaja alapjan atvitel vegrehajtasa
 status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
                         const MyI2CM_xfer_t* xferBlocks, uint32_t blockCount);
 
 //Eszkoz elerhetoseg tesztelese. Nincs adattartalom.
 status_t MyI2CM_ackTest(MyI2CM_Device_t* i2cDevice);
 
-//I2C iras/olvasas rutin.
-//Blokkolos mukodes. Megvarja amig a transzfer befejezodik.
-//FIGYELEM!  a bemenetnek megadott buffereknek permanensen a memoriaban kell
-//          maradni, amig az I2C folyamat le nem zarul, mivel a rutin nem keszit
-//          masolatot a bemeno adatokrol.
-//i2cDevice: I2C eszkoz leiroja
-//txData1: Elso korben kiirando adatokra mutat
-//txLength1: Az elso korben kiirando adatbyteok szama
-//txData2: Masodik korben kiirando adatokra mutat
-//txLength2: A masodik korben kiirando adatbyteok szama
-//rxData:  Ide pakolja a buszrol olvasott adatbyteokat
-//         (Az olvasaskor erre a memoriateruletre pakolja a vett byteokat.)
-//rxLength: Ennyi byteot olvas be.
-//Visszaterse: hibakoddal, ha van.
-
-//Ha TxLength valtozok valamelyike 0, akkor azt kihagyja.
-//Ha RxLength nulla, akkor nem hajt vegre olvasast.
-//     Ha nem nulla, akkor az irasok utan restartot general, es utanna olvas.
-#if 0
-status_t MyI2CM_writeRead(  MyI2CM_Device_t* i2cDevice,
-                            uint8_t *txData1, uint32_t txLength1,
-                            uint8_t *txData2, uint32_t txLength2,
-                            uint8_t *rxData,  uint32_t rxLength);
-#endif
-
+//I2C busz sebesseg modositasa/beallitasa
+status_t MyI2CM_setFrequency(MyI2CM_t* i2cDevice, uint32_t freq);
 
 //A sercomok definicioit undefine-olnom kellet, mert kulonben az alabbi makroban
 //a "SERCOM" osszeveszett a forditoval.
