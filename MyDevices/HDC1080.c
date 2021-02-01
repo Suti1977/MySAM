@@ -114,6 +114,9 @@ status_t HDC1080_measure(HDC1080_t* dev,
     status=HDC1080_startMeasure(dev);
     if (status)  goto error;
 
+    //Tapasztalat. Ha itt nem varunk, akkor az eszkoz kesobb NACK-t fog adni.
+    vTaskDelay(20);
+
     union
     {
         uint8_t buff[4];
@@ -127,7 +130,7 @@ status_t HDC1080_measure(HDC1080_t* dev,
     } result;
 
 
-    for(int i=0; i<40; i++)
+    for(int i=0; i<10; i++)
     {
         //Olvasas...
         //Adatatviteli blokk leirok listajnak osszeallitasa.
