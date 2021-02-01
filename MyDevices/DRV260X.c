@@ -29,8 +29,8 @@ status_t DRV260X_readReg(DRV260X_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&address,  1 },
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff,                1 },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&address,  1 },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, buff,                1 },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -49,8 +49,8 @@ status_t DRV260X_writeReg(DRV260X_t* dev, uint8_t address, uint8_t regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&address,  1 },
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)&regValue, 1 },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&address,  1 },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)&regValue, 1 },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

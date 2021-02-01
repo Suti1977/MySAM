@@ -36,8 +36,8 @@ status_t MCP794XX_write(MCP794XX_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, data, length     },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, data, length     },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -62,8 +62,8 @@ status_t MCP794XX_read(MCP794XX_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, data, length     },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, data, length     },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -169,8 +169,8 @@ status_t MCP794XX_readUID(MCP794XX_t* dev, uint8_t* buff, uint32_t len)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, buff, len        },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, buff, len        },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

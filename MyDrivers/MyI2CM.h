@@ -100,9 +100,9 @@ typedef struct
 typedef enum
 {
     //Adat kiiras a buszon
-    MYI2CM_DIR_TX=0,
+    MYI2CM_FLAG_TX=0,
     //Adat olvasas a buszrol. (A logika kihasznalja, hogy az RX=1!!!)
-    MYI2CM_DIR_RX=1,
+    MYI2CM_FLAG_RX=1,
     //10 bites cimzes eloirasa
     MYI2CM_FLAG_TENBIT=2,
 } MyI2CM_flag_t;

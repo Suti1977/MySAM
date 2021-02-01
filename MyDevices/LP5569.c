@@ -27,8 +27,8 @@ status_t LP5569_writeReg(LP5569_t* dev, uint8_t address, uint8_t regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, &regValue, 1      },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, &regValue, 1      },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -51,8 +51,8 @@ status_t LP5569_writeMultipleRegs(LP5569_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, (uint8_t*)values, length   },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, (uint8_t*)values, length   },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -72,8 +72,8 @@ status_t LP5569_readReg(LP5569_t* dev, uint8_t address, uint8_t* regValue)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, regValue, 1      },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, regValue, 1      },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)

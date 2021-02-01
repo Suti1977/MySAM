@@ -209,7 +209,7 @@ status_t MyI2CM_ackTest(MyI2CM_Device_t* i2cDevice)
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, NULL, 0}
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, NULL, 0}
     };
 
     //I2C mukodes kezdemenyezese.
@@ -299,7 +299,7 @@ mb_leftByteCntZero:
                 //Hatralevo leirok szamanak csokkentese
                 i2cm->leftBlockCnt--;
 
-                if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_DIR_RX)
+                if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_FLAG_RX)
                 {   //RX
                     //Eddig TX volt. Most RX-re valtunk.
 
@@ -416,7 +416,7 @@ mb_leftByteCntZero:
                 //Hatralevo leirok szamanak csokkentese
                 i2cm->leftBlockCnt--;
 
-                if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_DIR_RX)
+                if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_FLAG_RX)
                 {   //RX
                     //Eddig is RX volt. Folytatodik a stream olvasasa...
                     i2cm->dataPtr    =actualBlock->buffer;
@@ -541,7 +541,7 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
             addressReg |= SERCOM_I2CM_ADDR_TENBITEN;
         }
 
-        if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_DIR_RX)
+        if ((actualBlock->flags & MYI2CM_DIR_MASK)==MYI2CM_FLAG_RX)
         {   //RX
 
             if (actualBlock->length==0)
@@ -572,7 +572,7 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         MyI2CM_sync(hw);
 
         //Iranynak megfelelo megszakitas engedelyezese...
-        if ((actualBlock->flags & MYI2CM_DIR_MASK) == MYI2CM_DIR_RX)
+        if ((actualBlock->flags & MYI2CM_DIR_MASK) == MYI2CM_FLAG_RX)
         {   //RX
             hw->INTENSET.reg=SERCOM_I2CM_INTENSET_MB |
                              SERCOM_I2CM_INTENSET_SB;

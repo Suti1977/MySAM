@@ -33,8 +33,8 @@ status_t ISL12057_write(ISL12057_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, data, length     },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, data, length     },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
@@ -59,8 +59,8 @@ status_t ISL12057_read(ISL12057_t* dev,
     //(Ez a stcaken marad, amig le nem megy a transzfer!)
     MyI2CM_xfer_t xferBlocks[]=
     {
-        (MyI2CM_xfer_t){MYI2CM_DIR_TX, cmd,  sizeof(cmd)},
-        (MyI2CM_xfer_t){MYI2CM_DIR_RX, data, length     },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd)},
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, data, length     },
     };
     //I2C mukodes kezdemenyezese.
     //(A rutin megvarja, amig befejezodik az eloirt folyamat!)
