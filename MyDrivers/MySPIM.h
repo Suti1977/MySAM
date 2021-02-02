@@ -15,6 +15,9 @@ typedef struct
     //Az SPI interfacet biztosito Sercom beallitasaira mutat
     MySercom_Config_t  sercomCfg;
 
+    //A periferia IRQ prioritasa
+    uint32_t irqPriorities;
+
     //A (kezdeti) adatatvitei sebesseghez tartozo BAUD ertek.
     //Ez fugg a Sercomhoz rendelt GCLK altal eloallitott orajel frekitol.
     //Kiszamitasa a MYSPIM_CALC_BAUDVALUE() makro segitsegevel egyszerubb.
@@ -113,6 +116,9 @@ typedef struct
 //MySPIM driver valtozoi
 typedef struct
 {
+    //Driver konfiguracio
+    const MySPIM_Config_t*  config;
+
     //Az SPI interface alapszintu sercom driver-enek leiroja
     MySercom_t   sercom;
 
@@ -168,8 +174,15 @@ void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
                          void *handler);
 
 
-//driver kezdeti inicializalasa
-void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config);
+//driver kezdeti inicializalasa, letrehozasa
+void MySPIM_create(MySPIM_t* spim, const MySPIM_Config_t* config);
+//SPI driver es eroforrasok felaszabditasa
+void MySPIM_destory(MySPIM_t* spim);
+
+//SPI Periferia inicializalasa/engedelyezese
+void MySPIM_init(MySPIM_t* spim);
+//SPI Periferia tiltasa. HW eroforrasok tiltasa.
+void MySPIM_deinit(MySPIM_t* spim);
 
 //SPI mukodes engedelyezese
 void MySPIM_enable(MySPIM_t* spim);

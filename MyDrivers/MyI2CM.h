@@ -30,6 +30,9 @@ typedef struct
     //definicioknal
     uint32_t    attribs;
 
+    //A periferia IRQ prioritasa
+    uint32_t    irqPriorities;
+
 } MyI2CM_Config_t;
 //------------------------------------------------------------------------------
 //I2C master modot befolyasolo konfiguracios attributumok, melyeket a periferia
@@ -125,6 +128,9 @@ typedef struct
 //MyI2CM valtozoi
 typedef struct
 {
+    //A driverhez tartozo konfiguraciora mutat
+    const MyI2CM_Config_t* config;
+
     //Az I2C interface alapszintu sercom driver-enek leiroja
     MySercom_t   sercom;
 
@@ -197,8 +203,19 @@ typedef struct
     void*       handler;
 } MyI2CM_Device_t;
 //------------------------------------------------------------------------------
-//I2C master driver inicializalasa
-void MyI2CM_init(MyI2CM_t* i2cm, const MyI2CM_Config_t* config);
+//I2C master driver letrehozasa es konfiguralasa.
+//Fontos! A config altal mutatott konfiguracionak permanensen a memoriaban
+//kell maradnia!
+void MyI2CM_create(MyI2CM_t* i2cm, const MyI2CM_Config_t* config);
+//I2C driver es eroforrasok felaszabditasa
+void MyI2CM_destory(MyI2CM_t* i2cm);
+
+//I2C Periferia inicializalasa/engedelyezese
+void MyI2CM_init(MyI2CM_t* i2cm);
+//I2C Periferia tiltasa. HW eroforrasok tiltasa.
+void MyI2CM_deinit(MyI2CM_t* i2cm);
+
+
 
 //Az I2C interfacehez tartozo sercom interrupt service rutinokbol hivando.
 //Parameterkent at kell adni a kezelt interface leirojat.

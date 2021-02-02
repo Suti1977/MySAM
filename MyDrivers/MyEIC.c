@@ -28,7 +28,7 @@ void MyEIC_init(const MyEIC_Config_t* cfg)
     } else
     {   //GCLK kerul hasznalatra.
         //Engedelyezzuk es hozzarendeljuk a GCLK orajelet
-        MyGclk_setPeripherialClock(EIC_GCLK_ID, cfg->gclkNr);
+        MyGclk_enablePeripherialClock(EIC_GCLK_ID, cfg->gclkNr);
     }
 
     //pergesmentesitesi orajel forras beallitasa

@@ -95,7 +95,7 @@ void MyTC_init(MyTC_t* tc, const MyTC_Config_t* config)
 
     //A TC modul orajeleinek bekotese a GCLK modulok valamelyikehez,
     //a configok alapjan.
-    MyGclk_setPeripherialClock(tcInfo->gclkId, config->gclkId);
+    MyGclk_enablePeripherialClock(tcInfo->gclkId, config->gclkId);
 
     //Sercomhoz tartozo IRQ vonalak prioritasanak beallitasa
     MyTC_setIrqPriority(tc, config->irqPriority);

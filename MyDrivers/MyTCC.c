@@ -72,7 +72,7 @@ void MyTCC_init(MyTCC_t* tcc, const MyTCC_Config_t* config)
 
     //A tccmodul orajeleinek bekotese a GCLK modulok valamelyikehez,
     //a configok alapjan.
-    MyGclk_setPeripherialClock(tccInfo->gclkId, config->gclkId);
+    MyGclk_enablePeripherialClock(tccInfo->gclkId, config->gclkId);
 
     //Sercomhoz tartozo IRQ vonalak prioritasanak beallitasa
     //(1-el tobb vonala van, mint amennyi Compare/match modulja.

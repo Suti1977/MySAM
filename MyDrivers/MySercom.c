@@ -71,7 +71,7 @@ const MySercom_Info_t g_MySercom_infos[]=
 };
 //------------------------------------------------------------------------------
 //Sercom driver kezdeti inicializalasa
-void MySercom_init(MySercom_t* sercom, const MySercom_Config_t* config)
+void MySercom_create(MySercom_t* sercom, const MySercom_Config_t* config)
 {
     //Modul valtozoinak kezdeti torlese.
     memset(sercom, 0, sizeof(MySercom_t));
@@ -89,30 +89,62 @@ void MySercom_init(MySercom_t* sercom, const MySercom_Config_t* config)
     //A leiroban beallitja az alkalmazott sercom baziscimet.
     //A kesobbiekben a driverek (SPI, UART, I2C,...) ezen keresztul erik el.
     sercom->hw=sercomInfo->hw;
-
     sercom->info=sercomInfo;
+    sercom->config=config;
 
     //A Sercom MCLK orajelenek engedelyezese
-    MY_ENTER_CRITICAL();
-    *sercomInfo->mclkApbMaskReg |= sercomInfo->mclkApbMask;
-    MY_LEAVE_CRITICAL();
-
-    //A sercom Core orajelehez rendelt GCLK modul sorszama
-    sercom->gclkCore=config->gclkCore;
-    //Core orajel frekvenciaja
-    sercom->coreFreq=config->coreFreq;
-    //A sercom Slow orajelehez rendelt GCLK modul sorszama
-    sercom->gclkSlow=config->gclkSlow;
-    //Slow orajel frekvenciaja
-    sercom->slowFreq=config->slowFreq;
+    //MY_ENTER_CRITICAL();
+    //*sercomInfo->mclkApbMaskReg |= sercomInfo->mclkApbMask;
+    //MY_LEAVE_CRITICAL();
 
     //A Sercom Core es Slow orajeleinek bekotese a GCLK modulok valamelyikehez,
     //a configok alapjan.
-    MyGclk_setPeripherialClock(sercomInfo->gclkId_Core, config->gclkCore);
-    MyGclk_setPeripherialClock(sercomInfo->gclkId_Slow, config->gclkSlow);
-
+    //MyGclk_enablePeripherialClock(sercomInfo->gclkId_Core, config->gclkCore);
+    //MyGclk_enablePeripherialClock(sercomInfo->gclkId_Slow, config->gclkSlow);
     //Sercomhoz tartozo IRQ vonalak prioritasanak beallitasa
-    MySercom_setPriorites(sercom, config->irqPriorites);
+    //MySercom_setIrqPriorites(sercom, config->irqPriorites);
+}
+//------------------------------------------------------------------------------
+//Sercom mclk orajel engedelyezese
+void MySercom_enableMclkClock(MySercom_t* sercom)
+{
+    MY_ENTER_CRITICAL();
+    *sercom->info->mclkApbMaskReg |= sercom->info->mclkApbMask;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//Sercom mclk orajel tiltasa
+void MySercom_disableMclkClock(MySercom_t* sercom)
+{
+    MY_ENTER_CRITICAL();
+    *sercom->info->mclkApbMaskReg &= ~sercom->info->mclkApbMask;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//Sercom core orajel engedelyezese
+void MySercom_enableCoreClock(MySercom_t* sercom)
+{
+    MyGclk_enablePeripherialClock(sercom->info->gclkId_Core,
+                                  sercom->config->gclkCore);
+}
+//------------------------------------------------------------------------------
+//Sercom core orajel tiltasa
+void MySercom_disableCoreClock(MySercom_t* sercom)
+{
+    MyGclk_disablePeripherialClock(sercom->info->gclkId_Core);
+}
+//------------------------------------------------------------------------------
+//Sercom slow orajel engedelyezese
+void MySercom_enableSlowClock(MySercom_t* sercom)
+{
+    MyGclk_enablePeripherialClock(sercom->info->gclkId_Slow,
+                                  sercom->config->gclkSlow);
+}
+//------------------------------------------------------------------------------
+//Sercom slow orajel tiltasa
+void MySercom_disableSlowClock(MySercom_t* sercom)
+{
+    MyGclk_disablePeripherialClock(sercom->info->gclkId_Slow);
 }
 //------------------------------------------------------------------------------
 //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
@@ -152,7 +184,7 @@ void MySercom_disableIrqs(MySercom_t* sercom)
 //------------------------------------------------------------------------------
 //Sercom-hoz tartozo interruptok prioritasanak beallitasa.
 //A rutin az osszes sercom IRQ-t a megadott szintre allitja be.
-void MySercom_setPriorites(MySercom_t* sercom, uint32_t level)
+void MySercom_setIrqPriorites(MySercom_t* sercom, uint32_t level)
 {
     uint32_t irqn;
 

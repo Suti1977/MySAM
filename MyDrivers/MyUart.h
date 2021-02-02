@@ -28,7 +28,9 @@ typedef struct
     //A MYUART_CALC_BAUDVALUE() makroval szamithato
     uint16_t            baudRegValue;
     //RS485 mod kijelolese
-    bool rs485Mode;
+    bool rs485Mode;    
+    //A periferia IRQ prioritasa
+    uint32_t    irqPriorities;
 } MyUart_Config_t;
 //------------------------------------------------------------------------------
 //UART baudrate regiszterenek kiszamitasa a kivant adatatviteli sebesseg, es az
@@ -84,6 +86,9 @@ typedef struct
     //Az uarthoz tartozo sercom driver valtozoi
     MySercom_t sercom;
 
+    //UART konfiguracio
+    const MyUart_Config_t* config;
+
     //UART hiba eseten feljovo callback fuggveny (beregisztralhato)
     MyUart_errorFunc_t*  errorFunc;
     //A callback fuggvenyeknek atadott parameter (regisztarciokor beallitva)
@@ -97,16 +102,22 @@ typedef struct
 
 } MyUart_t;
 //------------------------------------------------------------------------------
-//Driver instancia inicializalasa
+//Driver instancia letrahozasa
 //Az inicializacio alatt egy standard "8 bit, 1 stop bit, nincs paritas"
 //aszinkron uart jon letre, mely a belso orajelrol mukodik. Ha ettol eltero
 //mukodes szukseges, akkor azt az applikacioban az init utan lehet modositani,
 //az uart engedelyezese elott.
 //Figyelem! Az init hatasara nem kerul engedelyezesre az UART,
 //          azt a MyUart_Enable() fuggvennyel kell elvegezni, a hasznalat elott.
-status_t MyUart_init(MyUart_t* uart, const MyUart_Config_t* cfg);
-//Alapertelmezett uart konfiguracios struktura visszaadasa
-void MyUart_getDefaultConfig(MyUart_Config_t* cfg);
+void MyUart_create(MyUart_t* uart, const MyUart_Config_t* cfg);
+
+//UART driver es eroforrasok felaszabditasa
+void MyUart_destory(MyUart_t* uart);
+
+//UART Periferia inicializalasa/engedelyezese
+void MyUart_init(MyUart_t* uart);
+//UART Periferia tiltasa. HW eroforrasok tiltasa.
+void MyUart_deinit(MyUart_t* uart);
 
 //Uart mukodes engedelyezese
 void MyUart_enable(MyUart_t* uart);

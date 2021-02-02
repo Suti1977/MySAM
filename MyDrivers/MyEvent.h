@@ -20,7 +20,7 @@
 
 //Event csatornahoz GCLK beallitasa. Ez sync/resync modokban lenyeges
 #define MyEvent_setChannelGCLK(channelNo, gclk_generator_id) \
-    MyGclk_setPeripherialClock(EVSYS_GCLK_ID_0+channelNo, gclk_generator_id)
+    MyGclk_enablePeripherialClock(EVSYS_GCLK_ID_0+channelNo, gclk_generator_id)
 
 //Event path beallitasa
 //  EVSYS_CHANNEL_PATH_SYNCHRONOUS_Val _U_(0x0)     Synchronous path

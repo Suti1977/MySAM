@@ -17,17 +17,29 @@
 #define I2C_TRANSFER_TIMEOUT    1000
 #endif
 
-static void MyI2CM_initI2CPeri(MyI2CM_t* i2cm, const MyI2CM_Config_t* config);
+static void MyI2CM_initPeri(MyI2CM_t* i2cm);
+static void MyI2CM_disablePeri(MyI2CM_t* i2cm);
 static void MyI2CM_sync(SercomI2cm* hw);
 //------------------------------------------------------------------------------
-//I2C master modul inicializalasa
-void MyI2CM_init(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
+//I2C master driver letrehozasa es konfiguralasa.
+//Fontos! A config altal mutatott konfiguracionak permanensen a memoriaban
+//kell maradnia!
+void MyI2CM_create(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
 {
     ASSERT(i2cm);
     ASSERT(config);
 
     //Modul valtozoinak kezdeti torlese.
     memset(i2cm, 0, sizeof(MyI2CM_t));
+
+    //A driver konfiguracio megjegyzese
+    i2cm->config=config;
+
+    //Alap sercom periferia driver initje.
+    MySercom_create(&i2cm->sercom, &i2cm->config->sercomCfg);
+
+    //Sercom IRQ prioritasainak beallitasa
+    MySercom_setIrqPriorites(&i2cm->sercom, config->irqPriorities);
 
   #ifdef USE_FREERTOS
     //Az egyideju busz hozzaferest tobb taszk kozott kizaro mutex letrehozasa
@@ -37,19 +49,43 @@ void MyI2CM_init(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     i2cm->semaphore=xSemaphoreCreateBinary();
     ASSERT(i2cm->semaphore);
   #endif //USE_FREERTOS
+}
+//------------------------------------------------------------------------------
+//I2C driver es eroforrasok felaszabditasa
+void MyI2CM_destory(MyI2CM_t* i2cm)
+{
+    MyI2CM_deinit(i2cm);
 
-    //Alap sercom periferia driver initje.
-    //Letrejon a sercom leiro, beallitja es engedelyezi a Sercom orajeleket
-    MySercom_init(&i2cm->sercom, &config->sercomCfg);
-
+  #ifdef USE_FREERTOS
+    if (i2cm->busMutex) vSemaphoreDelete(i2cm->busMutex);
+    if (i2cm->semaphore) vSemaphoreDelete(i2cm->semaphore);
+  #endif //USE_FREERTOS
+}
+//------------------------------------------------------------------------------
+//I2C Periferia inicializalasa/engedelyezese
+void MyI2CM_init(MyI2CM_t* i2cm)
+{
     //Sercom beallitasa I2C interfacenek megfeleloen, a kapott config alapjan.
-    MyI2CM_initI2CPeri(i2cm, config);
+    MyI2CM_initPeri(i2cm);
+}
+//------------------------------------------------------------------------------
+//I2C Periferia tiltasa. HW eroforrasok tiltasa.
+void MyI2CM_deinit(MyI2CM_t* i2cm)
+{
+    //I2C periferia tiltasa
+    MyI2CM_disablePeri(i2cm);
 }
 //------------------------------------------------------------------------------
 //I2C interfacehez tartozo sercom felkonfiguralasa
-static void MyI2CM_initI2CPeri(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
+static void MyI2CM_initPeri(MyI2CM_t* i2cm)
 {
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
+    const MyI2CM_Config_t* config=i2cm->config;
+
+    //Periferia orajelek engedelyezese
+    MySercom_enableMclkClock(&i2cm->sercom);
+    MySercom_enableCoreClock(&i2cm->sercom);
+    MySercom_enableSlowClock(&i2cm->sercom);
 
     //Periferia resetelese
     hw->CTRLA.reg=SERCOM_I2CM_CTRLA_SWRST;
@@ -104,18 +140,35 @@ static void MyI2CM_initI2CPeri(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     MyI2CM_sync(hw);
 }
 //------------------------------------------------------------------------------
+static void MyI2CM_disablePeri(MyI2CM_t* i2cm)
+{
+    SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
+
+    //I2C periferia tiltasa
+    hw->CTRLA.bit.ENABLE=0;
+    MyI2CM_sync(hw);
+
+    //Minden msz tiltasa az NVIC-ben
+    MySercom_disableIrqs(&i2cm->sercom);
+
+    //Periferia orajelek tiltasa
+    MySercom_disableCoreClock(&i2cm->sercom);
+    MySercom_disableSlowClock(&i2cm->sercom);
+    MySercom_disableMclkClock(&i2cm->sercom);
+}
+//------------------------------------------------------------------------------
 //I2C busz sebesseg modositasa/beallitasa
 status_t MyI2CM_setFrequency(MyI2CM_t* i2cm, uint32_t freq)
 {
     //Szaturalas maximum frekvenciara, mely a core orajel fele lehet.
-    uint32_t maxFreq = (i2cm->sercom.coreFreq >> 1);
+    uint32_t maxFreq = (i2cm->sercom.config->coreFreq >> 1);
     if (freq > maxFreq)
     {
         freq=maxFreq;
     }
 
     //Baud szamitasa
-    uint32_t baud = ((i2cm->sercom.coreFreq * 10) / (24 * freq)) - 4;
+    uint32_t baud = ((i2cm->sercom.config->coreFreq * 10) / (24 * freq)) - 4;
     uint32_t baud_hs =0;
     if (baud > 255)
     {
@@ -123,7 +176,7 @@ status_t MyI2CM_setFrequency(MyI2CM_t* i2cm, uint32_t freq)
     }
     else
     {
-        baud_hs = ((i2cm->sercom.coreFreq * 10) / (478 * freq)) - 1;
+        baud_hs = ((i2cm->sercom.config->coreFreq * 10) / (478 * freq)) - 1;
         if (baud_hs > 255)
         {
             baud_hs = 255;

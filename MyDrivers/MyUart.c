@@ -7,7 +7,8 @@
 #include <string.h>
 #include "MyAtomic.h"
 
-static status_t MyUart_initSercom(MyUart_t* uart, const MyUart_Config_t* cfg);
+static void MyUart_initPeri(MyUart_t* uart);
+static void MyUart_deinitPeri(MyUart_t* uart);
 
 //------------------------------------------------------------------------------
 //Driver instancia inicializalasa
@@ -17,32 +18,46 @@ static status_t MyUart_initSercom(MyUart_t* uart, const MyUart_Config_t* cfg);
 //az uart engedelyezese elott.
 //Figyelem! Az init hatasara nem kerul engedelyezesre az UART,
 //          azt a MyUart_Enable() fuggvennyel kell elvegezni, a hasznalat elott.
-status_t MyUart_init(MyUart_t* uart, const MyUart_Config_t* cfg)
+void MyUart_create(MyUart_t* uart, const MyUart_Config_t* cfg)
 {
     status_t status=kStatus_Success;
 
     //Modul valtozoinak kezdeti torlese.
     memset(uart, 0, sizeof(MyUart_t));
 
-    //Alap sercom periferia inicializalasa
-    MySercom_init(&uart->sercom, &cfg->sercomConfig);
+    //Konfiguracio mentese
+    uart->config=cfg;
 
-    //UART-nak konfiguralja a sercomot, tovabba beallitja azt a config szerint.
-    MyUart_initSercom(uart, cfg);
+    //Alap sercom periferia inicializalasa
+    MySercom_create(&uart->sercom, &cfg->sercomConfig);
+
+    //UART-hoz tartozo megszakitasok prioritasana beallitasa
+    MySercom_setIrqPriorites(&uart->sercom, cfg->irqPriorities);
+
 
     //Sercom megszakitasok engedelyezese
     MySercom_enableIrqs(&uart->sercom);
-
-    //Jelzes, hogy a driver initje megtortent.
-    uart->inited=1;
-
-    return status;
 }
 //------------------------------------------------------------------------------
-//Alapertelmezett uart konfiguracios struktura visszaadasa
-void MyUart_getDefaultConfig(MyUart_Config_t* cfg)
+//UART driver es eroforrasok felaszabditasa
+void MyUart_destory(MyUart_t* uart)
 {
-    memset(cfg, 0, sizeof(MyUart_Config_t));
+
+}
+//------------------------------------------------------------------------------
+//UART Periferia inicializalasa/engedelyezese
+void MyUart_init(MyUart_t* uart)
+{
+    //UART-nak konfiguralja a sercomot, tovabba beallitja azt a config szerint.
+    MyUart_initPeri(uart);
+    uart->inited=true;
+}
+//------------------------------------------------------------------------------
+//UART Periferia tiltasa. HW eroforrasok tiltasa.
+void MyUart_deinit(MyUart_t* uart)
+{
+    uart->inited=false;
+    MyUart_deinitPeri(uart);
 }
 //------------------------------------------------------------------------------
 static void MyUart_waitingForSync(SercomUsart* hw)
@@ -51,10 +66,15 @@ static void MyUart_waitingForSync(SercomUsart* hw)
 }
 //------------------------------------------------------------------------------
 //UART-nak konfiguralja a sercomot, tovabba beallitja azt a config szerint...
-static status_t MyUart_initSercom(MyUart_t* uart, const MyUart_Config_t* cfg)
+static void MyUart_initPeri(MyUart_t* uart)
 {
-    status_t status=kStatus_Success;
     SercomUsart* hw=&uart->sercom.hw->USART;
+    const MyUart_Config_t* cfg=uart->config;
+
+    //Periferia orajelek engedelyezese
+    MySercom_enableMclkClock(&uart->sercom);
+    MySercom_enableCoreClock(&uart->sercom);
+    MySercom_enableSlowClock(&uart->sercom);
 
     //USART Periferia reset
     hw->CTRLA.reg = SERCOM_USART_CTRLA_SWRST;
@@ -114,15 +134,29 @@ static status_t MyUart_initSercom(MyUart_t* uart, const MyUart_Config_t* cfg)
             SERCOM_USART_INTENSET_RXC |
             0;
 
-    return status;
+    //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
+    //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
+    //sorban kovetkeznek, es egy sercom-hoz 4 darab tartozik.
+    MySercom_enableIrqs(&uart->sercom);
+}
+//------------------------------------------------------------------------------
+static void MyUart_deinitPeri(MyUart_t* uart)
+{
+    //SPI periferia tiltasa
+    MyUart_disable(uart);
+
+    //Minden msz tiltasa az NVIC-ben
+    MySercom_disableIrqs(&uart->sercom);
+
+    //Periferia orajelek tiltasa
+    MySercom_disableSlowClock(&uart->sercom);
+    MySercom_disableCoreClock(&uart->sercom);
+    MySercom_disableMclkClock(&uart->sercom);
 }
 //------------------------------------------------------------------------------
 //Uart mukodes engedelyezese
 void MyUart_enable(MyUart_t* uart)
 {
-    //Sercomhoz tartozo IRQ vonalak engedelyezese az NVIC-ben
-    //MySercom_EnableIRQs(&uart->Sercom);
-
     MY_ENTER_CRITICAL();
     uart->sercom.hw->USART.CTRLA.bit.ENABLE=1;
     MyUart_waitingForSync(&uart->sercom.hw->USART);
@@ -136,9 +170,6 @@ void MyUart_disable(MyUart_t* uart)
     uart->sercom.hw->USART.CTRLA.bit.ENABLE=0;
     MyUart_waitingForSync(&uart->sercom.hw->USART);
     MY_LEAVE_CRITICAL();
-
-    //Sercomhoz tartozo IRQ vonalak tiltasa az NVIC-ben
-    MySercom_disableIrqs(&uart->sercom);
 }
 //------------------------------------------------------------------------------
 //Callback funkciok beregisztralasa

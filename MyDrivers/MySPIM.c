@@ -6,7 +6,8 @@
 #include "MySPIM.h"
 #include <string.h>
 
-static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config);
+static void MySPIM_initPeri(MySPIM_t* spim);
+static void MySPIM_deinitPeri(MySPIM_t* spim);
 static void MySPIM_getNextBlock(MySPIM_t* spim);
 //------------------------------------------------------------------------------
 //SPI eszkoz letrehozasa
@@ -25,14 +26,24 @@ void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
     spiDevice->slaveSelectFunc=slaveSelectFunc;
 }
 //------------------------------------------------------------------------------
-//driver kezdeti inicializalasa
-void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config)
+//driver kezdeti inicializalasa, letrehozasa
+void MySPIM_create(MySPIM_t* spim, const MySPIM_Config_t* config)
 {
     ASSERT(spim);
     ASSERT(config);
 
     //Modul valtozoinak kezdeti torlese.
     memset(spim, 0, sizeof(MySPIM_t));
+
+    //Konfiguraciot hordozo strukturara mutato pointer mentese
+    spim->config=config;
+
+    //Sercom driver letrehozasa
+    MySercom_create(&spim->sercom, &config->sercomCfg);
+
+    //IRQ prioritasok beallitasa
+    MySercom_setIrqPriorites(&spim->sercom, config->irqPriorities);
+
 
   #ifdef USE_FREERTOS
     //Az egyideju busz hozzaferest tobb taszk kozott kizaro mutex letrehozasa
@@ -42,20 +53,45 @@ void MySPIM_init(MySPIM_t* spim, const MySPIM_Config_t* config)
     spim->semaphore=xSemaphoreCreateBinary();
     ASSERT(spim->semaphore);
   #endif //USE_FREERTOS
-
-    //Alap sercom periferia driver initje.
-    //Letrejon a sercom leiro, beallitja es engedelyezi a Sercom orajeleket
-    MySercom_init(&spim->sercom, &config->sercomCfg);
-
-    //Sercom beallitasa SPI master interfacenek megfeleloen, a kapott config
-    //alapjan.
-    MySPIM_initSercom(spim, config);
 }
 //------------------------------------------------------------------------------
-//I2C interfacehez tartozo sercom felkonfiguralasa
-static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
+//SPI driver es eroforrasok felaszabditasa
+void MySPIM_destory(MySPIM_t* spim)
+{
+    MySPIM_deinit(spim);
+
+  #ifdef USE_FREERTOS
+    if (spim->busMutex) vSemaphoreDelete(spim->busMutex);
+    if (spim->semaphore) vSemaphoreDelete(spim->semaphore);
+  #endif //USE_FREERTOS
+}
+//------------------------------------------------------------------------------
+//SPI Periferia inicializalasa/engedelyezese
+void MySPIM_init(MySPIM_t* spim)
+{
+    //Sercom beallitasa SPI master interfacenek megfeleloen, a kapott config
+    //alapjan.
+    MySPIM_initPeri(spim);
+}
+//------------------------------------------------------------------------------
+//SPI Periferia tiltasa. HW eroforrasok tiltasa.
+void MySPIM_deinit(MySPIM_t* spim)
+{
+    //Sercom beallitasa SPI master interfacenek megfeleloen, a kapott config
+    //alapjan.
+    MySPIM_deinitPeri(spim);
+}
+//------------------------------------------------------------------------------
+//SPI interfacehez tartozo sercom felkonfiguralasa
+static void MySPIM_initPeri(MySPIM_t* spim)
 {
     SercomSpi* hw=&spim->sercom.hw->SPI;
+    const MySPIM_Config_t* config=spim->config;
+
+    //Mclk es periferia orajelek engedelyezese
+    MySercom_enableMclkClock(&spim->sercom);
+    MySercom_enableCoreClock(&spim->sercom);
+    //MySercom_enableSlowClock(&spim->sercom);
 
     //Periferia resetelese
     hw->CTRLA.reg=SERCOM_SPI_CTRLA_SWRST;
@@ -93,6 +129,20 @@ static void MySPIM_initSercom(MySPIM_t* spim, const MySPIM_Config_t* config)
     //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
     //sorban kovetkeznek, es egy sercom-hoz 4 darab tartozik.
     MySercom_enableIrqs(&spim->sercom);
+}
+//------------------------------------------------------------------------------
+static void MySPIM_deinitPeri(MySPIM_t* spim)
+{
+    //SPI periferia tiltasa
+    MySPIM_disable(spim);
+
+    //Minden msz tiltasa az NVIC-ben
+    MySercom_disableIrqs(&spim->sercom);
+
+    //Periferia orajelek tiltasa
+    //MySercom_disableSlowClock(&spim->sercom);
+    MySercom_disableCoreClock(&spim->sercom);
+    MySercom_disableMclkClock(&spim->sercom);
 }
 //------------------------------------------------------------------------------
 //SPI mukodes engedelyezese

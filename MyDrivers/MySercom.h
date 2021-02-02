@@ -44,7 +44,7 @@ typedef struct
     //Slow orajel frekvenciaja
     uint32_t slowFreq;
     //A sercomhoz tartozo IRQ vonalak prioritasa
-    uint32_t irqPriorites;
+    //uint32_t irqPriorites;
 } MySercom_Config_t;
 
 //------------------------------------------------------------------------------
@@ -57,18 +57,28 @@ typedef struct
     //A sercom informacios blokkjara mutat
     const MySercom_Info_t*   info;
 
-    //A sercom Core orajelehez rendelt GCLK modul sorszama
-    uint8_t gclkCore;
-    //Core orajel frekvenciaja
-    uint32_t coreFreq;
-    //A sercom Slow orajelehez rendelt GCLK modul sorszama
-    uint8_t gclkSlow;
-    //Slow orajel frekvenciaja
-    uint32_t slowFreq;
+    //A sercomra vonatkozo konfiguracio.
+    const MySercom_Config_t* config;
 } MySercom_t;
 //------------------------------------------------------------------------------
 //Sercom driver kezdeti inicializalasa
-void MySercom_init(MySercom_t* sercom, const MySercom_Config_t* config);
+void MySercom_create(MySercom_t* sercom, const MySercom_Config_t* config);
+
+//Sercom mclk orajel engedelyezese
+void MySercom_enableMclkClock(MySercom_t* sercom);
+//Sercom mclk orajel tiltasa
+void MySercom_disableMclkClock(MySercom_t* sercom);
+
+//Sercom core orajel tiltasa
+//Sercom core orajel engedelyezese
+void MySercom_enableCoreClock(MySercom_t* sercom);
+//Sercom core orajel tiltasa
+void MySercom_disableCoreClock(MySercom_t* sercom);
+//Sercom slow orajel engedelyezese
+void MySercom_enableSlowClock(MySercom_t* sercom);
+//Sercom slow orajel tiltasa
+void MySercom_disableSlowClock(MySercom_t* sercom);
+
 
 //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
 void MySercom_enableIrqs(MySercom_t* sercom);
@@ -76,7 +86,7 @@ void MySercom_enableIrqs(MySercom_t* sercom);
 void MySercom_disableIrqs(MySercom_t* sercom);
 //Sercom-hoz tartozo interruptok prioritasanak beallitasa.
 //A rutin az osszes sercom IRQ-t a megadott szintre allitja be.
-void MySercom_setPriorites(MySercom_t* sercom, uint32_t level);
+void MySercom_setIrqPriorites(MySercom_t* sercom, uint32_t level);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MY_SERCOM_H_
