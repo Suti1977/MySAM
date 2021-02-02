@@ -14,16 +14,8 @@
 //adunk at initkor.
 typedef struct
 {
-    //Az I2C interfacet biztosito Sercom beallitasaira mutat
-    MySercom_Config_t  sercomCfg;
-
-    //A (kezdeti) adatatvitei sebesseghez tartozo BAUD ertek.
-    //Ez fugg a Sercomhoz rendelt GCLK altal eloallitott orajel frekitol.
-    //Kiszamitasa a MYI2CM_CALC_BAUDVALUE() makro segitsegevel egyszerubb.
-    //uint32_t    baudValue;
-
     //Busz frekvencia/sebesseg
-    uint32_t busFreq;
+    uint32_t bitRate;
 
     //Konfiguracios attributumok (bitmaszk mezo)
     //Az ertelmezett attributumok definicioit lasd lejebb, a "MYI2CM_ATTR_"
@@ -162,6 +154,8 @@ typedef struct
     //A megszakitasban kiolvasott STATUS regiszter erteke.
     uint32_t statusRegValue;
 
+    //A busz sebessege
+    uint32_t    bitRate;
 } MyI2CM_t;
 //------------------------------------------------------------------------------
 //Statusz kodok
@@ -206,7 +200,10 @@ typedef struct
 //I2C master driver letrehozasa es konfiguralasa.
 //Fontos! A config altal mutatott konfiguracionak permanensen a memoriaban
 //kell maradnia!
-void MyI2CM_create(MyI2CM_t* i2cm, const MyI2CM_Config_t* config);
+void MyI2CM_create(MyI2CM_t* i2cm,
+                   const MyI2CM_Config_t* config,
+                   const MySercom_Config_t* sercomCfg);
+
 //I2C driver es eroforrasok felaszabditasa
 void MyI2CM_destory(MyI2CM_t* i2cm);
 
@@ -215,7 +212,8 @@ void MyI2CM_init(MyI2CM_t* i2cm);
 //I2C Periferia tiltasa. HW eroforrasok tiltasa.
 void MyI2CM_deinit(MyI2CM_t* i2cm);
 
-
+//I2C periferia resetelese
+void MyI2CM_reset(MyI2CM_t* i2cm);
 
 //Az I2C interfacehez tartozo sercom interrupt service rutinokbol hivando.
 //Parameterkent at kell adni a kezelt interface leirojat.
@@ -239,7 +237,7 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
 status_t MyI2CM_ackTest(MyI2CM_Device_t* i2cDevice);
 
 //I2C busz sebesseg modositasa/beallitasa
-status_t MyI2CM_setFrequency(MyI2CM_t* i2cDevice, uint32_t freq);
+status_t MyI2CM_setBitRate(MyI2CM_t* i2cDevice, uint32_t bitRate);
 
 //A sercomok definicioit undefine-olnom kellet, mert kulonben az alabbi makroban
 //a "SERCOM" osszeveszett a forditoval.

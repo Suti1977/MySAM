@@ -27,7 +27,9 @@ void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
 }
 //------------------------------------------------------------------------------
 //driver kezdeti inicializalasa, letrehozasa
-void MySPIM_create(MySPIM_t* spim, const MySPIM_Config_t* config)
+void MySPIM_create(MySPIM_t* spim,
+                   const MySPIM_Config_t* config,
+                   const MySercom_Config_t* sercomCfg)
 {
     ASSERT(spim);
     ASSERT(config);
@@ -39,7 +41,7 @@ void MySPIM_create(MySPIM_t* spim, const MySPIM_Config_t* config)
     spim->config=config;
 
     //Sercom driver letrehozasa
-    MySercom_create(&spim->sercom, &config->sercomCfg);
+    MySercom_create(&spim->sercom, sercomCfg);
 
     //IRQ prioritasok beallitasa
     MySercom_setIrqPriorites(&spim->sercom, config->irqPriorities);
@@ -86,7 +88,7 @@ void MySPIM_deinit(MySPIM_t* spim)
 static void MySPIM_initPeri(MySPIM_t* spim)
 {
     SercomSpi* hw=&spim->sercom.hw->SPI;
-    const MySPIM_Config_t* config=spim->config;
+    const MySPIM_Config_t* cfg=spim->config;
 
     //Mclk es periferia orajelek engedelyezese
     MySercom_enableMclkClock(&spim->sercom);
@@ -94,7 +96,8 @@ static void MySPIM_initPeri(MySPIM_t* spim)
     //MySercom_enableSlowClock(&spim->sercom);
 
     //Periferia resetelese
-    hw->CTRLA.reg=SERCOM_SPI_CTRLA_SWRST;
+    //hw->CTRLA.reg=SERCOM_SPI_CTRLA_SWRST;
+
     while(hw->SYNCBUSY.reg);
 
     //Sercom uzemmod beallitas (0x03-->SPI master)
@@ -106,7 +109,7 @@ static void MySPIM_initPeri(MySPIM_t* spim)
     //igy a beallitasok nagy resze konnyen elvegezheto. A nem a CTRLA regisz-
     //terre vonatkozo bitek egy maszkolassal kerulnek eltuntetesre.
     hw->CTRLA.reg |=
-            (config->attribs & MYSPIM_CTRLA_CONFIG_MASK) |
+            (cfg->attribs & MYSPIM_CTRLA_CONFIG_MASK) |
             0;
     __DMB();
 
@@ -114,16 +117,13 @@ static void MySPIM_initPeri(MySPIM_t* spim)
             //Vetel engedelyezett
             SERCOM_SPI_CTRLB_RXEN |
             //Hardver kezelje-e az SS vonalat? Config alapjan.
-            (config->hardwareSSControl ? SERCOM_SPI_CTRLB_MSSEN : 0) |
+            (cfg->hardwareSSControl ? SERCOM_SPI_CTRLB_MSSEN : 0) |
             0;
     __DMB();
     while(hw->SYNCBUSY.reg);
 
     //Adatatviteli sebesseg beallitasa
-    //A beallitando ertek kialakitasaban a MYSPIM_CALC_BAUDVALUE makro segiti
-    //a felhasznalot.
-    hw->BAUD.reg=config->baudValue;
-    __DMB();
+    MySPIM_setBitRate(spim, (spim->bitRate==0) ? cfg->bitRate : spim->bitRate);
 
     //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
     //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
@@ -145,24 +145,70 @@ static void MySPIM_deinitPeri(MySPIM_t* spim)
     MySercom_disableMclkClock(&spim->sercom);
 }
 //------------------------------------------------------------------------------
+//SPI periferia resetelese
+void MySPIM_reset(MySPIM_t* spim)
+{
+    SercomSpi* hw=&spim->sercom.hw->SPI;
+    MY_ENTER_CRITICAL();
+    hw->CTRLA.reg=SERCOM_SPI_CTRLA_SWRST;
+    while(hw->SYNCBUSY.reg);
+    spim->bitRate=0;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
 //SPI mukodes engedelyezese
 void MySPIM_enable(MySPIM_t* spim)
 {
     SercomSpi* hw=&spim->sercom.hw->SPI;
-
+    MY_ENTER_CRITICAL();
     hw->CTRLA.bit.ENABLE=1;
     __DMB();
     while(hw->SYNCBUSY.reg);
+    MY_LEAVE_CRITICAL();
 }
 //------------------------------------------------------------------------------
 //SPI mukodes tiltaasa
 void MySPIM_disable(MySPIM_t* spim)
 {
     SercomSpi* hw=&spim->sercom.hw->SPI;
-
+    MY_ENTER_CRITICAL();
     hw->CTRLA.bit.ENABLE=0;
     __DMB();
     while(hw->SYNCBUSY.reg);
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//SPI busz sebesseg modositasa/beallitasa
+void MySPIM_setBitRate(MySPIM_t* spim, uint32_t bitRate)
+{
+    if (spim->bitRate==bitRate) return;
+    spim->bitRate=bitRate;
+
+    SercomSpi* hw=&spim->sercom.hw->SPI;
+
+    if (bitRate==0) return;
+    uint32_t coreFreq=spim->sercom.config->coreFreq;
+    uint8_t baudValue= (uint8_t)((uint64_t)coreFreq / (2*bitRate))-1;
+
+    //Ha be van kapcsolva a sercom, akkor azt elobb tiltani kell.
+    if (hw->CTRLA.bit.ENABLE)
+    {   //A periferia be van kapcsolva. Azt elobb tiltani kell.
+        hw->CTRLA.bit.ENABLE=0;
+        while(hw->SYNCBUSY.reg);
+
+        //baud beallitasa
+        hw->BAUD.reg=baudValue;
+
+        //SPI periferia engedelyezese. (Ez utan mar bizonyos config bitek nem
+        //modosithatok!)
+        hw->CTRLA.bit.ENABLE=1;
+        while(hw->SYNCBUSY.reg);
+    }
+    else
+    {
+        //baud beallitasa
+        hw->BAUD.reg= baudValue;
+    }
 }
 //------------------------------------------------------------------------------
 //Egyetlen byte kuldese. A rutin bevarja, mig a byte kimegy.
@@ -245,7 +291,7 @@ static void MySPIM_getNextBlock(MySPIM_t* spim)
         //megszakitasok tiltasa
         hw->INTENCLR.reg = SERCOM_SPI_INTENCLR_RXC;
 
-        portYIELD_FROM_ISR(higherPriorityTaskWoken);
+        portYIELD_FROM_ISR(higherPriorityTaskWoken)
 
         return;
     }

@@ -18,18 +18,18 @@ static void MyUart_deinitPeri(MyUart_t* uart);
 //az uart engedelyezese elott.
 //Figyelem! Az init hatasara nem kerul engedelyezesre az UART,
 //          azt a MyUart_Enable() fuggvennyel kell elvegezni, a hasznalat elott.
-void MyUart_create(MyUart_t* uart, const MyUart_Config_t* cfg)
+void MyUart_create(MyUart_t* uart,
+                   const MyUart_Config_t* cfg,
+                   const MySercom_Config_t* sercomCfg)
 {
-    status_t status=kStatus_Success;
-
     //Modul valtozoinak kezdeti torlese.
     memset(uart, 0, sizeof(MyUart_t));
 
     //Konfiguracio mentese
-    uart->config=cfg;
+    uart->config=cfg;    
 
     //Alap sercom periferia inicializalasa
-    MySercom_create(&uart->sercom, &cfg->sercomConfig);
+    MySercom_create(&uart->sercom, sercomCfg);
 
     //UART-hoz tartozo megszakitasok prioritasana beallitasa
     MySercom_setIrqPriorites(&uart->sercom, cfg->irqPriorities);
@@ -42,7 +42,7 @@ void MyUart_create(MyUart_t* uart, const MyUart_Config_t* cfg)
 //UART driver es eroforrasok felaszabditasa
 void MyUart_destory(MyUart_t* uart)
 {
-
+    (void) uart;
 }
 //------------------------------------------------------------------------------
 //UART Periferia inicializalasa/engedelyezese
@@ -77,13 +77,10 @@ static void MyUart_initPeri(MyUart_t* uart)
     MySercom_enableSlowClock(&uart->sercom);
 
     //USART Periferia reset
-    hw->CTRLA.reg = SERCOM_USART_CTRLA_SWRST;
+    //hw->CTRLA.reg = SERCOM_USART_CTRLA_SWRST;
     //varakozas, amig a reset befejedodik
-    MyUart_waitingForSync(hw);
 
-    //Adatatviteli sebesseg beallitasa. Ezt initkor kellet kiszamolni, a
-    //MyUART_CALC_BAUDVALUE() makroval
-    hw->BAUD.reg= cfg->baudRegValue;
+    MyUart_waitingForSync(hw);
 
     hw->CTRLA.reg =
                 //Usart uzemmod kivalasztasa, belso orajelrol, aszinkron
@@ -111,6 +108,9 @@ static void MyUart_initPeri(MyUart_t* uart)
                 //(tehat a fifon keresztul jon a jelzes.)
                 //SERCOM_USART_CTRLA_IBON |
                 0;
+
+    //Adatatviteli sebesseg beallitasa.
+    MyUart_setBitRate(uart, (uart->bitRate==0) ? cfg->bitRate : uart->bitRate);
 
     hw->CTRLB.reg=
             //Soros vetel engedelyezese
@@ -154,22 +154,71 @@ static void MyUart_deinitPeri(MyUart_t* uart)
     MySercom_disableMclkClock(&uart->sercom);
 }
 //------------------------------------------------------------------------------
+//Uart periferia resetelese
+void MyUart_reset(MyUart_t* uart)
+{
+    SercomUsart* hw=&uart->sercom.hw->USART;
+    MY_ENTER_CRITICAL();
+    hw->CTRLA.reg=SERCOM_USART_CTRLA_SWRST;
+    MyUart_waitingForSync(hw);
+    uart->bitRate=0;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
 //Uart mukodes engedelyezese
 void MyUart_enable(MyUart_t* uart)
 {
+    SercomUsart* hw=&uart->sercom.hw->USART;
     MY_ENTER_CRITICAL();
-    uart->sercom.hw->USART.CTRLA.bit.ENABLE=1;
-    MyUart_waitingForSync(&uart->sercom.hw->USART);
+    hw->CTRLA.bit.ENABLE=1;
+    MyUart_waitingForSync(hw);
     MY_LEAVE_CRITICAL();
 }
 //------------------------------------------------------------------------------
 //Uart mukodes tiltaasa
 void MyUart_disable(MyUart_t* uart)
 {
+    SercomUsart* hw=&uart->sercom.hw->USART;
     MY_ENTER_CRITICAL();
-    uart->sercom.hw->USART.CTRLA.bit.ENABLE=0;
-    MyUart_waitingForSync(&uart->sercom.hw->USART);
+    hw->CTRLA.bit.ENABLE=0;
+    MyUart_waitingForSync(hw);
     MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//Adatatviteli sebesseg beallitasa/modositasa
+void MyUart_setBitRate(MyUart_t* uart, uint32_t bitRate)
+{
+    if (uart->bitRate==bitRate) return;
+    uart->bitRate=bitRate;
+
+    if (bitRate==0) return;
+
+    uint32_t coreFreq=uart->sercom.config->coreFreq;
+    if (coreFreq==0) return;
+    uint16_t baudValeu=(uint16_t)
+                        (65536 - (((uint64_t)65536 * 16 * bitRate) / coreFreq));
+
+    SercomUsart* hw=&uart->sercom.hw->USART;
+
+    //Ha be van kapcsolva a sercom, akkor azt elobb tiltani kell.
+    if (hw->CTRLA.bit.ENABLE)
+    {   //A periferia be van kapcsolva. Azt elobb tiltani kell.
+        hw->CTRLA.bit.ENABLE=0;
+        MyUart_waitingForSync(hw);
+
+        //baud beallitasa
+        hw->BAUD.reg= baudValeu;
+
+        //periferia engedelyezese. (Ez utan mar bizonyos config bitek nem
+        //modosithatok!)
+        hw->CTRLA.bit.ENABLE=1;
+        MyUart_waitingForSync(hw);
+    }
+    else
+    {
+        //baud beallitasa
+        hw->BAUD.reg= baudValeu;
+    }
 }
 //------------------------------------------------------------------------------
 //Callback funkciok beregisztralasa

@@ -24,7 +24,9 @@ static void MyI2CM_sync(SercomI2cm* hw);
 //I2C master driver letrehozasa es konfiguralasa.
 //Fontos! A config altal mutatott konfiguracionak permanensen a memoriaban
 //kell maradnia!
-void MyI2CM_create(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
+void MyI2CM_create(MyI2CM_t* i2cm,
+                   const MyI2CM_Config_t* config,
+                   const MySercom_Config_t* sercomCfg)
 {
     ASSERT(i2cm);
     ASSERT(config);
@@ -36,7 +38,7 @@ void MyI2CM_create(MyI2CM_t* i2cm, const MyI2CM_Config_t* config)
     i2cm->config=config;
 
     //Alap sercom periferia driver initje.
-    MySercom_create(&i2cm->sercom, &i2cm->config->sercomCfg);
+    MySercom_create(&i2cm->sercom, sercomCfg);
 
     //Sercom IRQ prioritasainak beallitasa
     MySercom_setIrqPriorites(&i2cm->sercom, config->irqPriorities);
@@ -80,7 +82,7 @@ void MyI2CM_deinit(MyI2CM_t* i2cm)
 static void MyI2CM_initPeri(MyI2CM_t* i2cm)
 {
     SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
-    const MyI2CM_Config_t* config=i2cm->config;
+    const MyI2CM_Config_t* cfg=i2cm->config;
 
     //Periferia orajelek engedelyezese
     MySercom_enableMclkClock(&i2cm->sercom);
@@ -88,10 +90,8 @@ static void MyI2CM_initPeri(MyI2CM_t* i2cm)
     MySercom_enableSlowClock(&i2cm->sercom);
 
     //Periferia resetelese
-    hw->CTRLA.reg=SERCOM_I2CM_CTRLA_SWRST;
-    MyI2CM_sync(hw);
-
-    hw->CTRLA.reg=
+    //hw->CTRLA.reg=SERCOM_I2CM_CTRLA_SWRST;
+    //MyI2CM_sync(hw);
 
     //A konfiguraciokor megadott attributum mezok alapjan a periferia mukodese-
     //nek beallitasa.
@@ -101,7 +101,7 @@ static void MyI2CM_initPeri(MyI2CM_t* i2cm)
     hw->CTRLA.reg =
             //Sercom uzemmod beallitas (0x05-->I2C master)
             SERCOM_I2CM_CTRLA_MODE(0x05) |
-            (config->attribs & MYI2CM_CTRLA_CONFIG_MASK) |
+            (cfg->attribs & MYI2CM_CTRLA_CONFIG_MASK) |
             //SERCOM_I2CM_CTRLA_LOWTOUTEN |
             //SERCOM_I2CM_CTRLA_INACTOUT(0x3) |
             //SERCOM_I2CM_CTRLA_SDAHOLD(3) |
@@ -117,10 +117,11 @@ static void MyI2CM_initPeri(MyI2CM_t* i2cm)
     MyI2CM_sync(hw);
 
     //Adatatviteli sebesseg beallitasa
-    MyI2CM_setFrequency(i2cm, config->busFreq);
+    MyI2CM_setBitRate(i2cm, (i2cm->bitRate==0) ? cfg->bitRate : i2cm->bitRate);
 
     //Minden interrupt tiltasa a periferian...
     hw->INTENCLR.reg=SERCOM_I2CM_INTENCLR_MASK;
+    hw->INTFLAG.reg=SERCOM_I2CM_INTFLAG_MASK;
 
     //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
     //Feltetelezzuk, hogy egy SERCOM-hoz tartozo interruptok egymas utan
@@ -157,18 +158,33 @@ static void MyI2CM_disablePeri(MyI2CM_t* i2cm)
     MySercom_disableMclkClock(&i2cm->sercom);
 }
 //------------------------------------------------------------------------------
-//I2C busz sebesseg modositasa/beallitasa
-status_t MyI2CM_setFrequency(MyI2CM_t* i2cm, uint32_t freq)
+//I2C periferia resetelese
+void MyI2CM_reset(MyI2CM_t* i2cm)
 {
+    SercomI2cm* hw=&i2cm->sercom.hw->I2CM;
+    MY_ENTER_CRITICAL();
+    hw->CTRLA.reg=SERCOM_I2CM_CTRLA_SWRST;
+    MyI2CM_sync(hw);
+    i2cm->bitRate=0;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//I2C busz sebesseg modositasa/beallitasa
+status_t MyI2CM_setBitRate(MyI2CM_t* i2cm, uint32_t bitRate)
+{
+    if (i2cm->bitRate==bitRate) return kStatus_Success;
+    i2cm->bitRate=bitRate;
+
     //Szaturalas maximum frekvenciara, mely a core orajel fele lehet.
-    uint32_t maxFreq = (i2cm->sercom.config->coreFreq >> 1);
-    if (freq > maxFreq)
+    uint32_t coreFreq=i2cm->sercom.config->coreFreq;
+    uint32_t maxFreq = (coreFreq >> 1);
+    if (bitRate > maxFreq)
     {
-        freq=maxFreq;
+        bitRate=maxFreq;
     }
 
     //Baud szamitasa
-    uint32_t baud = ((i2cm->sercom.config->coreFreq * 10) / (24 * freq)) - 4;
+    uint32_t baud = ((coreFreq * 10) / (24 * bitRate)) - 4;
     uint32_t baud_hs =0;
     if (baud > 255)
     {
@@ -176,7 +192,7 @@ status_t MyI2CM_setFrequency(MyI2CM_t* i2cm, uint32_t freq)
     }
     else
     {
-        baud_hs = ((i2cm->sercom.config->coreFreq * 10) / (478 * freq)) - 1;
+        baud_hs = ((coreFreq * 10) / (478 * bitRate)) - 1;
         if (baud_hs > 255)
         {
             baud_hs = 255;

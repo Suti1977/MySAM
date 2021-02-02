@@ -49,6 +49,10 @@ void MyModBus_init(MyModBus_t* this, const MyModbus_Config_t* cfg)
     this->sendDoneSemaphore=xSemaphoreCreateBinary();
     ASSERT(this->sendDoneSemaphore);
 
+    //Uart driver letrehozas
+    MyUart_create(&this->uart, cfg->uartConfig, cfg->sercomConfig);
+
+
     //kommunikaciot futtato taszk letrehozasa
     if (xTaskCreate(MyModBus_task,
                     cfg->taskName,

@@ -274,7 +274,12 @@ status_t MyModBus_deinitPeripheriaFunc_t(MyUart_t* uart,
 //------------------------------------------------------------------------------
 //Modul inicializalasakor atadando konfiguracios struktura
 typedef struct
-{
+{    
+    //Sercom konfiguracio
+    const MySercom_Config_t* sercomConfig;
+    //UART konfiguracio
+    const MyUart_Config_t* uartConfig;
+
     //Ha nem 0, akkor beallitja erre az eszkoz slave cimet.
     uint8_t slaveAddress;
 

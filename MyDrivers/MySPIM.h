@@ -12,16 +12,13 @@
 //adunk at initkor.
 typedef struct
 {
-    //Az SPI interfacet biztosito Sercom beallitasaira mutat
-    MySercom_Config_t  sercomCfg;
-
     //A periferia IRQ prioritasa
     uint32_t irqPriorities;
 
     //A (kezdeti) adatatvitei sebesseghez tartozo BAUD ertek.
     //Ez fugg a Sercomhoz rendelt GCLK altal eloallitott orajel frekitol.
     //Kiszamitasa a MYSPIM_CALC_BAUDVALUE() makro segitsegevel egyszerubb.
-    uint8_t    baudValue;
+    uint32_t    bitRate;
 
     //Konfiguracios attributumok (bitmaszk mezo)
     //Az ertelmezett attributumok definicioit lasd lejebb, a "MYSPIM_ATTR_"
@@ -96,9 +93,9 @@ typedef struct
 // gclkfreq: A sercom Core orajelehez rendelt GCLK modul kimeneti frekvenciaja
 // baud:     Az SPI busz sebesseg
 // trise:    ride time ido [ns-ban]. 215-300 us kozott lehet!
-
-#define MYSPIM_CALC_BAUDVALUE(gclkfreq, baud) \
-                            ((uint8_t)((gclkfreq / (2*baud))-1))
+//
+//#define MYSPIM_CALC_BAUDVALUE(gclkfreq, baud) \
+//                            ((uint8_t)((gclkfreq / (2*baud))-1))
 //------------------------------------------------------------------------------
 //Kuldes/fogadas leiroja. Ha txData es vagy rxData NULL, akkor az adott
 //transzfert nem hajtja vegre. Ha mindegyik be van allitva, akkor egyidoben
@@ -140,6 +137,9 @@ typedef struct
     uint8_t*        txPtr;
     //Beolvasott adatbyteokat cimzi
     uint8_t*        rxPtr;
+
+    //A busz sebessege
+    uint32_t    bitRate;
 } MySPIM_t;
 //------------------------------------------------------------------------------
 //SS (slave select/chip select) vonal vezerleset vegzo callback fuggvenyek
@@ -175,7 +175,10 @@ void MySPIM_createDevice(MySPIM_Device_t *spiDevice,
 
 
 //driver kezdeti inicializalasa, letrehozasa
-void MySPIM_create(MySPIM_t* spim, const MySPIM_Config_t* config);
+void MySPIM_create(MySPIM_t* spim,
+                   const MySPIM_Config_t* config,
+                   const MySercom_Config_t* sercomCfg);
+
 //SPI driver es eroforrasok felaszabditasa
 void MySPIM_destory(MySPIM_t* spim);
 
@@ -184,10 +187,15 @@ void MySPIM_init(MySPIM_t* spim);
 //SPI Periferia tiltasa. HW eroforrasok tiltasa.
 void MySPIM_deinit(MySPIM_t* spim);
 
+//SPI periferia resetelese
+void MySPIM_reset(MySPIM_t* spim);
 //SPI mukodes engedelyezese
 void MySPIM_enable(MySPIM_t* spim);
 //SPI mukodes tiltaasa
 void MySPIM_disable(MySPIM_t* spim);
+
+//SPI busz sebesseg modositasa/beallitasa
+void MySPIM_setBitRate(MySPIM_t* i2cDevice, uint32_t bitRate);
 
 //Egyetlen byte kuldese. A rutin bevarja, mig a byte kimegy.
 void MySPIM_sendByte(MySPIM_t* spim, uint8_t data);

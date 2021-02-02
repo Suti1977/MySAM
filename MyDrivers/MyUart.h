@@ -22,13 +22,10 @@ enum
 //UART inicializacios struktura
 typedef struct
 {
-    //Az alap sercom periferiara vonatkozo konfiguraciok
-    MySercom_Config_t  sercomConfig;
-    //Adatatviteli sebesseghez tartozo baudrate regiszter erteke
-    //A MYUART_CALC_BAUDVALUE() makroval szamithato
-    uint16_t            baudRegValue;
+    //Adatatviteli sebesseg.
+    uint32_t    bitRate;
     //RS485 mod kijelolese
-    bool rs485Mode;    
+    bool        rs485Mode;
     //A periferia IRQ prioritasa
     uint32_t    irqPriorities;
 } MyUart_Config_t;
@@ -37,8 +34,8 @@ typedef struct
 //UART-hoz rendelt GCLK frekvenciaja alapjan.
 //baud: a kivant adatatviteli sebesseg
 //gclkfreq: az uarthoz rendelt GCLK modul kimeneti frekvenciaja
-#define MYUART_CALC_BAUDVALUE(baud, gclkfreq)  (uint16_t) \
-                (65536 - (((uint64_t)65536 * 16 * baud) / gclkfreq))
+//#define MYUART_CALC_BAUDVALUE(baud, gclkfreq)  (uint16_t) \
+//                (65536 - (((uint64_t)65536 * 16 * baud) / gclkfreq))
 
 //------------------------------------------------------------------------------
 //Uj karakter vetelekor felojovo callback fuggveny prototipusa
@@ -100,6 +97,9 @@ typedef struct
     //Vetelhez tartozo valtozok halmaza
     MyUart_Rx_t  rx;
 
+    //Utoljara beallitott baud ertek.
+    uint32_t bitRate;
+
 } MyUart_t;
 //------------------------------------------------------------------------------
 //Driver instancia letrahozasa
@@ -109,7 +109,9 @@ typedef struct
 //az uart engedelyezese elott.
 //Figyelem! Az init hatasara nem kerul engedelyezesre az UART,
 //          azt a MyUart_Enable() fuggvennyel kell elvegezni, a hasznalat elott.
-void MyUart_create(MyUart_t* uart, const MyUart_Config_t* cfg);
+void MyUart_create(MyUart_t* uart,
+                   const MyUart_Config_t* cfg,
+                   const MySercom_Config_t* sercomCfg);
 
 //UART driver es eroforrasok felaszabditasa
 void MyUart_destory(MyUart_t* uart);
@@ -119,6 +121,8 @@ void MyUart_init(MyUart_t* uart);
 //UART Periferia tiltasa. HW eroforrasok tiltasa.
 void MyUart_deinit(MyUart_t* uart);
 
+//Uart periferia resetelese
+void MyUart_reset(MyUart_t* uart);
 //Uart mukodes engedelyezese
 void MyUart_enable(MyUart_t* uart);
 //Uart mukodes tiltaasa
@@ -133,6 +137,8 @@ void MyUart_registreCallbacks(MyUart_t* uart,
                               MyUart_errorFunc_t* errorFunc,
                               void* callbackData);
 
+//Adatatviteli sebesseg beallitasa/modositasa
+void MyUart_setBitRate(MyUart_t* uart, uint32_t bitRate);
 
 //Adatcsomag kiirasanak kezdemenyezese. A rutin nem varja meg, amig az adatok
 //kiirodnak az uartra.
