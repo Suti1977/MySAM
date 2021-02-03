@@ -104,6 +104,7 @@ status_t LP5569_config( LP5569_t* dev, const LP5569_Config_t* config)
 
     return status;
 }
+//------------------------------------------------------------------------------
 //LED vezerles beallitasa
 status_t LP5569_setLedControl(LP5569_t* dev,
                               uint8_t ledIndex,
@@ -113,7 +114,7 @@ status_t LP5569_setLedControl(LP5569_t* dev,
                               bool externalPowerd)
 {
     uint8_t regValue;
-    regValue=(uint8_t) masterFader;
+    regValue=(uint8_t) (masterFader << 5);
     if (ratioMetricDimming)    regValue |= BIT(4);
     if (exponentialAdjustment) regValue |= BIT(3);
     if (externalPowerd)        regValue |= BIT(2);
@@ -154,7 +155,7 @@ status_t LP5569_setMasterFader( LP5569_t* dev,
                                 uint8_t faderValue)
 {
     return  LP5569_writeReg(dev,
-                            LP5569_REG_MASTER_FADER1+faderIndex,
+                            LP5569_REG_MASTER_FADER1-1+faderIndex,
                             faderValue);
 }
 //------------------------------------------------------------------------------

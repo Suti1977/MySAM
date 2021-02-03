@@ -105,8 +105,7 @@
 #define LP5569_REG_GENERAL_FAULT       0x83    //CP Cap, UVLO and TSD Fault Status
 
 
-
-
+#define LP5569_BROADCAST_I2C_ADDRESS    0x40
 //------------------------------------------------------------------------------
 //LP5569 valtozoi
 typedef struct
@@ -136,17 +135,16 @@ status_t LP5569_enable(LP5569_t* dev);
 status_t LP5569_disable(LP5569_t* dev);
 
 //LED vezerlesek bealliatsanal, a master fader beallitashoz hasznalhato enumok.
-//(Olyan bitmaszkok, melyeket azonnal a regiszterbe irhatunk.)
 typedef enum
 {
     //A LED csatornat nem befolyasolja egyetlen master fader sem
     LP5569_NO_MASTER_FADING=0,
     //A LED csatornahoz az alabbiak szerint 1, 2, 3 master fadert rendeli
-    LP5569_MASTER_FADER1=1 << 5,
-    LP5569_MASTER_FADER2=2 << 5,
-    LP5569_MASTER_FADER3=3 << 5,
+    LP5569_MASTER_FADER1=1,
+    LP5569_MASTER_FADER2=2,
+    LP5569_MASTER_FADER3=3,
     //A PWM bemenet szerint fadeli a csatornat
-    LP5569_PWM_INPUT_MASTER_FADING=5 << 5,
+    LP5569_PWM_INPUT_MASTER_FADING=5,
 } LP5569_MF_MAPPING_t;
 
 //LED vezerles beallitasa
