@@ -22,7 +22,8 @@
 
 //------------------------------------------------------------------------------
 //Callback rutin, melyet az userre varas eseten hasznalunk
-static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
+static void MySimpleResourceUser_statusCB(resource_t* resource,
+                                          resourceStatus_t resourceStatus,
                                           resourceErrorInfo_t* errorInfo,
                                           void* callbackData)
 {
@@ -36,7 +37,10 @@ static void MySimpleResourceUser_statusCB(resourceStatus_t resourceStatus,
     //Ha van megadva az user-hez statusz callback, akkor az meghivasra kerul.
     if (user->statusFunc)
     {   //Van beallitva callback
-        user->statusFunc(resourceStatus, errorInfo, user->callbackData);
+        user->statusFunc(resource,
+                         resourceStatus,
+                         errorInfo,
+                         user->callbackData);
     }
 
     if (errorInfo)  user->asyncStatus=errorInfo->errorCode;

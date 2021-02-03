@@ -802,7 +802,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
                 //A jelzes kiadasa utan vegig kell majd nezni az eroforras
                 //hasznaloit, es ha van, kesleltetett inidtasi kerelem, akkor
                 //azokat ervenyre juttatni.
-                //Vegighalad az eroforrss osszes hasznalojan...
+                //Vegighalad az eroforras osszes hasznalojan...
                 dep=resource->requesterList.first;
                 while(dep)
                 {
@@ -979,7 +979,7 @@ stop_resource:
                 break;
         }
 
-        //Vegighalad az eroforrss osszes hasznalojan...
+        //Vegighalad az eroforras osszes hasznalojan...
         resourceDep_t* dep=resource->requesterList.first;
         while(dep)
         {
@@ -1029,7 +1029,7 @@ static inline void MyRM_processResource(MyRM_t* rm, resource_t* resource)
 static void MyRM_sendStatus(resource_t* resource,
                             resourceStatus_t resourceStatus)
 {
-    //Vegighalad az eroforrss osszes hasznalojan...
+    //Vegighalad az eroforras osszes hasznalojan...
     resourceDep_t* dep=resource->requesterList.first;
     while(dep)
     {
@@ -1049,8 +1049,24 @@ static void MyRM_sendStatus(resource_t* resource,
         }
 
 
-        //lancolt list akovetkezo elemere allas.
+        //lancolt lista kovetkezo elemere allas.
         dep=(resourceDep_t*)dep->nextRequester;
+    }
+
+    //A beregisztralt statusz kerelmezesek kiszolgalasa...
+    resourceStatusRequest_t* nextStatusReq=
+                    (resourceStatusRequest_t*)resource->firstStatusRequester;
+    while(nextStatusReq)
+    {
+        if (nextStatusReq->statusFunc)
+        {   //A beregisztralt status callback meghivasa
+            nextStatusReq->statusFunc(  resource,
+                                        resourceStatus,
+                                        resource->reportedError,
+                                        nextStatusReq->callbackData);
+        }
+        //lepes a lancolt listaban
+        nextStatusReq = (resourceStatusRequest_t*)nextStatusReq->next;
     }
 }
 //------------------------------------------------------------------------------
@@ -1339,6 +1355,10 @@ static void MyRM_stopDependency(resourceDep_t* dep)
         //Ki kell ertekelni az allapotokat
         dependency->flags.checkStartStopReq=true;
 
+        #if MyRM_TRACE
+            printf(" %s  usageCnt==0\n", dependency->resourceName);
+        #endif
+
         //eloirjuk az eroforras kiertekeleset...
         MyRM_addResourceToProcessReqList(&myRM, dependency);
     }
@@ -1502,6 +1522,33 @@ static void MyRM_resourceStatusCore(resource_t* resource,
     } //switch
 }
 //------------------------------------------------------------------------------
+//Eroforrashoz statusz callback beregisztralasa. Egy eroforrashoz tobb ilyen
+//kerelem is beregisztralhato.
+void MyRM_addResourceStatusRequest(resource_t* resource,
+                                   resourceStatusRequest_t* request)
+{
+    MyRM_t* rm=&myRM;
+    MyRM_LOCK(rm->mutex);
+
+    if (resource->firstStatusRequester==NULL)
+    {   //ez lesz az elso beregisztralt kerelmezo
+        resource->firstStatusRequester=(struct resourceStatusRequest_t*)request;
+    } else
+    {
+        //Lista vegenek keresese. Addig lepked, mig a listat lezaro NULL-ra nem
+        //talal.
+        resourceStatusRequest_t* item=(resourceStatusRequest_t*)
+                                                resource->firstStatusRequester;
+        while(item->next)
+        {
+            item = (resourceStatusRequest_t*)item->next;
+        }
+        item->next=(struct resourceStatusRequest_t*)request;
+    }
+    request->next=NULL;
+
+    MyRM_UNLOCK(rm->mutex);
+}
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1608,7 +1655,8 @@ void MyRM_useResource(resourceUser_t* user)
                 resource_t* resource=
                             ((resource_t*)user->dependency.requiredResource);
 
-                user->statusFunc(RESOURCE_ERROR,                                
+                user->statusFunc(resource,
+                                 RESOURCE_ERROR,
                                  resource->reportedError,
                                  user->callbackData);
             }
@@ -1685,7 +1733,8 @@ void MyRM_unuseResource(resourceUser_t* user)
                 resource_t* resource=
                             ((resource_t*)user->dependency.requiredResource);
 
-                user->statusFunc(RESOURCE_STOP,
+                user->statusFunc(resource,
+                                 RESOURCE_STOP,
                                  resource->reportedError,
                                  user->callbackData);
             }
@@ -1829,7 +1878,8 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
             if (user->statusFunc)
             {
                 //MyRM_UNLOCK(rm->mutex);
-                user->statusFunc(   RESOURCE_ERROR,
+                user->statusFunc(   resource,
+                                    RESOURCE_ERROR,
                                     resource->reportedError,
                                     user->callbackData);
                 //MyRM_LOCK(rm->mutex);
@@ -1854,7 +1904,8 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
                 if (user->statusFunc)
                 {
                     //MyRM_UNLOCK(rm->mutex);
-                    user->statusFunc(RESOURCE_RUN,
+                    user->statusFunc(resource,
+                                     RESOURCE_RUN,
                                      resource->reportedError,
                                      user->callbackData);
                     //MyRM_LOCK(rm->mutex);
@@ -1890,7 +1941,8 @@ static void MyRM_user_resourceStatusCB(struct resourceDep_t* dep,
                     if (user->statusFunc)
                     {
                         //xMyRM_UNLOCK(rm->mutex);
-                        user->statusFunc((status==RESOURCE_DONE) ? RESOURCE_DONE
+                        user->statusFunc(resource,
+                                         (status==RESOURCE_DONE) ? RESOURCE_DONE
                                                                  : RESOURCE_STOP,
                                          errorInfo,
                                          user->callbackData);
@@ -1924,6 +1976,8 @@ static void MyRM_restartDo(resourceUser_t* user)
     MyRM_startDependency(&user->dependency);
 }
 //------------------------------------------------------------------------------
+//Eroforras inditasa
+//csak teszteleshez hasznalhato, ha kivulrol hivjuk.
 void MyRM_startResource(resource_t* resource)
 {
     MyRM_t* rm=&myRM;
@@ -1955,6 +2009,8 @@ void MyRM_startResource(resource_t* resource)
     MyRM_sendNotify(rm, MyRM_NOTIFY__RESOURCE_START_REQUEST);
 }
 //------------------------------------------------------------------------------
+//Eroforras megallitasa
+//csak teszteleshez hasznalhato, ha kivulrol hivjuk.
 void MyRM_stopResource(resource_t* resource)
 {
     MyRM_t* rm=&myRM;

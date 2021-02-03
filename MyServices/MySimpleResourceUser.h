@@ -11,7 +11,8 @@
 //------------------------------------------------------------------------------
 //Egyszeru eroforras hasznalat eseten beallithato hiba callback felepitese,
 //melyben az applikacio fele jelezni tudja az eroforras hibait.
-typedef void simplelResourceUserStatusFunc_t(resourceStatus_t resourceStatus,
+typedef void simplelResourceUserStatusFunc_t(resource_t* resource,
+                                             resourceStatus_t resourceStatus,
                                              resourceErrorInfo_t* errorInfo,
                                              void* callbackData);
 

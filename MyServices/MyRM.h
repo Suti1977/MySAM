@@ -316,17 +316,36 @@ typedef struct
     uint16_t debug :1;
     } flags;
 
+
+    //Statuszt kerelmezok lancolt listaja.
+    //A listaba regisztralt callbackek kerulnek vegighivasra, ha az eroforras
+    //allapota valtozott. Egy eroforrashoz igy tobb statusz kerelmezo is
+    //regisztralhat.
+    struct resourceStatusRequest_t* firstStatusRequester;
+
     //Tetszoleges eroforras kiegeszitesre mutat. Ilyen lehet peldaul, ha egy
     //eroforrashoz letrehoztak taszkot.
     void* ext;
 } resource_t;
 //------------------------------------------------------------------------------
 //Az applikacio fele callback definicio.
-//Ezen keresztul jelez vissza, ha az hasznalt eroforrasban valami allapot
+//Ezen keresztul jelez vissza, ha a hasznalt eroforrasban valami allapot
 //valtozas all be. (pl elindul, megallt, hiba van vele, ...)
-typedef void resourceStatusFunc_t( resourceStatus_t resourceStatus,
+typedef void resourceStatusFunc_t( resource_t* resource,
+                                   resourceStatus_t resourceStatus,
                                    resourceErrorInfo_t* errorInfo,
                                    void* callbackData);
+
+//Az egyes eroforrasokhoz tartozo, eroforars statuszt kerelmezok listaja.
+typedef struct
+{
+    //A hivott callback funkcio
+    resourceStatusFunc_t* statusFunc;
+    //tetszoleges adattartalom
+    void* callbackData;
+    //Lancolt lista kovetkezo elemere mutat
+    struct resourceStatusRequest_t* next;
+} resourceStatusRequest_t;
 //------------------------------------------------------------------------------
 //Eroforrasokat hasznalo userek (igenylok) allapotai.
 typedef enum
@@ -484,6 +503,12 @@ void MyRM_addDependency(resourceDep_t* dep,
 void MyRM_resourceStatus(resource_t* resource,
                          resourceStatus_t resourceStatus,
                          status_t errorCode);
+
+//Eroforrashoz statusz callback beregisztralasa. Egy eroforrashoz tobb ilyen
+//kerelem is beregisztralhato.
+void MyRM_addResourceStatusRequest(resource_t* resource,
+                                   resourceStatusRequest_t* request);
+
 
 //Eroforrasok inditasa/megallitasa
 //csak teszteleshez hasznalhato, ha kivulrol hivjuk.
