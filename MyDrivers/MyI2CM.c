@@ -702,10 +702,20 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
             }
         }
 
-        if (status==kMyI2CMStatus_ArbitationLost)
-        {   //Arbitacio veszetes. Ujra probalkozik...
-            printf("I2C arbitation lost.\n");
-            continue;
+        if (status)
+        {   //Van valami hiba
+
+            //Ha van beregisztralva error callback, akkor az meghivodik...
+            if (i2cm->errorFunc)
+            {
+                i2cm->errorFunc(status, i2cm->errorFuncCallbackdata);
+            }
+
+            if (status==kMyI2CMStatus_ArbitationLost)
+            {   //Arbitacio veszetes. Ujra probalkozik...
+                printf("I2C arbitation lost.\n");
+                continue;
+            }
         }
 
         break;
@@ -724,5 +734,14 @@ error:
     }
 
     return status;
+}
+//------------------------------------------------------------------------------
+//Hiba eseten meghivodo callback beregisztralasa
+void MyI2CM_registerErrorFunc(MyI2CM_t* i2cm,
+                              MyI2CM_errorFunc_t* errorFunc,
+                              void* errorFuncCallbackdata)
+{
+    i2cm->errorFunc=errorFunc;
+    i2cm->errorFuncCallbackdata=errorFuncCallbackdata;
 }
 //------------------------------------------------------------------------------

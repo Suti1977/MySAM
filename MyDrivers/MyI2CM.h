@@ -10,6 +10,9 @@
 
 #include "MySercom.h"
 //------------------------------------------------------------------------------
+//I2C driver hibaja eseten hivott callback funkcio definicioja
+typedef void MyI2CM_errorFunc_t(status_t errorCode, void* callbackdata);
+//------------------------------------------------------------------------------
 //I2C periferia konfiguracios parameterei, melyet az MyI2CM_Init() fuggvenynek
 //adunk at initkor.
 typedef struct
@@ -156,6 +159,12 @@ typedef struct
 
     //A busz sebessege
     uint32_t    bitRate;
+
+    //Hiba eseten hivodo callback. (ha be van regisztralva.)
+    MyI2CM_errorFunc_t* errorFunc;
+    //A hiba callback szamara atadott tetszoleges valtozo.
+    void* errorFuncCallbackdata;
+
 } MyI2CM_t;
 //------------------------------------------------------------------------------
 //Statusz kodok
@@ -219,6 +228,12 @@ void MyI2CM_reset(MyI2CM_t* i2cm);
 //Parameterkent at kell adni a kezelt interface leirojat.
 void MyI2CM_service(MyI2CM_t* i2cm);
 
+//Hiba eseten meghivodo callback beregisztralasa
+void MyI2CM_registerErrorFunc(MyI2CM_t* i2cm,
+                              MyI2CM_errorFunc_t* errorFunc,
+                              void* errorFuncCallbackdata);
+
+
 //I2C eszkoz letrehozasa
 //i2c_device: A letrehozando eszkoz leiroja
 //i2c: Annak a busznak az I2CM driverenek handlere, melyre az eszkoz csatlakozik
@@ -238,6 +253,7 @@ status_t MyI2CM_ackTest(MyI2CM_Device_t* i2cDevice);
 
 //I2C busz sebesseg modositasa/beallitasa
 status_t MyI2CM_setBitRate(MyI2CM_t* i2cDevice, uint32_t bitRate);
+
 
 //A sercomok definicioit undefine-olnom kellet, mert kulonben az alabbi makroban
 //a "SERCOM" osszeveszett a forditoval.
