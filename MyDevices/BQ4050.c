@@ -197,5 +197,20 @@ status_t BQ4050_getDesignCapacity(BQ4050_t* dev, uint16_t *capacity_mAh)
     return BQ4050_readReg16(dev, BQ4050_DESIGN_CAPACITY_REG, capacity_mAh);
 }
 //------------------------------------------------------------------------------
+//SHUTDOWN modba lepes.
+status_t BQ4050_shutDown(BQ4050_t* dev)
+{
+    //A shutdown paarncsot ketszer kell a BMS-re kuldeni, hogy azt ervenyre is
+    //juttassa!
+    status_t status;
+    status=BQ4050_writeReg16(dev,
+                             BQ4050_MANUFACTURER_ACCESS_REG,
+                             BQ4050_MAC_SHUTDOWN);
+    if (status) return status;
+    status=BQ4050_writeReg16(dev,
+                             BQ4050_MANUFACTURER_ACCESS_REG,
+                             BQ4050_MAC_SHUTDOWN);
+    return status;
+}
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

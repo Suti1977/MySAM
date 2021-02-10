@@ -8,7 +8,7 @@
 
 #include "MyI2CM.h"
 
-
+#define BQ4050_MANUFACTURER_ACCESS_REG          0x00
 #define BQ4050_BATTERY_MODE_REG                 0x03
 #define  BQ4050_BATTERY_MODE_CAPM_MA                         0
 #define  BQ4050_BATTERY_MODE_CAPM_10MW                       BIT(15)
@@ -31,6 +31,7 @@
 //BQ4050 altal kezelheto cellak szama
 #define BQ4050_MAX_CELL_COUNT   4
 
+#define BQ4050_MAC_SHUTDOWN                     0x0010
 //------------------------------------------------------------------------------
 //BQ4050 valtozoi
 typedef struct
@@ -85,6 +86,9 @@ status_t BQ4050_getRemainingCapacity_mAh(BQ4050_t* dev, uint16_t *capacity_mAh);
 
 //Tervezett kapacitas lekerdezese mAh-ban
 status_t BQ4050_getDesignCapacity(BQ4050_t* dev, uint16_t *capacity_mAh);
+
+//SHUTDOWN modba lepes.
+status_t BQ4050_shutDown(BQ4050_t* dev);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //BQ4050_H_
