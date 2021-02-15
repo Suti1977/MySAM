@@ -22,7 +22,7 @@ static uint16_t crc_ccitt(uint16_t crc, uint8_t byte)
 
 static uint16_t crc_ccitt_of_data(uint8_t *data, uint32_t length)
 {
-    uint8_t i;
+    uint32_t i;
     uint16_t crc = 0xffff;
     for (i = 0; i < length; ++i) {
         crc = crc_ccitt(crc, data[i]);
