@@ -185,6 +185,26 @@ void MyUart_disable(MyUart_t* uart)
     MY_LEAVE_CRITICAL();
 }
 //------------------------------------------------------------------------------
+//Vetel atmeneti tiltasa.
+void MyUart_disableRx(MyUart_t* uart)
+{
+    SercomUsart* hw=&uart->sercom.hw->USART;
+    MY_ENTER_CRITICAL();
+    hw->CTRLB.bit.RXEN=0;
+    MyUart_waitingForSync(hw);
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//Vetel visszaengedelyezese
+void MyUart_enableRx(MyUart_t* uart)
+{
+    SercomUsart* hw=&uart->sercom.hw->USART;
+    MY_ENTER_CRITICAL();
+    hw->CTRLB.bit.RXEN=1;
+    MyUart_waitingForSync(hw);
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
 //Adatatviteli sebesseg beallitasa/modositasa
 void MyUart_setBitRate(MyUart_t* uart, uint32_t bitRate)
 {

@@ -128,6 +128,11 @@ void MyUart_enable(MyUart_t* uart);
 //Uart mukodes tiltaasa
 void MyUart_disable(MyUart_t* uart);
 
+//Vetel atmeneti tiltasa.
+void MyUart_disableRx(MyUart_t* uart);
+//Vetel visszaengedelyezese
+void MyUart_enableRx(MyUart_t* uart);
+
 //UART-ra kozvetlen karakter kiirasa
 void MyUart_putCharDirect(MyUart_t* uart, char txByte);
 
