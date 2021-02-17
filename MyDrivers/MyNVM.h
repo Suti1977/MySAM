@@ -16,13 +16,13 @@ typedef struct
 extern sMyNVM MyNVM;
 //------------------------------------------------------------------------------
 // kezdeti inicializalasa
-void MyNVM_Init(void);
+void MyNVM_init(void);
 
 //Varakozas, hogy az NVM vezerlo elkeszuljon egy korabbi parancsal.
-void MyNVM_waitingForReady(void);
+status_t MyNVM_waitingForReady(void);
 
 //NVM parancs vegrehajtasa
-status_t MyNVM_execCmd(uint32_t cmd);
+status_t MyNVM_execCmd(uint16_t cmd);
 
 //BOOTPROT bitek programozasat megvalosito fuggveny.
 //Ha a BOOTPROT bitek nem azonosak a bemeno parameterben megadottal, akkor
@@ -33,11 +33,24 @@ status_t MyNVM_setBootProtBits(uint32_t value);
 //BOOTPROT bitek kiolvasasa
 uint32_t MyNVM_readBootProtBits(void);
 
-//Egy megadott blokk torlese.
-void MyNVM_eraseBlock(uint32_t *dst);
+//Egy megadott blokk torlese.  (NVMCTRL_BLOCK_SIZE)
+status_t MyNVM_eraseBlock(uint32_t *dst);
 
 //Egy adott cimtol kezdve a Flash vegeig torli a blokkokat
-void MyNVM_eraseToFlashEnd(uint32_t *dst);
+status_t MyNVM_eraseToFlashEnd(uint32_t *dst);
+
+//User page torlese
+status_t MyNVM_eraseUserPage(uint32_t *dst);
+
+//32 bites szavak irasa
+status_t MyNVM_writeWords(uint32_t *dst,
+                          const uint32_t *src,
+                          uint32_t numWords);
+
+//Egy teljes lap irasa (FLASH_PAGE_SIZE)
+status_t MyNVM_writePage(const volatile void *dst,
+                         const void *src,
+                         uint32_t size);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYNVM_H_
