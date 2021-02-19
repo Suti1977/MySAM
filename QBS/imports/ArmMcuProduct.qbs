@@ -19,11 +19,11 @@ Product
 
 	//A projekthez hozzaadott ".ld" kiterjesztesu fileok "linkerscript" TAG-et
 	//kapnak. 
-    FileTagger 
-	{
-        patterns: "*.ld"
-        fileTags: ["linkerscript"]
-    }
+    //FileTagger
+    //{
+    //    patterns: "*.ld"
+    //    fileTags: ["linkerscript"]
+    //}
 
     cpp.cLanguageVersion: "c11"         //11
     cpp.cxxLanguageVersion: "c++11"     //11

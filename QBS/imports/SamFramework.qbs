@@ -25,11 +25,13 @@ ArmMcuProduct
     property path freeRTOS_Path: mywayPath+"Thirdparty/FreeRTOS/"
     //FreeRTOS eseten alkalmazando memoria managger verzioja.
     //https://www.freertos.org/a00111.html
-    property string memManagerVerison: project.memManagerVerison;
+    property string memManagerVerison: project.memManagerVerison
 
 
     //Az applikacioban megadott globalis definiciok gyujtoje
     property stringList  appDefines
+
+    property string linkerScript : "__LINKER_SCRIPT_UNDEFINED__"
 
     //--------------------------------------------------------------------------
     //Globalis definiciok listajanak kialakitasa...
@@ -580,6 +582,11 @@ ArmMcuProduct
 
     //globalis definiciok hozzaadasa
     cpp.defines: base.concat(globalDefs)
+
+    cpp.linkerFlags:
+    [
+        "-T" + linkerScript
+    ].concat(base)
 
     Export 
 	{
