@@ -24,6 +24,9 @@
 
 //verzioszam osszeallitasat segito makro
 #define MAKE_VERSION(major, minor, bugfix) (((major) << 16) | ((minor) << 8) | (bugfix))
+#define VERSION_MAJOR(v)    (v>>16)
+#define VERSION_MINOR(v)    ((v>>8)&0xff)
+#define VERSION_BUGFIX(v)   (v & 0xff)
 
 //BIT-re maszkot eloallito seged makro
 #ifndef BIT
