@@ -94,7 +94,7 @@ typedef struct
 // baud:     Az SPI busz sebesseg
 // trise:    ride time ido [ns-ban]. 215-300 us kozott lehet!
 //
-//#define MYSPIM_CALC_BAUDVALUE(gclkfreq, baud) \
+//#define MYSPIM_CALC_BAUDVALUE(gclkfreq, baud)
 //                            ((uint8_t)((gclkfreq / (2*baud))-1))
 //------------------------------------------------------------------------------
 //Kuldes/fogadas leiroja. Ha txData es vagy rxData NULL, akkor az adott

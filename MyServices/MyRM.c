@@ -53,7 +53,9 @@ static void MyRM_restartDo(resourceUser_t* user);
 #define MyRM_UNLOCK(mutex)  xSemaphoreGiveRecursive(mutex)
 
 static const char* MyRM_resourceStateStrings[]=RESOURCE_STATE_STRINGS;
+#if MyRM_TRACE
 static const char* MyRM_resourceStatusStrings[]=RESOURCE_STATUS_STRINGS;
+#endif
 static const char* MyRM_resourceUserStateStrings[]=RESOURCE_USER_STATE_STRINGS;
 //------------------------------------------------------------------------------
 //Eroforras management reset utani kezdeti inicializalasa

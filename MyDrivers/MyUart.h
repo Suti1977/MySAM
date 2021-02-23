@@ -30,14 +30,6 @@ typedef struct
     uint32_t    irqPriorities;
 } MyUart_Config_t;
 //------------------------------------------------------------------------------
-//UART baudrate regiszterenek kiszamitasa a kivant adatatviteli sebesseg, es az
-//UART-hoz rendelt GCLK frekvenciaja alapjan.
-//baud: a kivant adatatviteli sebesseg
-//gclkfreq: az uarthoz rendelt GCLK modul kimeneti frekvenciaja
-//#define MYUART_CALC_BAUDVALUE(baud, gclkfreq)  (uint16_t) \
-//                (65536 - (((uint64_t)65536 * 16 * baud) / gclkfreq))
-
-//------------------------------------------------------------------------------
 //Uj karakter vetelekor felojovo callback fuggveny prototipusa
 typedef void MyUart_rxFunc_t(SercomUsart* hw, void* callbackData);
 

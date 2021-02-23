@@ -16,12 +16,15 @@ void MyGPIO_initPorts(void)
     //Ennek megfeleloen, itt most minden port (A, B, C) minden PIN-jehez enge-
     //delyezni fogom a bemenetek mintazasat.
     PORT->Group[PORT_A].CTRL.bit.SAMPLING = 0xffffffff;
+#if (PORT_GROUPS>1)
     PORT->Group[PORT_B].CTRL.bit.SAMPLING = 0xffffffff;
+#endif
+#if (PORT_GROUPS>2)
     PORT->Group[PORT_C].CTRL.bit.SAMPLING = 0xffffffff;
-#ifdef PORT_D
+#endif
+#if (PORT_GROUPS>3)
     PORT->Group[PORT_D].CTRL.bit.SAMPLING = 0xffffffff;
 #endif
-
 }
 //------------------------------------------------------------------------------
 //GPIO pin beallitasa, az Config-ban megadott modon.

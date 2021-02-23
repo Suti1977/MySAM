@@ -184,6 +184,7 @@ error:
 //User page torlese
 status_t MyNVM_eraseUserPage(uint32_t *dst)
 {
+    (void) dst;
     status_t status;
     status=MyNVM_waitingForReady();
     if (status) goto error;
@@ -299,7 +300,7 @@ error:
 }
 //------------------------------------------------------------------------------
 //Egy teljes lap irasa (FLASH_PAGE_SIZE)
-status_t MyNVM_writePage(const volatile void *dst,
+status_t MyNVM_writePage(void *dst,
                          const void *src,
                          uint32_t size)
 {
@@ -309,7 +310,7 @@ status_t MyNVM_writePage(const volatile void *dst,
     size = (size + 3) / 4; //convert bytes to words with rounding
 
     volatile uint32_t *dst_addr = (volatile uint32_t *)dst;
-    const uint8_t *src_addr = (uint8_t *)src;
+    const uint8_t *src_addr = (const uint8_t *)src;
 
     //A lap iras csak hataron kezdodhet!
     if (((uint32_t)dst) % FLASH_PAGE_SIZE)

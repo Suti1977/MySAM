@@ -48,7 +48,7 @@ status_t MyNVM_writeWords(uint32_t *dst,
                           uint32_t numWords);
 
 //Egy teljes lap irasa (FLASH_PAGE_SIZE)
-status_t MyNVM_writePage(const volatile void *dst,
+status_t MyNVM_writePage(void *dst,
                          const void *src,
                          uint32_t size);
 //------------------------------------------------------------------------------

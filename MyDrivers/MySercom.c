@@ -79,12 +79,12 @@ void MySercom_create(MySercom_t* sercom, const MySercom_Config_t* config)
     uint8_t index=config->sercomNr;
 
     //Ha ez az assert feljon, akkor a hivatkozott sercom nem letezik
-    assert(index<ARRAY_SIZE(g_MySercom_infos));
+    ASSERT(index<ARRAY_SIZE(g_MySercom_infos));
 
 
     const MySercom_Info_t* sercomInfo=&g_MySercom_infos[index];
     //Ha ez az assert feljon, akkor a hivatkozott sercom nem letezik
-    assert(sercomInfo->hw);
+    ASSERT(sercomInfo->hw);
 
     //A leiroban beallitja az alkalmazott sercom baziscimet.
     //A kesobbiekben a driverek (SPI, UART, I2C,...) ezen keresztul erik el.
