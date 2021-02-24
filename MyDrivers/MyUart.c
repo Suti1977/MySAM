@@ -254,6 +254,14 @@ void MyUart_registreCallbacks(MyUart_t* uart,
     MY_LEAVE_CRITICAL();
 }
 //------------------------------------------------------------------------------
+//Kimeneti fifo beregisztralasa
+void MyUart_registerTxFifo(MyUart_t* uart, MyFIFO_t* txFifo)
+{
+    MY_ENTER_CRITICAL();
+    uart->tx.txFifo=txFifo;
+    MY_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
 //UART-ra kozvetlen karakter kiirasa
 void MyUart_putCharDirect(MyUart_t* uart, char txByte)
 {
@@ -289,7 +297,7 @@ status_t MyUart_sendNonBlocking(MyUart_t* uart,
     hw->INTENCLR.reg=SERCOM_USART_INTENCLR_DRE;
 
     //Ha ugy hivnank a rutint, hogy az uarton meg fut egy korabbi csomag kuldese
-    if (uart->tx.sending)
+    if (uart->tx.blockSending)
     {
         //IT visszaengedelyezese.
         hw->INTENSET.reg=SERCOM_USART_INTENSET_DRE;
@@ -305,12 +313,33 @@ status_t MyUart_sendNonBlocking(MyUart_t* uart,
     uart->tx.doneFunc=doneFunc;
     uart->tx.doneFunc_callbackData=doneCallbackData;
     //Jelzes, hogy fut a kuldes
-    uart->tx.sending=1;
+    uart->tx.blockSending=1;
 
     //IT engedelyezese. A kuldes az IT-ben fog elkezdodni...
     hw->INTENSET.reg=SERCOM_USART_INTENSET_DRE;
 
     return kStatus_Success;
+}
+//------------------------------------------------------------------------------
+//Uartra adat kuldese a kimeneti fifo-n keresztul.
+//FONTOS! a kimeneti fifot elotte regisztralni kell!!!
+status_t MyUart_sendByte(MyUart_t* uart, uint8_t data)
+{
+    ASSERT(uart->tx.txFifo);
+
+    SercomUsart* hw=&uart->sercom.hw->USART;
+    status_t status;
+
+    //IT tiltasa a vizsgalatok idejere
+    //hw->INTENCLR.reg=SERCOM_USART_INTENCLR_DRE;
+
+    //A karakter elhelyezese a kimenetei fifoban
+    status=MyFIFO_putByte(uart->tx.txFifo, data);
+
+    //IT engedelyezese. A kuldes az IT-ben fog elkezdodni/folytatodni...
+    hw->INTENSET.reg=SERCOM_USART_INTENSET_DRE;
+
+    return status;
 }
 //------------------------------------------------------------------------------
 //Uart driver kozos interrupt kiszolgalo rutinja. Az applikacioban elhelyezett
@@ -364,19 +393,42 @@ void MyUart_service(MyUart_t* uart)
                 hw->DATA.reg=(uint8_t) *uart->tx.dataPtr++;
                 //Hatralevo elemszam csokkentese
                 uart->tx.leftByteCount--;
-            } else
-            {   //Minden adatbyte el lett kuldve.
-                //Tovabbi Tx interruptok tiltasa
-                hw->INTENCLR.reg = SERCOM_USART_INTENCLR_DRE;
-                __asm("dmb");
-                __asm("isb");
+            }
+            else
+            {   //Minden adatbyte el lett kuldve a blockbol, vagy nem blokk
+                //kuldes van...
+                if (uart->tx.blockSending)
+                {   //blokk kuldes volt.
+                    uart->tx.blockSending=0;
 
-                uart->tx.sending=0;
+                    //Tovabbi Tx interruptok tiltasa
+                    hw->INTENCLR.reg = SERCOM_USART_INTENCLR_DRE;
+                    __asm("dmb");
+                    __asm("isb");
 
-                //Ha van bereisztralva callback a Tx vegere, akkor meghivjuk...
-                if (uart->tx.doneFunc)
-                {
-                    uart->tx.doneFunc(uart->tx.doneFunc_callbackData);
+                    //Ha van bereisztralva callback a Tx vegere, akkor meghivjuk...
+                    if (uart->tx.doneFunc)
+                    {
+                        uart->tx.doneFunc(uart->tx.doneFunc_callbackData);
+                    }
+                }
+
+                if (uart->tx.txFifo)
+                {   //Van beregisztralva tx fifo. Ha ababn van tartalom, akkor
+                    //abbol tortenik a kovetkezo adatbyte portra helyezese...
+                    uint8_t rxData;
+                    if (MyFIFO_getByteFromIsr(uart->tx.txFifo, &rxData)==
+                                                                kStatus_Success)
+                    {   //A fifobol sikerult adatot olvasni, melyet az uartra
+                        //helyezett.
+                        hw->DATA.reg=rxData;
+                    } else
+                    {   //A tx fifo ures.
+                        //Tovabbi Tx interruptok tiltasa
+                        hw->INTENCLR.reg = SERCOM_USART_INTENCLR_DRE;
+                        __asm("dmb");
+                        __asm("isb");
+                    }
                 }
             }
 

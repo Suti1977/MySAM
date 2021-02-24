@@ -7,6 +7,7 @@
 #define MY_UART_H_
 
 #include "MySercom.h"
+#include "MyFIFO.h"
 
 //Statusz kodok
 enum
@@ -54,8 +55,11 @@ typedef struct
     //A callbacknak atadando adatokra mutat
     void*   doneFunc_callbackData;
 
-    //1, ha a kuldesi folyamat aktiv
-    uint8_t sending;
+    //1, ha egy blokk kuldesi folyamat aktiv
+    uint8_t blockSending;
+
+    //kimeneti fifo
+    MyFIFO_t* txFifo;
 } MyUart_Tx_t;
 //------------------------------------------------------------------------------
 //Az adatok vetelehez tartozo valtozok halmaza
@@ -133,6 +137,9 @@ void MyUart_registreCallbacks(MyUart_t* uart,
                               MyUart_rxFunc_t* rxFunc,
                               MyUart_errorFunc_t* errorFunc,
                               void* callbackData);
+//Kimeneti fifo beregisztralasa
+void MyUart_registerTxFifo(MyUart_t* uart, MyFIFO_t* txFifo);
+
 
 //Adatatviteli sebesseg beallitasa/modositasa
 void MyUart_setBitRate(MyUart_t* uart, uint32_t bitRate);
@@ -152,6 +159,11 @@ status_t MyUart_sendNonBlocking(MyUart_t* uart,
                                 uint32_t lengt,
                                 MyUart_txDoneFunc_t* doneFunc,
                                 void* doneCallbackData);
+
+//Uartra adat kuldese a kimeneti fifo-n keresztul.
+//FONTOS! a kimeneti fifot elotte regisztralni kell!!!
+status_t MyUart_sendByte(MyUart_t* uart, uint8_t data);
+
 
 //nem 0-at ad vissza, ha az uartrol lehet olvasni
 //A veteli callbackban lehet hasznalni, es minaddig olvasni az uartot, mig ez
