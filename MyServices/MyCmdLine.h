@@ -83,6 +83,8 @@ typedef struct
     //A parancsertelmezo konfiguracios beallitasai
     MyCmdLine_Config_t configs;
 
+    //ha ez true, akkor az enter utan nem tesz automatikusan promptoto.
+    bool skipPrompt;
 } MyCmdLine_t;
 //------------------------------------------------------------------------------
 //A parancsertelmezo altal hivhato parancsok prototipusa. (Callback fuggvenyek)
@@ -131,6 +133,9 @@ void MyCmdLine_putError(MyCmdLine_t* cmd, const char* errorStr);
 //Parancs/argumentum hasonlito fuggveny
 //visszateresi ertek 0, ha nem egyezik. 1, ha egyezik
 int MyCmdLine_compare(const char* str1, const char* str2);
+
+//Beallithato vele, hogy a parancs lefutasa utan ne tegyen promptot.
+void MyCmdLine_skipPrompt(MyCmdLine_t* cmd);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYCMDLINE_H_

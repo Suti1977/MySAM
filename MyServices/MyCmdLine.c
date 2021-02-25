@@ -119,8 +119,12 @@ void MyCmdLine_feeding(MyCmdLine_t* cmd, char newChar)
         //Sor uritese.
         memset(cmd->lineBuffer, 0, cmd->configs.lineBufferSize);
 
-        //Uj sorba uj prompt
-        MyCmdLine_putPrompt(cmd);
+        //Uj sorba uj prompt, de csak ha nincs tiltva
+        if (cmd->skipPrompt==false)
+        {
+            MyCmdLine_putPrompt(cmd);
+        }
+        cmd->skipPrompt=false;
     }
 }
 //------------------------------------------------------------------------------
@@ -296,4 +300,9 @@ void MyCmdLine_putString(MyCmdLine_t* cmd, const char* str)
     cmd->configs.putStringFunc(str, cmd->configs.userData);
 }
 //------------------------------------------------------------------------------
+//Beallithato vele, hogy a parancs lefutasa utan ne tegyen promptot.
+void MyCmdLine_skipPrompt(MyCmdLine_t* cmd)
+{
+    cmd->skipPrompt=true;
+}
 //------------------------------------------------------------------------------
