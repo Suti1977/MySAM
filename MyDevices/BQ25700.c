@@ -240,7 +240,8 @@ static status_t BQ25700_adc_start(BQ25700_t* dev, int adc_en_mask)
     do
     {
         vTaskDelay(2);
-        BQ25700_readReg16(dev, BQ25700_ADC_OPTION_REG, &reg);
+        status = BQ25700_readReg16(dev, BQ25700_ADC_OPTION_REG, &reg);
+        if (status) goto error;
     } while (--tries_left && (reg & BQ25700_ADC_OPTION_ADC_START));
 
     // ADC reading attempt complete, go back to low power mode
