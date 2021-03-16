@@ -239,7 +239,7 @@ static status_t BQ25700_adc_start(BQ25700_t* dev, int adc_en_mask)
     // then the conversion time jumps to ~60 msec.
     do
     {
-        vTaskDelay(2);
+        vTaskDelay(3);
         status = BQ25700_readReg16(dev, BQ25700_ADC_OPTION_REG, &reg);
         if (status) goto error;
     } while (--tries_left && (reg & BQ25700_ADC_OPTION_ADC_START));
