@@ -54,7 +54,9 @@ typedef struct
     const char* name;
 
   #ifdef USE_FREERTOS
-    //A konzolt futtato taszkhoz foglalando stack meret
+    //A konzolt futtato taszkhoz foglalando stack meret. Ha ez a parameter 0,
+    //akkor nem fog letrehozni taszkot. Ebben az esetben a parancssor etetese
+    //ujabb karakterekkel az applikacio feladata.
     uint32_t    taskStackSize;
     //A konzol taszk prioritasa
     uint32_t    taskPriority;
