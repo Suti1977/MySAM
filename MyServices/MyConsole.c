@@ -61,14 +61,17 @@ status_t MyConsole_init(MyConsole_t* console, const MyConsole_Config_t* cfg)
 
   #ifdef USE_FREERTOS
     //Konzolt futtato taszk letrehozasa
-    if (xTaskCreate(MyConsole_task,
-                    cfg->name,
-                    (configSTACK_DEPTH_TYPE)cfg->taskStackSize,
-                    console,
-                    cfg->taskPriority,
-                    &console->taskHandler)!=pdPASS)
-    {
-        ASSERT(0);
+    if (cfg->taskStackSize)
+    {   //Van megadva stack meret a taszkhoz. A taszkot letre lehet hozni.
+        if (xTaskCreate(MyConsole_task,
+                        cfg->name,
+                        (configSTACK_DEPTH_TYPE)cfg->taskStackSize,
+                        console,
+                        cfg->taskPriority,
+                        &console->taskHandler)!=pdPASS)
+        {
+            ASSERT(0);
+        }
     }
   #endif
 
