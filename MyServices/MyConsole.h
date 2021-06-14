@@ -114,6 +114,10 @@ void MyConsole_putChar(MyConsole_t* console, const char txByte);
 //Konzolra string kiirsa
 void MyConsole_putString(MyConsole_t* console, const char* Str);
 
+//Konzolra binaris tartalom kiirasa
+void MyConsole_putBinary(MyConsole_t* console, const uint8_t* data, uint32_t len);
+
+
 void MyConsole_poll(MyConsole_t* console);
 
 //Taszkokhoz beallithato az stdio (konzol) kimenet

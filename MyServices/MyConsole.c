@@ -191,6 +191,12 @@ void MyConsole_putString(MyConsole_t* console, const char* str)
                        console->callbackData);
 }
 //------------------------------------------------------------------------------
+//Konzolra binaris tartalom kiirasa
+void MyConsole_putBinary(MyConsole_t* console, const uint8_t* data, uint32_t len)
+{
+    console->sendFunc(data, len, console->callbackData);
+}
+//------------------------------------------------------------------------------
 //Taszkokhoz beallithato az stdio (konzol) kimenet
 #ifdef USE_FREERTOS
 #if configUSE_APPLICATION_TASK_TAG
