@@ -51,6 +51,11 @@ status_t MyNVM_writeWords(uint32_t *dst,
 status_t MyNVM_writePage(void *dst,
                          const void *src,
                          uint32_t size);
+
+//Tetszoleges szamu byte irasa. Az irast a PAGE_BUFFER-en keresztul hajtja
+//vegre.
+status_t MyNVM_write(void *dst, const void *src, uint32_t size);
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYNVM_H_

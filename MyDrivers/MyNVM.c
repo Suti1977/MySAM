@@ -336,7 +336,7 @@ status_t MyNVM_writePage(void *dst,
         MyNVM_waitingForDone();
         MY_LEAVE_CRITICAL();
 
-        //Page buffer toltese. Csak 4 szavankent szabad tolteni egy idoben!
+        //Page buffer toltese. Csak 4 bajtonkent szabad tolteni egy idoben!
         for (uint32_t i=0; i<(FLASH_PAGE_SIZE/4) && size; i++)
         {
             //A nem illesztett bemeneti adatok olvasasa...
@@ -372,6 +372,146 @@ status_t MyNVM_writePage(void *dst,
         CMCC->MAINT0.bit.INVALL=1;
         CMCC->CTRL.bit.CEN=1;
 
+
+        status=MyNVM_waitingForReady();
+        if (status) break;
+        status=MyNVM_waitingForDone();
+        if (status) break;
+    }
+
+error:
+    return status;
+}
+//------------------------------------------------------------------------------
+//Tetszoleges szamu byte irasa. Az irast a PAGE_BUFFER-en keresztul hajtja
+//vegre.
+status_t MyNVM_write(void *dst, const void *src, uint32_t size)
+{
+    status_t status=kStatus_Success;
+    volatile uint32_t *dst_addr = (volatile uint32_t *)dst;
+    const uint8_t *src_addr = (const uint8_t *)src;
+
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+    //Automatikus lap iras tiltasa
+    NVMCTRL->CTRLA.bit.WMODE=0x00;
+
+    union
+    {
+        uint32_t u32;
+        uint8_t u8[4];
+    } res;
+
+    //A PAGE buffer csak 4 bajtonkent irhato. Kiszamoljuk, hogy a szavon
+    //belul honnantol kell kezdeni.
+    volatile uint32_t rem=4-(uint32_t)dst_addr & 0x03;
+
+    //Az elso szo cimere maszkolunk. (Also 2 bit torlese)
+    dst_addr=(uint32_t*)((uint32_t) dst_addr & ~(uint32_t) 3);
+
+    if (rem)
+    {   //Nem teljes szoval kezd.
+
+        //Page buffer torlese. Minden bit 1-be all...
+        MY_ENTER_CRITICAL();
+        MyNVM_waitingForReady();
+        NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+        NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_PBC;
+        MyNVM_waitingForDone();
+        MY_LEAVE_CRITICAL();
+
+        //A nem irt bitekre '1'-et kell helyezni.
+        res.u32=~(uint32_t) 0;
+
+        for(uint32_t i=0; i<rem; i++)
+        {
+            res.u8[4-rem+i]= *src_addr++;
+        }
+        size-=rem;
+        //elso szo kiirasa.
+        *dst_addr++ = res.u32;
+        MyNVM_waitingForReady();
+
+        MY_ENTER_CRITICAL();
+        NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+        NVMCTRL->ADDR.reg=(uint32_t)dst;
+        NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_WP;
+        MyNVM_waitingForDone();
+        MY_LEAVE_CRITICAL();
+
+
+        //Cache uritese
+        CMCC->CTRL.bit.CEN=0;
+        CMCC->MAINT0.bit.INVALL=1;
+        CMCC->CTRL.bit.CEN=1;
+
+        MyNVM_waitingForReady();
+        MyNVM_waitingForDone();
+    }
+
+
+    while (size)
+    {   //Van meg mit kiirni. Ciklusm amig tud irni.
+
+
+        //Page buffer torlese. Minden bit 1-be all...
+        MY_ENTER_CRITICAL();
+        MyNVM_waitingForReady();
+        NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+        NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_PBC;
+        MyNVM_waitingForDone();
+        MY_LEAVE_CRITICAL();
+
+        //Page buffer toltese... Csak 4 bajtonkent szabad tolteni egy idoben!
+
+        //Flash iro lapon beluli pozicio meghatarozasa. (32 bites szohatarok)
+        uint32_t pageOffs;
+        pageOffs=(uint32_t)dst_addr & (FLASH_PAGE_SIZE-1);
+
+        while(pageOffs< FLASH_PAGE_SIZE && size)
+        {
+            if (size>4)
+            {   //Egy szot biztosan ki lehet irni
+                for(uint32_t x=0; x<4; x++)
+                {
+                    res.u8[x]= *src_addr++;
+                }
+                size-=4;
+            } else
+            {   //Egy teljes szot mar nem lehet megtolteni tartalommal.
+
+                //A nem irt bitekre '1'-et kell helyezni.
+                res.u32=~(uint32_t) 0;
+
+                for(uint32_t x=0; x<size; x++)
+                {
+                    res.u8[x]= *src_addr++;
+                }
+                size=0;
+            }
+            //32 bites iras
+            *dst_addr++ = res.u32;
+
+            //uj szora allt. Annak megfelelo offset mutatasa.
+            pageOffs+=4;
+        }
+
+        //A lap tartalma elkeszult. Iras...
+
+        MyNVM_waitingForReady();
+
+        MY_ENTER_CRITICAL();
+        NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+        NVMCTRL->ADDR.reg=(uint32_t)dst;
+        NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_WP;
+        MyNVM_waitingForDone();
+        MY_LEAVE_CRITICAL();
+
+        //Cache uritese
+        CMCC->CTRL.bit.CEN=0;
+        CMCC->MAINT0.bit.INVALL=1;
+        CMCC->CTRL.bit.CEN=1;
 
         status=MyNVM_waitingForReady();
         if (status) break;
