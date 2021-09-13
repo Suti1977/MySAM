@@ -405,7 +405,8 @@ status_t MyNVM_write(void *dst, const void *src, uint32_t size)
 
     //A PAGE buffer csak 4 bajtonkent irhato. Kiszamoljuk, hogy a szavon
     //belul honnantol kell kezdeni.
-    volatile uint32_t rem=4-((uint32_t)dst_addr & 0x03);
+    //volatile uint32_t rem=4-((uint32_t)dst_addr & 0x03);
+    volatile uint32_t rem=4-(uint32_t)dst_addr & 0x03;
 
     //Az elso szo cimere maszkolunk. (Also 2 bit torlese)
     dst_addr=(uint32_t*)((uint32_t) dst_addr & ~(uint32_t) 3);
