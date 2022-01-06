@@ -132,6 +132,8 @@ static void MyUart_initPeri(MyUart_t* uart)
     hw->INTENSET.reg=
             //Veteli msz. (ujabb adatbyte erkezett)
             SERCOM_USART_INTENSET_RXC |
+            //Hiba megszakitasa
+            SERCOM_USART_INTENSET_ERROR |
             0;
 
     //Sercom-hoz tartozo interruptok engedelyezese az NVIC-ben.
@@ -360,6 +362,23 @@ void MyUart_service(MyUart_t* uart)
     do
     {
         wasIT=0;
+
+        if ((hw->INTFLAG.bit.ERROR))
+        {   //Valamilyen hiba van a sorosporton
+
+
+            //Hiba jelzo callback meghivasa
+            if (uart->errorFunc)
+            {
+                uart->errorFunc(hw, uart->callbackData);
+            }
+
+            //Hiba jelzo msz flag torlese
+            hw->INTFLAG.reg=SERCOM_USART_INTFLAG_ERROR;
+
+            wasIT=1;
+        }
+
         if ((hw->INTFLAG.bit.RXC) && (hw->INTENSET.bit.RXC))
         {   //uj adatbyte van az uarton
 
@@ -420,7 +439,7 @@ void MyUart_service(MyUart_t* uart)
                     if (MyFIFO_getByteFromIsr(uart->tx.txFifo, &rxData)==
                                                                 kStatus_Success)
                     {   //A fifobol sikerult adatot olvasni, melyet az uartra
-                        //helyezett.
+                        //helyezett.                        
                         hw->DATA.reg=rxData;
                     } else
                     {   //A tx fifo ures.
