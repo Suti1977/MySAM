@@ -116,6 +116,7 @@ status_t MyDMA_configureChannel(uint8_t channel, MyDMA_ChannelConfig_t* cfg)
 
     chRegs->CHCTRLA.reg |=ctrlAValue;
     chRegs->CHPRILVL.bit.PRILVL=cfg->priorityLevel;
+    chRegs->CHEVCTRL.reg =cfg->eventControl.reg;
 
     MYDMA_LEAVE_CRITICAL();
 
@@ -456,20 +457,21 @@ void MyDMA_printDebugInfo(void)
     printf("   BASEADDR: %08X\n", (int)DMAC->BASEADDR.reg);
     printf("    WRBADDR: %08X\n", (int)DMAC->WRBADDR.reg);
     printf("-----------------CHANNEL REGISTRES----------------\n");
-    printf(" CH  CHCTRLA    CHCTRLB   CHINTENCLR CHINTENSET  CHINTFLAG  CHSTATUS\n");
+    printf(" CH  CHCTRLA    CHCTRLB   CHINTENCLR CHINTENSET  CHINTFLAG  CHSTATUS  EVENTCNTRL\n");
     for(int i=0; i< MAX_USEABLE_DMA_CHANNEL; i++)
     {
         //csatorna kijelolese
         DmacChannel* ChRegs=&DMAC->Channel[i];
 
-        printf(" %02d. %08x     %02x          %02x         %02x         %02x         %02x  ",
+        printf(" %02d. %08x     %02x          %02x         %02x         %02x         %02x       %02X",
                i,
                (int)ChRegs->CHCTRLA.reg,
                (int)ChRegs->CHCTRLB.reg,
                (int)ChRegs->CHINTENCLR.reg,
                (int)ChRegs->CHINTENSET.reg,
                (int)ChRegs->CHINTFLAG.reg,
-               (int)ChRegs->CHSTATUS.reg
+               (int)ChRegs->CHSTATUS.reg,
+               (int)ChRegs->CHEVCTRL.reg
                );
         if (ChRegs->CHCTRLA.bit.ENABLE) printf(" ENABLED");
 

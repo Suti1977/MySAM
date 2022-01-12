@@ -28,7 +28,7 @@ void MyEvent_printDebugInfo(void)
     printf("INTSTATUS: %08x\n", (int)hw->INTSTATUS.reg);
     printf("    SWEVT: %08x\n", (int)hw->SWEVT.reg);
     printf("\n");
-    for(int i=0; i<12; i++)
+    for(uint16_t i=0; i<ARRAY_SIZE(hw->Channel); i++)
     {
        printf("  CHANNEL%02d: %08x -->",i, (int)hw->Channel[i].CHANNEL.reg);
        printf("  EVGEN=%02d",   (int)hw->Channel[i].CHANNEL.bit.EVGEN);
@@ -46,17 +46,22 @@ void MyEvent_printDebugInfo(void)
 
     }
     printf("\nUsers:\n");
-    int m=0;
-    for(int i=0; i<5; i++)
+    uint16_t m=0;
+    for(uint16_t i=0; i<10; i++)
     {
         printf("  %02d-%02d:   ",m, m+9);
-        for(int j=0; j<10; j++)
+        for(uint16_t j=0; j<10; j++)
         {
             printf("%02x ", (int)EVSYS->USER[m].reg);
             m++;
+            if (m >= ARRAY_SIZE(EVSYS->USER))
+            {
+                printf("\n");
+                goto exit;
+            }
         }
         printf("\n");
     }
-
+exit:
     printf("========================================\n");
 }
