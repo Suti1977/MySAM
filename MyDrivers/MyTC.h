@@ -26,6 +26,18 @@ typedef struct
     //Feltetelezzuk, hogy az egy TC-hez tartozo interrupt vektorok egymas
     //utan kovetkeznek.
     uint16_t    irqn;
+
+    //Compare/capture modulok szama (A kulonbozo TC-knel ez mas lehet.)
+    uint8_t     ccNum;
+
+    //Event bemenet azonosito
+    uint8_t     eventUserID;
+
+    //Az elso event kimenet azonosito
+    //   EVSYS_ID_GEN_TCCn_OVF  +0
+    //   EVSYS_ID_GEN_TCCn_MC_0 +1
+    //   EVSYS_ID_GEN_TCCn_MC_1 +2
+    uint8_t     firstEventGeneratorID;
 } MyTC_Info_t;
 extern const MyTC_Info_t g_MyTC_infos[];
 //------------------------------------------------------------------------------
@@ -47,8 +59,26 @@ typedef struct
     //A TC periferiara mutat
     Tc*                     hw;
     //A TC informacios blokkjara mutat
-    const MyTC_Info_t*      info;
+    const MyTC_Info_t*      info;   
 } MyTC_t;
+//------------------------------------------------------------------------------
+//A TC-hez tartozo event bemenet azonosito lekerdezese
+static inline uint8_t MyTC_getEventUserID(MyTC_t* tc)
+{
+     return tc->info->eventUserID;
+}
+//------------------------------------------------------------------------------
+//A TCC-hez tartozo event generator azonosito lekerdezese
+//   EVSYS_ID_GEN_TCn_OVF  +0
+//   EVSYS_ID_GEN_TCn_MC_0 +1
+//   EVSYS_ID_GEN_TCn_MC_1 +2
+#define MYTC_EVENT_GEN_OVF  0
+#define MYTC_EVENT_GEN_MC_0 1
+#define MYTC_EVENT_GEN_MC_1 2
+static inline uint8_t MyTC_getEventGeneratorID(MyTC_t* tc, uint8_t eventIdx)
+{
+     return tc->info->firstEventGeneratorID + eventIdx;
+}
 //------------------------------------------------------------------------------
 //TC modul kezdeti inicializalasa
 void MyTC_init(MyTC_t* tc, const MyTC_Config_t* config);
