@@ -41,6 +41,9 @@ extern DmacDescriptor  MyDMA_firstDescriptors[MAX_USEABLE_DMA_CHANNEL];
 #define MYDMA_SET_SRCADDR(ch, val)  MyDMA_firstDescriptors[ch].SRCADDR.reg=(uint32_t)val
 #define MYDMA_SET_DSTADDR(ch, val)  MyDMA_firstDescriptors[ch].DSTADDR.reg=(uint32_t)val
 #define MYDMA_SET_DESCADDR(ch, val) MyDMA_firstDescriptors[ch].DESCADDR.reg=(uint32_t)val
+
+//Deszkriptor kozvetlen beallitasa
+#define MYDMA_SET_DESCRIPTOR(ch, descriptor) MyDMA_firstDescriptors[ch]=descriptor
 //------------------------------------------------------------------------------
 //DMA vezerlo inicializalasanal megadando struktura.
 typedef struct
