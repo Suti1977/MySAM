@@ -25,6 +25,10 @@ enum
 //Az SRAM-bol a DMA kezeles deszkriptorainak memoria foglalasa. Erre mutat a DMA
 //vezerloben a BASEADDR mezo is.
 extern DmacDescriptor  MyDMA_firstDescriptors[MAX_USEABLE_DMA_CHANNEL];
+
+//DMA vezerlo ide irja vissza a statusz informaciot. (Erre mutat a DMAC-ben a
+//WRBADDR regiszter.
+extern DmacDescriptor MyDMA_writeBackMemory[];
 //------------------------------------------------------------------------------
 #define MYDMA_ENTER_CRITICAL()  MY_ENTER_CRITICAL()
 #define MYDMA_LEAVE_CRITICAL()  MY_LEAVE_CRITICAL()
@@ -41,6 +45,14 @@ extern DmacDescriptor  MyDMA_firstDescriptors[MAX_USEABLE_DMA_CHANNEL];
 #define MYDMA_SET_SRCADDR(ch, val)  MyDMA_firstDescriptors[ch].SRCADDR.reg=(uint32_t)val
 #define MYDMA_SET_DSTADDR(ch, val)  MyDMA_firstDescriptors[ch].DSTADDR.reg=(uint32_t)val
 #define MYDMA_SET_DESCADDR(ch, val) MyDMA_firstDescriptors[ch].DESCADDR.reg=(uint32_t)val
+
+//WriteBack DMA teruleten talalhato mezok lekerdezeset lehetove tevo makrok
+#define MYDMA_GET_WB_BTCTRL(ch)     MyDMA_writeBackMemory[ch].BTCTRL.reg
+#define MYDMA_GET_WB_BTCNT(ch)      MyDMA_writeBackMemory[ch].BTCNT.reg
+#define MYDMA_GET_WB_SRCADDR(ch)    MyDMA_writeBackMemory[ch].SRCADDR.reg
+#define MYDMA_GET_WB_DSTADDR(ch)    MyDMA_writeBackMemory[ch].DSTADDR.reg
+#define MYDMA_GET_WB_DESCADDR(ch)   MyDMA_writeBackMemory[ch].DESCADDR.reg
+
 
 //Deszkriptor kozvetlen beallitasa
 #define MYDMA_SET_DESCRIPTOR(ch, descriptor) MyDMA_firstDescriptors[ch]=descriptor
@@ -209,6 +221,9 @@ void MyDMA_enableChannelFromIsr(uint8_t channel);
 
 //Egy DMA csatorna engedelyezese -->Elindul az atvitel, ha van trigger
 void MyDMA_enableChannel(uint8_t channel);
+
+//Egy DMA csatorna tiltasa megszakitasbol
+void MyDMA_disableChannelFromIsr(uint8_t channel);
 
 //Egy DMA csatorna tiltasa
 void MyDMA_disableChannel(uint8_t channel);

@@ -12,7 +12,7 @@ DmacDescriptor
 MyDMA_firstDescriptors[MAX_USEABLE_DMA_CHANNEL] __attribute__ ((aligned (16)));
 //DMA vezerlo ide irja vissza a statusz informaciot. (Erre mutat a DMAC-ben a
 //WRBADDR regiszter.
-static DmacDescriptor
+DmacDescriptor
 MyDMA_writeBackMemory [MAX_USEABLE_DMA_CHANNEL] __attribute__ ((aligned (16)));
 
 //------------------------------------------------------------------------------
@@ -215,6 +215,16 @@ void MyDMA_enableChannel(uint8_t channel)
     chRegs->CHCTRLA.bit.ENABLE = 1;
 
     MYDMA_LEAVE_CRITICAL();
+}
+//------------------------------------------------------------------------------
+//Egy DMA csatorna tiltasa megszakitasbol
+void MyDMA_disableChannelFromIsr(uint8_t channel)
+{
+    DmacChannel* chRegs=&DMAC->Channel[channel];
+
+    //tiltas
+    #undef ENABLE
+    chRegs->CHCTRLA.bit.ENABLE = 0;
 }
 //------------------------------------------------------------------------------
 //Egy DMA csatorna tiltasa
