@@ -2,8 +2,6 @@
 //  Sajat timer/counter modul kezeles
 //
 //    File: MyTC.c
-// Created: 2020.2.3 11:19:54
-//Modified: 2020.2.3 11:19:54
 //------------------------------------------------------------------------------
 #include "MyTC.h"
 #include <string.h>
@@ -13,7 +11,7 @@
 //A lehetseges 4 TC-ra vonatkozo informacios tablazat
 //Ebben a tablazatban kerulnek leirasra az alkalmazott mcu TC hardver
 //jellemzoi (baziscimek, orajek ID-k es maszkok, irq indexek, stb...
-#define NO_TC  {NULL, 0, NULL, 0, 0}
+#define NO_TC  {NULL, 0, NULL, 0, 0, 0, 0, 0}
 const MyTC_Info_t g_MyTC_infos[]=
 {
 
