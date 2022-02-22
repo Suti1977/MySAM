@@ -217,7 +217,7 @@ void MyDMA_setDescriptor(uint8_t channel, DmacDescriptor* desc);
 
 //Egy DMA csatorna engedelyezese megszakitasbol --> Elindul az atvitel, ha van
 //trigger
-void inline MyDMA_enableChannelFromIsr(uint8_t channel)
+static inline void MyDMA_enableChannelFromIsr(uint8_t channel)
 {
     DmacChannel* chRegs=&DMAC->Channel[channel];
 
@@ -231,7 +231,7 @@ void inline MyDMA_enableChannelFromIsr(uint8_t channel)
 void MyDMA_enableChannel(uint8_t channel);
 
 //Egy DMA csatorna tiltasa megszakitasbol
-void inline MyDMA_disableChannelFromIsr(uint8_t channel)
+static inline void MyDMA_disableChannelFromIsr(uint8_t channel)
 {
     DmacChannel* chRegs=&DMAC->Channel[channel];
     //tiltas
