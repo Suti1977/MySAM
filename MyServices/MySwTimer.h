@@ -84,7 +84,7 @@ void MySwTimer_stop(MySwTimer_t* timer);
 //true-t ad vissza, ha lejart. Egyben a jelzes torlese is.
 bool MySwTimer_expired(MySwTimer_t* timer);
 
-//Annak lekerdzese, hoyg az idozito aktiv-e
+//Annak lekerdzese, hogy az idozito aktiv-e
 bool MySwTimer_isActive(MySwTimer_t* timer);
 
 //------------------------------------------------------------------------------

@@ -83,7 +83,7 @@ status_t MySwTimer_runManager(MySwTimerManager_t* manager, uint64_t time)
     //Aktualis ido elmentese.
     manager->time=time;
 
-    //Ellenorzes, hoyg egyaltalan van-e mit futtatni...
+    //Ellenorzes, hogy egyaltalan van-e mit futtatni...
     //Ha Meg nem erte el a futtatas idejet, akkor kilepes.
     if (manager->nextExecutionTime>time) return kStatus_Success;
 
@@ -163,7 +163,7 @@ bool MySwTimer_expired(MySwTimer_t* timer)
     return expired;
 }
 //------------------------------------------------------------------------------
-//Annak lekerdzese, hoyg az idozito aktiv-e
+//Annak lekerdzese, hogy az idozito aktiv-e
 bool MySwTimer_isActive(MySwTimer_t* timer)
 {
     return timer->active;
