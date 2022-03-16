@@ -336,7 +336,7 @@ typedef void resourceStatusFunc_t( resource_t* resource,
                                    resourceErrorInfo_t* errorInfo,
                                    void* callbackData);
 
-//Az egyes eroforrasokhoz tartozo, eroforars statuszt kerelmezok listaja.
+//Az egyes eroforrasokhoz tartozo, eroforras statuszt kerelmezok listaja.
 typedef struct
 {
     //A hivott callback funkcio
