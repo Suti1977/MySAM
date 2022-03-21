@@ -771,7 +771,7 @@ static inline void MyRM_checkStartStop(MyRM_t* rm, resource_t* resource)
 
                 //Elinditottsag jelzesenek torlese.
                 resource->flags.started=false;
-
+                resource->flags.running=false;
                 //Az eroforras felveszi a leallitott allapotot
                 resource->state=RESOURCE_STATE_STOP;
 
@@ -1349,6 +1349,18 @@ static void MyRM_stopDependency(resourceDep_t* dep)
     if (dependency->usageCnt==0)
     {   //Az eroforras kezelesben hiba van. Nem mondhatnanak le tobben,
         //mint amennyien korabban igenybe vettek!
+
+
+        if ((dependency->state==RESOURCE_STATE_STOPPING) &&
+            (dependency->flags.error))
+        {   //Az eroforras hiba miatti lallitasra var.
+            //Az egyes eroforrasok fele jelezni kell egy statuszt, mely alapjan akik
+            //lemondtak az eroforrasrol, azok le tudjanak allni.
+            dependency->flags.statusRequest=true;
+            dep->flags.statusRequest=true;            
+            goto skip;
+        }        
+
         ASSERT(0);
         return;
     }
@@ -1368,7 +1380,7 @@ static void MyRM_stopDependency(resourceDep_t* dep)
         dependency->flags.statusRequest=true;
         dep->flags.statusRequest=true;
     }
-
+skip:
     //Ki kell ertekelni az allapotokat
     dependency->flags.checkStartStopReq=true;
     //eloirjuk az eroforras kiertekeleset...
