@@ -70,9 +70,9 @@ uint64_t MySwTimer_getWaitTime64(MySwTimerManager_t* manager);
 uint32_t MySwTimer_getWaitTime32(MySwTimerManager_t* manager);
 
 //Timer inditasa.
-//actualTime: az aktualis ido, amihez kepest szamolhat
 //interval: az az ido, amennyi ido mulva az elso lejarat kovetkezik
-//periodTime: ha nem 0, akkor periodikus modban indulva enyni idonkent hivodik meg
+//periodTime: ha nem 0, akkor periodikus modban indulva ennyi idonkent hivodik
+//            meg
 void MySwTimer_start(MySwTimer_t* timer,
                      uint32_t interval,
                      uint32_t periodTime);

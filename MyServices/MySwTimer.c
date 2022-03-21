@@ -76,7 +76,7 @@ status_t MySwTimer_runManager(MySwTimerManager_t* manager, uint64_t time)
     //A manager vegigszalad a beregisztralt timereken, es amelyik fut, azt
     //ellenorzi, hogy az idozitese letelt e. Ha letelt, akkor a leiroban
     //bejegyzi annak tenyet, melyet kesobb le lehet kerdezni.
-    //Ha az idozito csk egysezr fut le, akkro az idozitot azonnal le is tiltja.
+    //Ha az idozito csk egyszer fut le, akkor az idozitot azonnal le is tiltja.
     //Ha az idozito periodikus, akkor a periodusidovel kesobbi idopontot
     //allit be ra.
 
@@ -96,10 +96,21 @@ status_t MySwTimer_runManager(MySwTimerManager_t* manager, uint64_t time)
     MySwTimer_t* timer=manager->firstTimer;
     for(; timer; timer=(MySwTimer_t*)timer->next)
     {
-        //Ha  atimer nem mukodik, akkor atugorja
+        //Ha a timer nem mukodik, akkor atugorja annak kezeleset
         if (timer->active==false) continue;
 
-        if (timer->nextTime > time) continue;
+        //Ha a timer meg nem tuzel, akkor ugras a kovetkezore
+        if (timer->nextTime > time)
+        {
+            //Ellenorzes, hogy nem e a vizsglat timer a kovetkezo, amit majd
+            //futtatni kell...
+            if (timer->nextTime < manager->nextExecutionTime)
+            {
+                manager->nextExecutionTime=timer->nextTime;
+            }
+
+            continue;
+        }
 
         //A timer idozitese lejart.
 
@@ -107,7 +118,7 @@ status_t MySwTimer_runManager(MySwTimerManager_t* manager, uint64_t time)
         timer->expired=true;
 
         if (timer->periodTime)
-        {   //ez egy periodikusan mukodo idozito. Uj idozitesi idopont
+        {   //Ez egy periodikusan mukodo idozito. Uj idozitesi idopont
             //beallitasa
             timer->nextTime += timer->periodTime;
 
@@ -119,7 +130,7 @@ status_t MySwTimer_runManager(MySwTimerManager_t* manager, uint64_t time)
             }
 
         } else
-        {   //CSak egyszer lefuto idozito. Az idozito leall.
+        {   //Csak egyszer lefuto idozito. Az idozito leall.
             timer->active=false;
         }
 
@@ -172,6 +183,12 @@ bool MySwTimer_isActive(MySwTimer_t* timer)
 //Timer leallitasa
 void MySwTimer_stop(MySwTimer_t* timer_)
 {
+    //Ha a timer jelezett volna, akkor azt torlni kell!
+    timer_->expired=false;
+
+    //Ha nem fut a timer, akkor nincs mit tenni. Kilepes.
+    if (timer_->active==false) return;
+
     timer_->active=false;
 
     MySwTimerManager_t* manager=(MySwTimerManager_t*) timer_->manager;
@@ -181,11 +198,11 @@ void MySwTimer_stop(MySwTimer_t* timer_)
     manager->nextExecutionTime=~0ull;   //0xffffffffffffffff;
 
     //Managerben idozites ujraszamitasa. A legorabbi idopont kikeresese...
-    //ciklus,a mig minden timeren vegigert.
+    //ciklus, amig minden timeren vegigert....
     MySwTimer_t* next=manager->firstTimer;
     for(; next; next=(MySwTimer_t*)next->next)
     {
-        //Ha  atimer nem mukodik, akkor atugorja
+        //Ha a timer nem mukodik, akkor atugorja
         if (next->active==false) continue;
 
         //A legkorabbi idopontot veszi fel a manager.
@@ -193,16 +210,20 @@ void MySwTimer_stop(MySwTimer_t* timer_)
         {
             manager->nextExecutionTime=next->nextTime;
         }
-
     } //for
 
 }
 //------------------------------------------------------------------------------
+//Timer inditasa.
+//interval: az az ido, amennyi ido mulva az elso lejarat kovetkezik
+//periodTime: ha nem 0, akkor periodikus modban indulva ennyi idonkent hivodik
+//            meg
 void MySwTimer_start(MySwTimer_t* timer,
                      uint32_t interval,
                      uint32_t periodTime)
 {
     MySwTimerManager_t* manager=(MySwTimerManager_t*) timer->manager;
+
 
     //Az (elso) idozites idopontjanak kiszamitasa.
     timer->nextTime = manager->time + interval;
@@ -211,18 +232,46 @@ void MySwTimer_start(MySwTimer_t* timer,
     //ujra fog indulni a timer, az elso (interval) ido utan.
     timer->periodTime=periodTime;
 
-    //A timer meg nem jart le.
+    //A timer meg nem jart le. (vagy ha le is jart, ujra lesz inditva)
     timer->expired=false;
 
-    //timer inditasa
-    timer->active=true;
+    if (timer->active)
+    {   //A timer fut. Ezek szerint ez egy ujrainditas.
 
-    //Managerben idozites ujraszamitasa...
-    if (timer->nextTime < manager->nextExecutionTime)
-    {   //E timer korababn kell, hogy kiszolgaalsra keruljon, mint amit a
-        //managerben futtatasi idopontot isemerunk. Ez a timer lesz kiszolgalva
-        //eloszor.
-        manager->nextExecutionTime=timer->nextTime;
+        //Managerben idozites ujraszamitasa. A legorabbi idopont kikeresese...
+
+        //A leheto legnagyobb idore allitjuk a manager kovetkezo futtatasi
+        //idopontjat. Ha marad aktiv timer, akkor a legkisebb idot veszi fel.
+        manager->nextExecutionTime=~0ull;   //0xffffffffffffffff;
+
+        //ciklus, amig minden timeren vegigert....
+        MySwTimer_t* next=manager->firstTimer;
+        for(; next; next=(MySwTimer_t*)next->next)
+        {
+            //Ha a timer nem mukodik, akkor atugorja
+            if (next->active==false) continue;
+
+            //A legkorabbi idopontot veszi fel a manager.
+            if (next->nextTime < manager->nextExecutionTime)
+            {
+                manager->nextExecutionTime=next->nextTime;
+            }
+        } //for
+
+    } else
+    {   //Inditas.
+
+        //Managerben idozites ujraszamitasa...
+        if (timer->nextTime < manager->nextExecutionTime)
+        {   //E timer korababn kell, hogy kiszolgaalsra keruljon, mint amit a
+            //managerben futtatasi idopontot isemerunk. Ez a timer lesz kiszol-
+            //galva eloszor.
+            manager->nextExecutionTime=timer->nextTime;
+        }
+
+        //timer inditasa
+        timer->active=true;
     }
+
 }
 //------------------------------------------------------------------------------
