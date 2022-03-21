@@ -210,7 +210,7 @@ void MyRM_printUsages(bool printDeps)
 {
     MyRM_t* rm=&myRM;
 
-    vTaskSuspendAll();
+    //vTaskSuspendAll();
 
     resource_t* resource=rm->resourceList.first;
     printf("---------------------RESOURCE INFO-----------------------------\n");
@@ -224,7 +224,7 @@ void MyRM_printUsages(bool printDeps)
     printf("Running resources count:%d\n", (int)rm->runningResourceCount);
     printf("---------------------------------------------------------------\n");
 
-    xTaskResumeAll();
+    //xTaskResumeAll();
 }
 //------------------------------------------------------------------------------
 //Eroforras letrehozasa.
