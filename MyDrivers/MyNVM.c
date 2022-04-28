@@ -409,7 +409,7 @@ status_t MyNVM_write(void *dst, const void *src, uint32_t size)
     volatile uint32_t rem=4-(uint32_t)dst_addr & 0x03;
 
     //Az elso szo cimere maszkolunk. (Also 2 bit torlese)
-    dst_addr=(uint32_t*)((uint32_t) dst_addr & ~(uint32_t) 3);
+    dst_addr=(uint32_t*)((uint32_t) dst_addr & ~((uint32_t) 3ul));
 
     if (rem)
     {   //Nem teljes szoval kezd.
@@ -455,7 +455,6 @@ status_t MyNVM_write(void *dst, const void *src, uint32_t size)
     while (size)
     {   //Van meg mit kiirni. Ciklusm amig tud irni.
 
-
         //Page buffer torlese. Minden bit 1-be all...
         MY_ENTER_CRITICAL();
         MyNVM_waitingForReady();
@@ -470,7 +469,10 @@ status_t MyNVM_write(void *dst, const void *src, uint32_t size)
         uint32_t pageOffs;
         pageOffs=(uint32_t)dst_addr & (FLASH_PAGE_SIZE-1);
 
-        while(pageOffs< FLASH_PAGE_SIZE && size)
+        //Az elso irt cim megjegyzese. Majd az iro parancsnal ez kerul megadasra
+        uint32_t pageStartAddr=(uint32_t)dst_addr;
+
+        while((pageOffs < FLASH_PAGE_SIZE) && size)
         {
             if (size>4)
             {   //Egy szot biztosan ki lehet irni
@@ -504,7 +506,7 @@ status_t MyNVM_write(void *dst, const void *src, uint32_t size)
 
         MY_ENTER_CRITICAL();
         NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
-        NVMCTRL->ADDR.reg=(uint32_t)dst;
+        NVMCTRL->ADDR.reg=pageStartAddr;
         NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_WP;
         MyNVM_waitingForDone();
         MY_LEAVE_CRITICAL();
