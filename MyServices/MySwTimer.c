@@ -228,7 +228,7 @@ void MySwTimer_start(MySwTimer_t* timer,
     //Az (elso) idozites idopontjanak kiszamitasa.
     timer->nextTime = manager->time + interval;
 
-    //Periodusido megjegyzese. Ha ez nem 0, akkor enyni idonkent automatikusan
+    //Periodusido megjegyzese. Ha ez nem 0, akkor ennyi idonkent automatikusan
     //ujra fog indulni a timer, az elso (interval) ido utan.
     timer->periodTime=periodTime;
 
