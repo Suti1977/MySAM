@@ -60,20 +60,19 @@
 #include "MyNVM.h"
 #include <string.h>
 
-
-//MyNVM sajat valtozoi
-sMyNVM MyNVM;
-
 //------------------------------------------------------------------------------
-// kezdeti inicializalasa
+//NVM driver kezdeti inicializalasa
 void MyNVM_init(void)
 {
-    //Modul valtozoinak kezdeti torlese.
-    memset(&MyNVM, 0, sizeof(sMyNVM));
-
     //NVM orajel engedelyezese
     MCLK->AHBMASK.reg |= MCLK_AHBMASK_NVMCTRL;
-    //TODO: deinitet is implementalni!
+}
+//------------------------------------------------------------------------------
+//NVM driver deinicializalasa
+void MyNVM_deinit(void)
+{
+    //NVM orajel tiltasa
+    MCLK->AHBMASK.reg &= ~MCLK_AHBMASK_NVMCTRL;
 }
 //------------------------------------------------------------------------------
 //Varakozas, hogy az NVM vezerlo elkeszuljon egy korabbi parancsal.
@@ -140,7 +139,7 @@ status_t MyNVM_setBootProtBits(uint32_t value)
 
     //LAP torlese (erase page)
     MyNVM_execCmd(NVMCTRL_CTRLB_CMD_EP );
-    //Oage buffer torlese
+    //Page buffer torlese
     MyNVM_execCmd(NVMCTRL_CTRLB_CMD_PBC);
 
     *((uint32_t *) NVMCTRL_FUSES_BOOTPROT_ADDR)      = fuses[0];
@@ -546,5 +545,82 @@ void MyNVM_copyWords(uint32_t *dst, uint32_t *src, uint32_t n_words)
     {
         *dst++ = *src++;
     }
+}
+//------------------------------------------------------------------------------
+//Security bit beallitasa --> kodvedelem
+status_t MyNVM_setSecurityBit(void)
+{
+    status_t status;
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+    MY_ENTER_CRITICAL();
+    NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+    NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_SSB;
+    MY_LEAVE_CRITICAL();
+
+    status=MyNVM_waitingForDone();
+    if (status) goto error;
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+error:
+    return status;
+}
+//------------------------------------------------------------------------------
+//Erase/write ellen vedett regiokat jelolo bitek lekerdezese.
+uint32_t MyNVM_getLockBits(void)
+{
+    return NVMCTRL->RUNLOCK.reg;
+}
+//------------------------------------------------------------------------------
+//Flash terulet lezarasa
+status_t MyNVM_lockBlock(uint32_t address)
+{
+    status_t status;
+
+    //TODO: ellenorizni, hogy a cim az blokk hatarra esik e!
+
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+    MY_ENTER_CRITICAL();
+    NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+    NVMCTRL->ADDR.reg=address;
+    NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_LR;
+    MY_LEAVE_CRITICAL();
+
+    status=MyNVM_waitingForDone();
+    if (status) goto error;
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+error:
+    return status;
+}
+//------------------------------------------------------------------------------
+//Flash terulet feloldasa
+status_t MyNVM_unlockBlock(uint32_t address)
+{
+    status_t status;
+
+    //TODO: ellenorizni, hogy a cim az blokk hatarra esik e!
+
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+    MY_ENTER_CRITICAL();
+    NVMCTRL->INTFLAG.reg=NVMCTRL_INTFLAG_DONE;
+    NVMCTRL->ADDR.reg=address;
+    NVMCTRL->CTRLB.reg = NVMCTRL_CTRLB_CMDEX_KEY | NVMCTRL_CTRLB_CMD_UR;
+    MY_LEAVE_CRITICAL();
+
+    status=MyNVM_waitingForDone();
+    if (status) goto error;
+    status=MyNVM_waitingForReady();
+    if (status) goto error;
+
+error:
+    return status;
 }
 //------------------------------------------------------------------------------

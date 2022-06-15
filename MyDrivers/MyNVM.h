@@ -8,15 +8,11 @@
 
 #include "MyCommon.h"
 //------------------------------------------------------------------------------
-//MyNVM valtozoi
-typedef struct
-{
-    int x;
-} sMyNVM;
-extern sMyNVM MyNVM;
-//------------------------------------------------------------------------------
-// kezdeti inicializalasa
+//NVM driver kezdeti inicializalasa
 void MyNVM_init(void);
+
+//NVM driver deinicializalasa
+void MyNVM_deinit(void);
 
 //Varakozas, hogy az NVM vezerlo elkeszuljon egy korabbi parancsal.
 status_t MyNVM_waitingForReady(void);
@@ -29,6 +25,9 @@ status_t MyNVM_execCmd(uint16_t cmd);
 //atprogramozza azokat. Ha azonosak, akkor nem tortenik muvelet.
 //FONTOS! Biztositani kell, hogy a hivas kozben a megszakitasok tiltva legyenek!
 status_t MyNVM_setBootProtBits(uint32_t value);
+
+//Security bit beallitasa --> kodvedelem
+status_t MyNVM_setSecurityBit(void);
 
 //BOOTPROT bitek kiolvasasa
 uint32_t MyNVM_readBootProtBits(void);
@@ -56,6 +55,14 @@ status_t MyNVM_writePage(void *dst,
 //vegre.
 status_t MyNVM_write(void *dst, const void *src, uint32_t size);
 
+//Erase/write ellen vedett regiokat jelolo bitek lekerdezese.
+uint32_t MyNVM_getLockBits(void);
+
+//Flash terulet lezarasa
+status_t MyNVM_lockBlock(uint32_t address);
+
+//Flash terulet feloldasa
+status_t MyNVM_unlockBlock(uint32_t address);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //MYNVM_H_
