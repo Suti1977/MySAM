@@ -12,6 +12,9 @@ ArmMcuProduct
     id: SAM_Framework
     name: "SAM_FRAMEWORK"
 
+    //A GCC forditohoz tartozo parancskeszlet eleresi utja
+    property string toolchainInstallPath : cpp.toolchainInstallPath
+
 	//A webfeluleten osszeallitott ASF csomag lokacioja
     property path asfPath : project.asfPath
 
