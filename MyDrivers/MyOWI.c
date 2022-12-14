@@ -438,6 +438,7 @@ static void MyOWI_mState_byteReaded(MyOWI_Driver_t* driver)
 {
     //Beolvasott byte az rxShiftReg-ben talalhato. Letaroljuk...
     *driver->rxPtr++ = driver->rxShiftReg;
+    driver->rxShiftReg=0;
 
     //Hatralevo byteok szamanak csokkentese. Van meg hatra olvasni valo?
     if (--driver->rxCnt)
