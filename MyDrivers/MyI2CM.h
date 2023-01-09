@@ -9,9 +9,15 @@
 
 
 #include "MySercom.h"
+
+struct MyI2CM_t_;
 //------------------------------------------------------------------------------
 //I2C driver hibaja eseten hivott callback funkcio definicioja
 typedef void MyI2CM_errorFunc_t(status_t errorCode, void* callbackdata);
+//I2C busz hiba eseten hivott callback, melyben a beragadt busz feloldasa
+//megoldhato.
+typedef void MyI2CM_busErrorResolverFunc_t(struct MyI2CM_t_* i2cm,
+                                           void* callbackdata);
 //------------------------------------------------------------------------------
 //I2C periferia konfiguracios parameterei, melyet az MyI2CM_Init() fuggvenynek
 //adunk at initkor.
@@ -121,7 +127,7 @@ typedef struct
 #define MYI2CM_DIR_MASK     1
 //------------------------------------------------------------------------------
 //MyI2CM valtozoi
-typedef struct
+typedef struct MyI2CM_t_
 {
     //A driverhez tartozo konfiguraciora mutat
     const MyI2CM_Config_t* config;
@@ -164,6 +170,11 @@ typedef struct
     MyI2CM_errorFunc_t* errorFunc;
     //A hiba callback szamara atadott tetszoleges valtozo.
     void* errorFuncCallbackdata;
+
+    //I2C busz hiba eseten hivott callback, melyben a beragadt busz feloldasa
+    //megoldhato.
+    MyI2CM_busErrorResolverFunc_t* busErrorResolverFunc;
+    void* busErrorResolverFuncCallbackData;
 
 } MyI2CM_t;
 //------------------------------------------------------------------------------
@@ -233,6 +244,11 @@ void MyI2CM_registerErrorFunc(MyI2CM_t* i2cm,
                               MyI2CM_errorFunc_t* errorFunc,
                               void* errorFuncCallbackdata);
 
+//Busz hiba eseten meghivodo callback beregisztralasa, melyben a beragadt busz
+//feloldhato
+void MyI2CM_registerBusErrorResolverFunc(MyI2CM_t* i2cm,
+                              MyI2CM_busErrorResolverFunc_t* func,
+                              void* funcCallbackdata);
 
 //I2C eszkoz letrehozasa
 //i2c_device: A letrehozando eszkoz leiroja

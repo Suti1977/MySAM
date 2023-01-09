@@ -17,9 +17,15 @@
 #define I2C_TRANSFER_TIMEOUT    1000
 #endif
 
+//I2C busz hiba eseten enyniszer probalkozik annak feloldasaval, es a transzfer
+//leiro blokk ujboli elkuldesevel.
+#define RETRY_COUNT 3
+
+
 static void MyI2CM_initPeri(MyI2CM_t* i2cm);
 static void MyI2CM_disablePeri(MyI2CM_t* i2cm);
 static void MyI2CM_sync(SercomI2cm* hw);
+static void MyI2CM_busErrorResolver(MyI2CM_t* i2cm);
 //------------------------------------------------------------------------------
 //I2C master driver letrehozasa es konfiguralasa.
 //Fontos! A config altal mutatott konfiguracionak permanensen a memoriaban
@@ -238,8 +244,7 @@ static void MyI2CM_sync(SercomI2cm* hw)
 }
 //------------------------------------------------------------------------------
 //I2C folyamatok vegen hivodo rutin.
-//Ebben tortenik meg a buszciklust lezaro stop feltetel kiadas, majd jelzes
-//az applikacio fele, hogy vegzett az interruptban futo folyamat.
+//Jelzes az applikacio fele, hogy vegzett az interruptban futo folyamat.
 static void MyI2CM_end(MyI2CM_t* i2cm)
 {
     //Minden tovabbi megszakitast letiltunk
@@ -252,6 +257,24 @@ static void MyI2CM_end(MyI2CM_t* i2cm)
     xSemaphoreGiveFromISR(i2cm->semaphore, &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken)
   #endif //USE_FREERTOS
+}
+//------------------------------------------------------------------------------
+//Busz hiba eseten hivhato rutin, melyben egy elore beregisztralt callback
+//hivodhat, ha busz hibat, beragadt buszt kell helyre allitani.
+static void MyI2CM_busErrorResolver(MyI2CM_t* i2cm)
+{
+    //I2C periferia tiltasa
+    MyI2CM_deinit(i2cm);
+
+    if (i2cm->busErrorResolverFunc)
+    {
+        i2cm->busErrorResolverFunc(i2cm,
+                                   i2cm->busErrorResolverFuncCallbackData);
+    }
+
+    //I2C periferia ujra inicializalasa
+    MyI2CM_initPeri(i2cm);
+
 }
 //------------------------------------------------------------------------------
 //I2C eszkoz letrehozasa
@@ -553,22 +576,43 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
     //Interfesz lefoglalasa a hivo taszk szamara
     xSemaphoreTake(i2cm->busMutex, portMAX_DELAY);
 
+    int retryCnt=0;
     //Arbitacio vesztes eseten ujra probalkozik. (Addig ciklus....)
     while(1)
     {
+        status=kStatus_Success;
+
         //Varakozas, hogy a busz felszabaduljon...
         MyI2CM_sync(hw);
         uint32_t toCnt=0;
         while (hw->STATUS.bit.BUSSTATE != 1)
         {
-            if (toCnt > 1000)
+            if (toCnt > 2)
             {   //Timeout!
                 status=kMyI2CMStatus_BusError;
-                goto error;
+                break;
             }
             vTaskDelay(1);
             toCnt++;
+            if (hw->STATUS.bit.BUSSTATE == 2)
+            {
+                __NOP();
+                __NOP();
+                __NOP();
+            }
         }
+
+        if (status==kMyI2CMStatus_BusError)
+        {   //Busz hibat detektalunk. Azt ha van beregisztralva kulso callback,
+            //akkor megprobaljuk avval feloldani...
+            MyI2CM_busErrorResolver(i2cm);
+
+            //adott szamuszor probalkozhat a busz helyreallitassal.
+            retryCnt++;
+            if (retryCnt<RETRY_COUNT) continue;
+            goto error;
+        }
+
 
         i2cm->asyncStatus=kStatus_Success;
         i2cm->statusRegValue=0;
@@ -705,16 +749,33 @@ status_t MYI2CM_transfer(MyI2CM_Device_t* i2cDevice,
         if (status)
         {   //Van valami hiba
 
+            if (status==kMyI2CMStatus_ArbitationLost)
+            {   //Arbitacio veszetes. Ujra probalkozik...
+                printf("I2C arbitation lost.\n");
+
+                //A busz hiba feloldasi probalkozas szamlalo nullazhato. Minden
+                //arbitacio vesztes helyes busz mukodest feltetelez.
+                retryCnt=0;
+                continue;
+            }
+
+            if (status==kMyI2CMStatus_BusError)
+            {   //Busz hiba. Ezt megprobaljuk feloldani...
+                printf("I2C Bus error.\n");
+
+                retryCnt++;
+                if (retryCnt<RETRY_COUNT)
+                {
+                    MyI2CM_busErrorResolver(i2cm);
+                    continue;
+                }
+            }
+
+
             //Ha van beregisztralva error callback, akkor az meghivodik...
             if (i2cm->errorFunc)
             {
                 i2cm->errorFunc(status, i2cm->errorFuncCallbackdata);
-            }
-
-            if (status==kMyI2CMStatus_ArbitationLost)
-            {   //Arbitacio veszetes. Ujra probalkozik...
-                printf("I2C arbitation lost.\n");
-                continue;
             }
         }
 
@@ -743,5 +804,15 @@ void MyI2CM_registerErrorFunc(MyI2CM_t* i2cm,
 {
     i2cm->errorFunc=errorFunc;
     i2cm->errorFuncCallbackdata=errorFuncCallbackdata;
+}
+//------------------------------------------------------------------------------
+//Busz hiba eseten meghivodo callback beregisztralasa, melyben a beragadt busz
+//feloldhato
+void MyI2CM_registerBusErrorResolverFunc(MyI2CM_t* i2cm,
+                              MyI2CM_busErrorResolverFunc_t* func,
+                              void* funcCallbackdata)
+{
+    i2cm->busErrorResolverFunc=func;
+    i2cm->busErrorResolverFuncCallbackData=funcCallbackdata;
 }
 //------------------------------------------------------------------------------
