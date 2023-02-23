@@ -75,6 +75,9 @@ status_t DS18B201_readResult(MyOWI_Wire_t* wire, uint16_t* temperatureValue);
 
 //12 bites meresi adat celsius fojra konvertalasa
 double DS18B201_value2Celsius(uint16_t temperatureValue);
+
+//8 bites CRC szamitas
+uint8_t DS18B201_crc8(const uint8_t *addr, uint8_t len);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #endif //DS18B20_H_

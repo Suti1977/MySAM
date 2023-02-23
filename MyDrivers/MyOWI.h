@@ -23,6 +23,8 @@ enum
     kMyOWI_Status_busError,
     //A resetkor nem erzekelte a presence bitet
     kMyOWI_Status_noPresence,
+    //CRC hiba az adott eszkoz eleresekor
+    kMyOWI_Status_crcError,
 };
 //------------------------------------------------------------------------------
 //          MyOWI idozitesi konstansok
