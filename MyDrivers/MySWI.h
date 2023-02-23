@@ -23,6 +23,8 @@ enum
     kMySWI_Status_NACK,
     //A felderiteskor (Discovery) nem kapott visszajelzest.
     kMySWI_Status_discoveryNACK,
+    //CRC hiba az adott eszkoz eleresekor
+    kMySWI_Status_crcError,
 };
 //------------------------------------------------------------------------------
 //          MySWI idozitesi konstansok

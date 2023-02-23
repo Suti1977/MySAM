@@ -19,6 +19,7 @@
 //------------------------------------------------------------------------------
 #include "AT21CS01.h"
 #include <string.h>
+#include "MyCRC.h"
 
 #define AT21CS01_OPCODE_EEPROM_ACCESS               0xA0
 #define AT21CS01_OPCODE_SECURITY_REGISTER_ACCESS    0xB0
@@ -63,6 +64,7 @@ status_t AT21CS01_readSerialNumber(MySWI_Wire_t* wire,
     if (bufferLength>8) bufferLength=8;
 
     ASSERT(buffer);
+    ASSERT(bufferLength>=8);
 
     slaveAddress <<=1;
 
@@ -90,7 +92,16 @@ status_t AT21CS01_readSerialNumber(MySWI_Wire_t* wire,
     trans.rxBuff=buffer;
     trans.rxLength=bufferLength;
 
-    return MySWI_transaction(wire, &trans);
+    status_t status;
+    status=MySWI_transaction(wire, &trans);
+    if (status) goto error;
+
+    //CRC ellenorzes. (A vegen levo crc nem szamolodik bele)
+    uint8_t calcCRC=MyCRC_crc8_X8X5X41((uint8_t*) buffer, 7);
+    if (calcCRC != buffer[7]) return kMySWI_Status_crcError;
+
+error:
+    return status;
 }
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
