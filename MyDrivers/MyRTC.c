@@ -119,7 +119,7 @@ void MyRTC_enable(Rtc* hw)
 {
     hw->MODE0.CTRLA.bit.ENABLE=1;
     __DMB();
-    while(hw->MODE0.SYNCBUSY.reg);
+    while(hw->MODE0.SYNCBUSY.bit.ENABLE);
 }
 //------------------------------------------------------------------------------
 //RTC tiltasa
@@ -127,6 +127,6 @@ void MyRTC_disable(Rtc* hw)
 {
     hw->MODE0.CTRLA.bit.ENABLE=0;
     __DMB();
-    while(hw->MODE0.SYNCBUSY.reg);
+    while(hw->MODE0.SYNCBUSY.bit.ENABLE);
 }
 //------------------------------------------------------------------------------

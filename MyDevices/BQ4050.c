@@ -213,4 +213,16 @@ status_t BQ4050_shutDown(BQ4050_t* dev)
     return status;
 }
 //------------------------------------------------------------------------------
+//Akkumulator pakk toltesi feszultsegkorlat lekerdezese (mV-ban)
+status_t BQ4050_getChargingVoltage_mV(BQ4050_t* dev, uint16_t *voltage_mV)
+{
+    return BQ4050_readReg16(dev, BQ4050_CHARGING_VOLTAGE_REG, voltage_mV);
+}
+//------------------------------------------------------------------------------
+//Akkumulator pakk toltesi aramkorlat lekerdezese (mV-ban)
+status_t BQ4050_getChargingCurrent_mA(BQ4050_t* dev, int16_t *current_mA)
+{
+    return BQ4050_readReg16(dev, BQ4050_CHARGING_CURRENT_REG, (uint16_t*)current_mA);
+}
+
 //------------------------------------------------------------------------------

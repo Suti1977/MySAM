@@ -22,6 +22,8 @@
 #define BQ4050_RELATIVE_STATE_OF_CHARGE_REG     0x0d
 #define BQ4050_ABSOLUTE_STATE_OF_CHARGE_REG     0x0e
 #define BQ4050_REMAINING_CAPACITY_REG           0x0f
+#define BQ4050_CHARGING_CURRENT_REG             0x14
+#define BQ4050_CHARGING_VOLTAGE_REG             0x15
 #define BQ4050_DESIGN_CAPACITY_REG              0x18
 #define BQ4050_CELL_VOLTAGE4_REG                0x3c
 #define BQ4050_CELL_VOLTAGE3_REG                0x3d
@@ -86,6 +88,13 @@ status_t BQ4050_getRemainingCapacity_mAh(BQ4050_t* dev, uint16_t *capacity_mAh);
 
 //Tervezett kapacitas lekerdezese mAh-ban
 status_t BQ4050_getDesignCapacity(BQ4050_t* dev, uint16_t *capacity_mAh);
+
+
+//Akkumulator pakk toltesi feszultsegkorlat lekerdezese (mV-ban)
+status_t BQ4050_getChargingVoltage_mV(BQ4050_t* dev, uint16_t *voltage_mV);
+
+//Akkumulator pakk toltesi aramkorlat lekerdezese (mV-ban)
+status_t BQ4050_getChargingCurrent_mA(BQ4050_t* dev, int16_t *current_mA);
 
 //SHUTDOWN modba lepes.
 status_t BQ4050_shutDown(BQ4050_t* dev);
