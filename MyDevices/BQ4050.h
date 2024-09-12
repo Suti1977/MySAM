@@ -29,7 +29,9 @@
 #define BQ4050_CELL_VOLTAGE3_REG                0x3d
 #define BQ4050_CELL_VOLTAGE2_REG                0x3e
 #define BQ4050_CELL_VOLTAGE1_REG                0x3f
-
+#define BQ4050_SAFETY_STATUS_REG                0x51
+#define BQ4050_PF_STATUS_REG                    0x53
+#define BQ4050_OPERATION_STATUS_REG             0x54
 //BQ4050 altal kezelheto cellak szama
 #define BQ4050_MAX_CELL_COUNT   4
 
@@ -95,6 +97,16 @@ status_t BQ4050_getChargingVoltage_mV(BQ4050_t* dev, uint16_t *voltage_mV);
 
 //Akkumulator pakk toltesi aramkorlat lekerdezese (mV-ban)
 status_t BQ4050_getChargingCurrent_mA(BQ4050_t* dev, int16_t *current_mA);
+
+//SafetyStatus regiszter lekerdezese
+status_t BQ4050_getSafetyStatus(BQ4050_t* dev, uint16_t *safetyStatus);
+
+//PFStatus regiszter lekerdezese
+status_t BQ4050_getPfStatus(BQ4050_t* dev, uint16_t *pfStatus);
+
+//OperationStatus regiszter lekerdezese
+status_t BQ4050_getOperationStatus(BQ4050_t* dev, uint16_t *opStatus);
+
 
 //SHUTDOWN modba lepes.
 status_t BQ4050_shutDown(BQ4050_t* dev);

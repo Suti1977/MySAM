@@ -5,6 +5,8 @@
 //------------------------------------------------------------------------------
 //STUFF:
 //  http://www.ti.com/lit/ug/sluuaq3/sluuaq3.pdf
+//  https://chromium.googlesource.com/chromiumos/platform/ec/+/master/driver/battery/smart.c
+//  https://github.com/PX4/PX4-Autopilot/blob/main/src/lib/drivers/smbus/SMBus.cpp
 #include "BQ4050.h"
 
 //------------------------------------------------------------------------------
@@ -48,6 +50,49 @@ status_t BQ4050_readRegs(BQ4050_t* dev,
 status_t BQ4050_readReg16(BQ4050_t* dev, uint8_t regAddress, uint16_t* data)
 {
     return BQ4050_readRegs(dev, regAddress, (uint8_t*) data, 2);
+}
+//------------------------------------------------------------------------------
+//A BMS manufacturer access blockjanak egyetlen 16 bites regiszterenek olvasasa
+status_t BQ4050_readManuAccReg16(BQ4050_t* dev,
+                                 uint16_t regAddress,
+                                 uint16_t* data)
+{
+    status_t status;
+
+    //Block iro parancs
+    uint8_t cmd[4];
+    cmd[0]= 0x44;                       //ManufacturerBlockAccess
+    cmd[1]= 2;                          //block len
+    cmd[2]= regAddress & 0xff;
+    cmd[3]= (regAddress >> 8) & 0xff;
+
+
+    MyI2CM_xfer_t xferBlocksW[]=
+    {
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  sizeof(cmd) },
+    };
+    status=MYI2CM_transfer(&dev->i2cDevice, xferBlocksW, ARRAY_SIZE(xferBlocksW));
+    if (status) goto error;
+
+
+    uint8_t buff[5];
+    memset(buff, 0x00, sizeof(buff));
+    MyI2CM_xfer_t xferBlocksR[]=
+    {
+        (MyI2CM_xfer_t){MYI2CM_FLAG_TX, cmd,  1 },
+        (MyI2CM_xfer_t){MYI2CM_FLAG_RX, (uint8_t*) buff, sizeof(buff)},
+    };
+    status=MYI2CM_transfer(&dev->i2cDevice, xferBlocksR, ARRAY_SIZE(xferBlocksR));
+    if (status) goto error;
+
+    //Buff[0] vaalsz hossza
+    //Buff[1] Buff[2] a command/reg address
+    //Buff[3]... a visszadott tenyleges adtattartalom
+
+    *data = *((uint16_t*) &buff[3]);
+
+error:
+    return status;
 }
 //------------------------------------------------------------------------------
 //A BMS IC egyetlen regiszterenek irasa
@@ -225,4 +270,22 @@ status_t BQ4050_getChargingCurrent_mA(BQ4050_t* dev, int16_t *current_mA)
     return BQ4050_readReg16(dev, BQ4050_CHARGING_CURRENT_REG, (uint16_t*)current_mA);
 }
 
+//------------------------------------------------------------------------------
+//SafetyStatus regiszter lekerdezese
+status_t BQ4050_getSafetyStatus(BQ4050_t* dev, uint16_t *safetyStatus)
+{
+    return BQ4050_readManuAccReg16(dev, BQ4050_SAFETY_STATUS_REG,  safetyStatus);
+}
+//------------------------------------------------------------------------------
+//PFStatus regiszter lekerdezese
+status_t BQ4050_getPfStatus(BQ4050_t* dev, uint16_t *pfStatus)
+{
+    return BQ4050_readManuAccReg16(dev, BQ4050_PF_STATUS_REG,  pfStatus);
+}
+//------------------------------------------------------------------------------
+//OperationStatus regiszter lekerdezese
+status_t BQ4050_getOperationStatus(BQ4050_t* dev, uint16_t *opStatus)
+{
+    return BQ4050_readManuAccReg16(dev,  BQ4050_OPERATION_STATUS_REG,  opStatus);
+}
 //------------------------------------------------------------------------------
