@@ -289,3 +289,21 @@ status_t BQ4050_getOperationStatus(BQ4050_t* dev, uint16_t *opStatus)
     return BQ4050_readManuAccReg16(dev,  BQ4050_OPERATION_STATUS_REG,  opStatus);
 }
 //------------------------------------------------------------------------------
+//ChargingStatus regiszter lekerdezese
+status_t BQ4050_getChargingStatus(BQ4050_t* dev, uint16_t *chargingStatus)
+{
+    return BQ4050_readManuAccReg16(dev,  BQ4050_CHARGING_STATUS_REG,  chargingStatus);
+}
+//------------------------------------------------------------------------------
+//GuagingStatus regiszter lekerdezese
+status_t BQ4050_getGuagingStatus(BQ4050_t* dev, uint16_t *guagingStatus)
+{
+    return BQ4050_readManuAccReg16(dev,  BQ4050_GUAGING_STATUS_REG,  guagingStatus);
+}
+//------------------------------------------------------------------------------
+//BatteryStatus regiszter lekerdezese
+status_t BQ4050_getBatteryStatus(BQ4050_t* dev, uint16_t *batteryStatus)
+{
+    return BQ4050_readReg16(dev,  BQ4050_BATTERY_STATUS_REG,  batteryStatus);
+}
+//------------------------------------------------------------------------------

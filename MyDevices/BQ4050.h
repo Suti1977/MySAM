@@ -24,6 +24,7 @@
 #define BQ4050_REMAINING_CAPACITY_REG           0x0f
 #define BQ4050_CHARGING_CURRENT_REG             0x14
 #define BQ4050_CHARGING_VOLTAGE_REG             0x15
+#define BQ4050_BATTERY_STATUS_REG               0x16
 #define BQ4050_DESIGN_CAPACITY_REG              0x18
 #define BQ4050_CELL_VOLTAGE4_REG                0x3c
 #define BQ4050_CELL_VOLTAGE3_REG                0x3d
@@ -32,6 +33,8 @@
 #define BQ4050_SAFETY_STATUS_REG                0x51
 #define BQ4050_PF_STATUS_REG                    0x53
 #define BQ4050_OPERATION_STATUS_REG             0x54
+#define BQ4050_CHARGING_STATUS_REG              0x55
+#define BQ4050_GUAGING_STATUS_REG               0x56
 //BQ4050 altal kezelheto cellak szama
 #define BQ4050_MAX_CELL_COUNT   4
 
@@ -107,6 +110,14 @@ status_t BQ4050_getPfStatus(BQ4050_t* dev, uint16_t *pfStatus);
 //OperationStatus regiszter lekerdezese
 status_t BQ4050_getOperationStatus(BQ4050_t* dev, uint16_t *opStatus);
 
+//ChargingStatus regiszter lekerdezese
+status_t BQ4050_getChargingStatus(BQ4050_t* dev, uint16_t *chargingStatus);
+
+//GuagingStatus regiszter lekerdezese
+status_t BQ4050_getGuagingStatus(BQ4050_t* dev, uint16_t *guagingStatus);
+
+//BatteryStatus regiszter lekerdezese
+status_t BQ4050_getBatteryStatus(BQ4050_t* dev, uint16_t *batteryStatus);
 
 //SHUTDOWN modba lepes.
 status_t BQ4050_shutDown(BQ4050_t* dev);
